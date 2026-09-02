@@ -1208,6 +1208,7 @@ Create `test/repositories/fiado_repository_test.dart`:
 ```dart
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/repositories/fiado_repository.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -1442,7 +1443,6 @@ import 'package:app_ventas/repositories/gasto_repository.dart';
 import 'package:app_ventas/repositories/resumen_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
 import 'package:drift/native.dart';
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -3036,7 +3036,6 @@ Create `test/screens/home/resumen_screen_test.dart`:
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/screens/home/resumen_screen.dart';
-import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
