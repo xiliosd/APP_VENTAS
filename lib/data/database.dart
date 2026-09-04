@@ -64,7 +64,8 @@ class Gastos extends Table {
   tables: [Usuarios, Productos, Clientes, Ventas, PagosFiado, Gastos],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
+  AppDatabase([QueryExecutor? executor])
+      : super(_wrapConnection(executor ?? _openConnection()));
 
   @override
   int get schemaVersion => 1;
@@ -75,5 +76,17 @@ class AppDatabase extends _$AppDatabase {
       final file = File(p.join(dbFolder.path, 'app_ventas.sqlite'));
       return NativeDatabase.createInBackground(file);
     });
+  }
+
+  // Closes query streams synchronously instead of debouncing them with a
+  // Timer. Without this, widget tests that use `observarProductosActivos()`
+  // (or any other watch stream) fail with "A Timer is still pending even
+  // after the widget tree was disposed" once the widget tree is torn down,
+  // because flutter_test runs widget tests inside a FakeAsync zone that
+  // never elapses drift's debounce timer on its own. See drift's own
+  // `DatabaseConnection` docs for `closeStreamsSynchronously`.
+  static QueryExecutor _wrapConnection(QueryExecutor executor) {
+    if (executor is DatabaseConnection) return executor;
+    return DatabaseConnection(executor, closeStreamsSynchronously: true);
   }
 }
