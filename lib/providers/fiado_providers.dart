@@ -4,9 +4,9 @@ import '../repositories/fiado_repository.dart';
 import 'database_provider.dart';
 import 'repository_providers.dart';
 
-/// Emite cada vez que cambia alguna tabla relacionada con fiados (ventas o
-/// pagos), para que [clientesConDeudaProvider] se recalcule automáticamente
-/// sin depender de una invalidación manual explícita.
+/// Emits whenever any table changes, so that [clientesConDeudaProvider]
+/// recomputes automatically instead of relying only on an explicit
+/// `ref.invalidate` call after a payment.
 final _cambiosFiadoProvider = StreamProvider<void>((ref) {
   return ref.watch(databaseProvider).tableUpdates().map((_) {});
 });
