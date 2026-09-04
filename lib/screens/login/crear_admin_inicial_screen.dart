@@ -26,7 +26,7 @@ class _CrearAdminInicialScreenState
       setState(() => _error = 'Escribe tu nombre');
       return;
     }
-    if (pin.length != 4 || int.tryParse(pin) == null) {
+    if (!RegExp(r'^\d{4}$').hasMatch(pin)) {
       setState(() => _error = 'El PIN debe tener 4 dígitos');
       return;
     }
