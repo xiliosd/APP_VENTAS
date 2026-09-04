@@ -64,8 +64,13 @@ class Gastos extends Table {
   tables: [Usuarios, Productos, Clientes, Ventas, PagosFiado, Gastos],
 )
 class AppDatabase extends _$AppDatabase {
+  // Only an explicitly-injected executor (as used in tests, e.g.
+  // `AppDatabase(NativeDatabase.memory())`) is wrapped with
+  // `closeStreamsSynchronously: true` below. The production path
+  // (`_openConnection()`) is left untouched, since only `flutter_test`'s
+  // FakeAsync zone has the debounce-Timer problem that fix addresses.
   AppDatabase([QueryExecutor? executor])
-      : super(_wrapConnection(executor ?? _openConnection()));
+      : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
   int get schemaVersion => 1;
