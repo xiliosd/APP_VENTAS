@@ -18,7 +18,7 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
   Future<void> _crearVendedor() async {
     final nombre = _nombreController.text.trim();
     final pin = _pinController.text.trim();
-    if (nombre.isEmpty || pin.length != 4 || int.tryParse(pin) == null) return;
+    if (nombre.isEmpty || !RegExp(r'^\d{4}$').hasMatch(pin)) return;
 
     await ref.read(usuarioRepositoryProvider).crearUsuario(
           nombre: nombre,
