@@ -1,0 +1,42 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../repositories/cliente_repository.dart';
+import '../repositories/fiado_repository.dart';
+import '../repositories/gasto_repository.dart';
+import '../repositories/producto_repository.dart';
+import '../repositories/resumen_repository.dart';
+import '../repositories/usuario_repository.dart';
+import '../repositories/venta_repository.dart';
+import 'database_provider.dart';
+
+final usuarioRepositoryProvider = Provider(
+  (ref) => UsuarioRepository(ref.watch(databaseProvider)),
+);
+
+final productoRepositoryProvider = Provider(
+  (ref) => ProductoRepository(ref.watch(databaseProvider)),
+);
+
+final clienteRepositoryProvider = Provider(
+  (ref) => ClienteRepository(ref.watch(databaseProvider)),
+);
+
+final ventaRepositoryProvider = Provider(
+  (ref) => VentaRepository(ref.watch(databaseProvider)),
+);
+
+final fiadoRepositoryProvider = Provider(
+  (ref) => FiadoRepository(ref.watch(databaseProvider)),
+);
+
+final gastoRepositoryProvider = Provider(
+  (ref) => GastoRepository(ref.watch(databaseProvider)),
+);
+
+final resumenRepositoryProvider = Provider(
+  (ref) => ResumenRepository(
+    ref.watch(databaseProvider),
+    ref.watch(ventaRepositoryProvider),
+    ref.watch(gastoRepositoryProvider),
+  ),
+);
