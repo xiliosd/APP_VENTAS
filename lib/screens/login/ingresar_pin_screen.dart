@@ -28,6 +28,8 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
         _error = 'PIN incorrecto';
         _pin = '';
       });
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
     }
   }
 

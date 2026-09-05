@@ -48,4 +48,59 @@ void main() {
     expect(container.read(sesionProvider).haySesion, isTrue);
     expect(container.read(sesionProvider).usuarioActivo?.id, usuarioId);
   });
+
+  testWidgets('PIN correcto cierra la pantalla cuando fue empujada al stack',
+      (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await db.into(db.usuarios).insert(
+          UsuariosCompanion.insert(
+            nombre: 'Ana',
+            rol: 'admin',
+            pinHash:
+                '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', // "1234"
+          ),
+        );
+    final usuario = (await db.select(db.usuarios).get()).single;
+
+    final container = ProviderContainer(
+      overrides: [databaseProvider.overrideWithValue(db)],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              key: const Key('pantalla_host'),
+              body: ElevatedButton(
+                key: const Key('boton_abrir_pin'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => IngresarPinScreen(usuario: usuario),
+                  ),
+                ),
+                child: const Text('Abrir PIN'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('boton_abrir_pin')));
+    await tester.pumpAndSettle();
+    expect(find.byType(IngresarPinScreen), findsOneWidget);
+
+    for (final digito in ['1', '2', '3', '4']) {
+      await tester.tap(find.byKey(Key('tecla_$digito')));
+      await tester.pumpAndSettle();
+    }
+
+    expect(container.read(sesionProvider).haySesion, isTrue);
+    expect(find.byType(IngresarPinScreen), findsNothing);
+    expect(find.byKey(const Key('pantalla_host')), findsOneWidget);
+  });
 }
