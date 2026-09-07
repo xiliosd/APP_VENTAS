@@ -1,11 +1,17 @@
 # Flutter/Dart
 .dart_tool/
-.flutter-plugin-dependencies
+.flutter-plugins-dependencies
 build/
 .pub-cache/
 .pub/
 *.g.dart
 *.freezed.dart
+
+# Unused platform scaffolding (this app targets Android only)
+/web/
+/linux/
+/macos/
+/windows/
 
 # Android
 **/android/.gradle
