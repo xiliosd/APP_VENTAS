@@ -1630,7 +1630,7 @@ void main() {
             nombre: 'Ana',
             rol: 'admin',
             pinHash:
-                '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f', // sha256("1234")
+                '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', // sha256("1234")
           ),
         );
 
@@ -1676,7 +1676,7 @@ void main() {
             nombre: 'Ana',
             rol: 'vendedor',
             pinHash:
-                '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f',
+                '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',
           ),
         );
 
@@ -1856,7 +1856,7 @@ void main() {
             nombre: 'Ana',
             rol: 'admin',
             pinHash:
-                '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f', // "1234"
+                '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', // "1234"
           ),
         );
     final usuario = (await db.select(db.usuarios).get()).single;
@@ -2104,7 +2104,7 @@ class _CrearAdminInicialScreenState
       setState(() => _error = 'Escribe tu nombre');
       return;
     }
-    if (pin.length != 4 || int.tryParse(pin) == null) {
+    if (!RegExp(r'^\d{4}$').hasMatch(pin)) {
       setState(() => _error = 'El PIN debe tener 4 dígitos');
       return;
     }
@@ -3334,7 +3334,7 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
   Future<void> _crearVendedor() async {
     final nombre = _nombreController.text.trim();
     final pin = _pinController.text.trim();
-    if (nombre.isEmpty || pin.length != 4 || int.tryParse(pin) == null) return;
+    if (nombre.isEmpty || !RegExp(r'^\d{4}$').hasMatch(pin)) return;
 
     await ref.read(usuarioRepositoryProvider).crearUsuario(
           nombre: nombre,
@@ -3816,6 +3816,7 @@ git commit -m "Wire up app entry point with role-based navigation"
 
 ## Self-review notes
 
-- **Spec coverage:** login/PIN (Tasks 5, 11), roles/permissions (Tasks 10, 16 — Config tab hidden for `vendedor`), registrar venta in few taps with products + quick amounts + free amount (Tasks 12–13), fiado with aging order and partial payments (Tasks 8, 14), gastos (Task 15), resumen diario general and per-seller (Tasks 9, 15), offline-only (no network dependency anywhere in this plan), historial (Task 15). All Fase 1 spec sections have a corresponding task.
+- **Spec coverage:** login/PIN (Tasks 5, 11), roles/permissions (Tasks 10, 16 — Config tab hidden for `vendedor`), registrar venta in few taps with products + quick amounts + free amount (Tasks 12–13), fiado with aging order and partial payments (Tasks 8, 14), gastos (Task 15), resumen diario general and per-seller (Tasks 9, 15), offline-only (no network dependency anywhere in this plan), historial (Task 15).
+  **Post-implementation correction (found by the final whole-branch review, after all 16 tasks were built and individually reviewed):** this claim was inaccurate. Six spec'd capabilities were never scoped into any task, even though their repository methods exist and are tested: PIN reset for a vendedor (`UsuarioRepository.resetearPin`), product editing (`ProductoRepository.actualizarProducto`), fiado per-client sale/payment history (`FiadoRepository.ventasFiadasCliente`/`pagosCliente`), resumen day-navigation (both resumen providers hardcode `DateTime.now()`), and historial filtering by user/day plus showing gastos (Historial only lists today's ventas). See `README.md`'s "Alcance no cubierto en esta fase" for the user-facing version of this list — these are Fase 2 candidates, not defects in what Fase 1 actually built.
 - **Type consistency:** `Usuario`/`Producto`/`Cliente`/`Venta`/`PagoFiado`/`Gasto` (Task 2's `@DataClassName`s) are used identically across every later task; repository constructor signatures declared in each task's Interfaces block match their Step 3 implementation; `ClienteConSaldo` and `ResumenDia` are defined once (Tasks 8, 9) and reused as-is in providers/screens.
 - **No placeholders:** every step has runnable code, not a description.
