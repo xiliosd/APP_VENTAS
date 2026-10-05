@@ -26,9 +26,15 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> abrirFormulario(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('boton_agregar_usuario')));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('crear un usuario sin tocar el rol crea un vendedor',
       (tester) async {
     await montar(tester);
+    await abrirFormulario(tester);
     expect(find.text('Agregar usuario'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('campo_nombre_usuario')), 'Beto');
@@ -40,11 +46,14 @@ void main() {
     expect(usuarios.single.nombre, 'Beto');
     expect(usuarios.single.rol, 'vendedor');
     expect(find.text('Beto'), findsOneWidget);
+    expect(find.text('Usuario creado'), findsOneWidget);
+    expect(find.text('Vendedor'), findsOneWidget);
   });
 
   testWidgets('elegir Administrador en el selector crea un admin',
       (tester) async {
     await montar(tester);
+    await abrirFormulario(tester);
 
     await tester.enterText(find.byKey(const Key('campo_nombre_usuario')), 'Carla');
     await tester.enterText(find.byKey(const Key('campo_pin_usuario')), '1111');
@@ -60,6 +69,7 @@ void main() {
   testWidgets('PIN inválido al crear muestra error y no crea el usuario',
       (tester) async {
     await montar(tester);
+    await abrirFormulario(tester);
 
     await tester.enterText(find.byKey(const Key('campo_nombre_usuario')), 'Beto');
     await tester.enterText(find.byKey(const Key('campo_pin_usuario')), '12');

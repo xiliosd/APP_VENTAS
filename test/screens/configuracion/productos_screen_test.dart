@@ -30,9 +30,17 @@ void main() {
         ProductosCompanion.insert(nombre: 'Arepa', precio: 3000),
       );
 
-  testWidgets('crear un producto lo agrega a la lista visible', (tester) async {
+  testWidgets('sin productos muestra el estado vacío', (tester) async {
+    await montar(tester);
+    expect(find.text('Aún no tienes productos'), findsOneWidget);
+  });
+
+  testWidgets('crear un producto desde el panel lo agrega y lo confirma',
+      (tester) async {
     await montar(tester);
 
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
     await tester.enterText(
         find.byKey(const Key('campo_nombre_producto')), 'Arepa');
     await tester.enterText(
@@ -40,8 +48,27 @@ void main() {
     await tester.tap(find.byKey(const Key('boton_crear_producto')));
     await tester.pumpAndSettle();
 
+    expect(find.byType(BottomSheet), findsNothing);
     expect(find.text('Arepa'), findsOneWidget);
     expect(find.text(r'$3.000'), findsOneWidget);
+    expect(find.text('Producto guardado'), findsOneWidget);
+  });
+
+  testWidgets('un precio inválido al crear muestra error y no guarda',
+      (tester) async {
+    await montar(tester);
+
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('campo_nombre_producto')), 'Arepa');
+    await tester.enterText(
+        find.byKey(const Key('campo_precio_producto')), '2.5');
+    await tester.tap(find.byKey(const Key('boton_crear_producto')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Escribe un precio válido'), findsOneWidget);
+    expect(await db.select(db.productos).get(), isEmpty);
   });
 
   testWidgets('editar un producto cambia nombre y precio', (tester) async {
