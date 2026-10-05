@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/sesion_provider.dart';
 import '../../ui/colores_app.dart';
+import '../respaldo/respaldo_screen.dart';
 import 'productos_screen.dart';
 import 'usuarios_screen.dart';
 
@@ -37,6 +38,17 @@ class AjustesScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const UsuariosScreen()),
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                key: const Key('menu_respaldo'),
+                leading: const Icon(Icons.cloud_upload_outlined),
+                title: const Text('Respaldo'),
+                subtitle: const Text('Copia de seguridad en la nube'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RespaldoScreen()),
                 ),
               ),
             ],

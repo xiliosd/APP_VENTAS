@@ -67,6 +67,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('menu_productos')), findsOneWidget);
     expect(find.byKey(const Key('menu_usuarios')), findsOneWidget);
+    expect(find.byKey(const Key('menu_respaldo')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('ajustes_cerrar_sesion')));
     await tester.pumpAndSettle();
