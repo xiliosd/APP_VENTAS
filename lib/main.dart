@@ -31,7 +31,7 @@ class AppVentas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'App Ventas',
+      title: 'VeciTienda',
       theme: temaApp(),
       home: const RaizApp(),
     );
