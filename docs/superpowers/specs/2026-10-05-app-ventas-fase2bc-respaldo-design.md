@@ -1,7 +1,7 @@
 # App de ventas — Fase 2B+2C (respaldo en la nube e identidad de la tienda)
 
 **Fecha:** 2026-10-05
-**Estado:** Borrador para revisión
+**Estado:** Implementado
 **Base:** `docs/superpowers/specs/2026-10-05-app-ventas-fase2a-design.md`
 
 ## Contexto y alcance
