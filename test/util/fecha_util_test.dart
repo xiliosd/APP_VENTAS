@@ -34,4 +34,14 @@ void main() {
     expect(textoDebeDesde(DateTime(2026, 9, 23), hoy),
         'Debe desde hace 12 días');
   });
+
+  test('textoUltimoRespaldo usa hoy, ayer o la fecha completa', () {
+    final ahora = DateTime(2026, 10, 5, 18);
+    expect(textoUltimoRespaldo(DateTime(2026, 10, 5, 14, 32), ahora),
+        'hoy 14:32');
+    expect(textoUltimoRespaldo(DateTime(2026, 10, 4, 9, 5), ahora),
+        'ayer 09:05');
+    expect(textoUltimoRespaldo(DateTime(2026, 10, 3, 14, 32), ahora),
+        '03/10/2026 14:32');
+  });
 }

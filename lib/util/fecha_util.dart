@@ -21,3 +21,11 @@ String textoDebeDesde(DateTime desde, DateTime hoy) {
   if (dias == 1) return 'Debe desde ayer';
   return 'Debe desde hace $dias días';
 }
+
+/// "hoy 14:32", "ayer 09:05" o "03/10/2026 14:32".
+String textoUltimoRespaldo(DateTime fecha, DateTime ahora) {
+  final dias = inicioDelDia(ahora).difference(inicioDelDia(fecha)).inDays;
+  if (dias == 0) return 'hoy ${formatoHora(fecha)}';
+  if (dias == 1) return 'ayer ${formatoHora(fecha)}';
+  return formatoFechaHora(fecha);
+}
