@@ -49,6 +49,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       body: tabs[_tabActual].pantalla,
       bottomNavigationBar: BottomNavigationBar(
+        // Con 4 pestañas el tipo por defecto es "shifting", que deja los
+        // íconos casi blancos sobre la barra clara (invisibles).
+        type: BottomNavigationBarType.fixed,
         currentIndex: _tabActual,
         onTap: (index) => setState(() => _tabActual = index),
         items: tabs

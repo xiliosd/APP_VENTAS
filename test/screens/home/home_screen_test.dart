@@ -79,4 +79,28 @@ void main() {
 
     expect(container.read(sesionProvider).haySesion, isFalse);
   });
+
+  testWidgets('los íconos de las pestañas se ven oscuros sobre la barra clara',
+      (tester) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final container = await _containerConSesion(db, rol: 'admin');
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: HomeScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Con 4 pestañas BottomNavigationBar usa por defecto el modo "shifting",
+    // que pinta los íconos casi blancos sobre el fondo claro: invisibles.
+    for (final icono in [Icons.people, Icons.history, Icons.settings]) {
+      final elemento = tester.element(find.byIcon(icono));
+      expect(IconTheme.of(elemento).color!.computeLuminance(), lessThan(0.5),
+          reason: 'el ícono $icono debe verse sobre el fondo de la barra');
+    }
+  });
 }
