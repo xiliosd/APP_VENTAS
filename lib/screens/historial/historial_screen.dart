@@ -5,8 +5,11 @@ import '../../data/database.dart';
 import '../../providers/historial_providers.dart';
 import '../../providers/usuarios_providers.dart';
 import '../../repositories/historial_repository.dart';
+import '../../ui/colores_app.dart';
+import '../../ui/estado_vacio.dart';
+import '../../ui/monto.dart';
+import '../../ui/tarjeta_monto.dart';
 import '../../util/fecha_util.dart';
-import '../../util/formato_moneda.dart';
 import '../../widgets/selector_fecha.dart';
 
 class HistorialScreen extends ConsumerStatefulWidget {
@@ -29,40 +32,96 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
         ref.watch(historialProvider((dia: _dia, usuarioId: _usuarioId)));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Historial')),
       body: Column(
         children: [
-          SelectorFecha(
-            dia: _dia,
-            onCambio: (dia) => setState(() => _dia = inicioDelDia(dia)),
-          ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: DropdownButton<int?>(
-              key: const Key('filtro_usuario'),
-              isExpanded: true,
-              value: _usuarioId,
-              items: [
-                const DropdownMenuItem<int?>(value: null, child: Text('Todos')),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: SelectorFecha(
+              dia: _dia,
+              onCambio: (dia) => setState(() => _dia = inicioDelDia(dia)),
+            ),
+          ),
+          SizedBox(
+            height: 48,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    key: const Key('filtro_usuario_todos'),
+                    label: const Text('Todos'),
+                    selected: _usuarioId == null,
+                    onSelected: (_) => setState(() => _usuarioId = null),
+                  ),
+                ),
                 for (final u in usuarios)
-                  DropdownMenuItem<int?>(value: u.id, child: Text(u.nombre)),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      key: Key('filtro_usuario_${u.id}'),
+                      label: Text(u.nombre),
+                      selected: _usuarioId == u.id,
+                      onSelected: (_) => setState(() => _usuarioId = u.id),
+                    ),
+                  ),
               ],
-              onChanged: (id) => setState(() => _usuarioId = id),
             ),
           ),
           Expanded(
             child: movimientosAsync.when(
               data: (movimientos) {
-                if (movimientos.isEmpty) {
-                  return const Center(child: Text('Sin movimientos este día'));
-                }
+                final totalVentas = movimientos
+                    .where((m) => m.tipo == TipoMovimientoHistorial.venta)
+                    .fold<int>(0, (suma, m) => suma + m.monto);
+                final totalGastos = movimientos
+                    .where((m) => m.tipo == TipoMovimientoHistorial.gasto)
+                    .fold<int>(0, (suma, m) => suma + m.monto);
                 return ListView(
-                  children: movimientos
-                      .map((m) => _MovimientoTile(
-                            movimiento: m,
-                            nombreUsuario: nombres[m.usuarioId] ?? '',
-                          ))
-                      .toList(),
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TarjetaMonto(
+                            key: const Key('total_ventas'),
+                            etiqueta: 'Ventas',
+                            valor: totalVentas,
+                            tono: TonoMonto.entra,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TarjetaMonto(
+                            key: const Key('total_gastos'),
+                            etiqueta: 'Gastos',
+                            valor: totalGastos,
+                            tono: TonoMonto.sale,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (movimientos.isEmpty)
+                      const EstadoVacio(
+                        icono: Icons.receipt_long_rounded,
+                        titulo: 'Sin movimientos este día',
+                      )
+                    else
+                      Card(
+                        key: const Key('lista_movimientos'),
+                        child: Column(
+                          children: [
+                            for (final m in movimientos)
+                              _MovimientoTile(
+                                movimiento: m,
+                                nombreUsuario: nombres[m.usuarioId] ?? '',
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -84,23 +143,27 @@ class _MovimientoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final esGasto = movimiento.tipo == TipoMovimientoHistorial.gasto;
-    final colorGasto = Theme.of(context).colorScheme.error;
+    final color = esGasto ? ColoresApp.sale : ColoresApp.entra;
     final descripcion = movimiento.descripcion?.trim() ?? '';
     final detalle = esGasto
         ? (descripcion.isEmpty ? 'Gasto' : descripcion)
         : (movimiento.esFiado ? 'Fiado' : 'Contado');
 
     return ListTile(
-      leading: Icon(
-        esGasto ? Icons.money_off : Icons.point_of_sale,
-        color: esGasto ? colorGasto : null,
+      leading: CircleAvatar(
+        radius: 18,
+        backgroundColor: color.withValues(alpha: 0.12),
+        child: Icon(
+          esGasto ? Icons.south_west_rounded : Icons.north_east_rounded,
+          color: color,
+          size: 20,
+        ),
       ),
-      title: Text(
-        formatoMoneda(movimiento.monto),
-        style: esGasto ? TextStyle(color: colorGasto) : null,
-      ),
+      title: Monto(movimiento.monto,
+          tamano: 16, tono: esGasto ? TonoMonto.sale : TonoMonto.neutro),
       subtitle: Text('$detalle · $nombreUsuario'),
-      trailing: Text(formatoHora(movimiento.fecha)),
+      trailing: Text(formatoHora(movimiento.fecha),
+          style: const TextStyle(color: ColoresApp.textoSecundario)),
     );
   }
 }

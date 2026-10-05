@@ -39,6 +39,12 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Finder enLista(String texto) => find.descendant(
+      of: find.byKey(const Key('lista_movimientos')), matching: find.text(texto));
+
+  Finder enTotal(String clave, String texto) => find.descendant(
+      of: find.byKey(Key(clave)), matching: find.text(texto));
+
   Future<void> cargarHoy() async {
     await ventas.registrarVenta(monto: 5000, esFiado: false, usuarioId: ana);
     await gastos.registrarGasto(
@@ -46,17 +52,17 @@ void main() {
     await gastos.registrarGasto(monto: 500, usuarioId: ana);
   }
 
-  testWidgets('muestra ventas y gastos del día con usuario', (tester) async {
+  testWidgets('muestra ventas y gastos del día con usuario y totales',
+      (tester) async {
     await cargarHoy();
     await montar(tester);
 
-    expect(find.text('Historial'), findsOneWidget);
-    expect(find.text(r'$5.000'), findsOneWidget);
-    expect(find.text('Contado · Ana'), findsOneWidget);
-    expect(find.text(r'$1.000'), findsOneWidget);
-    expect(find.text('Hielo · Beto'), findsOneWidget);
-    expect(find.text(r'$500'), findsOneWidget);
-    expect(find.text('Gasto · Ana'), findsOneWidget);
+    expect(enLista(r'$5.000'), findsOneWidget);
+    expect(enLista('Contado · Ana'), findsOneWidget);
+    expect(enLista('Hielo · Beto'), findsOneWidget);
+    expect(enLista('Gasto · Ana'), findsOneWidget);
+    expect(enTotal('total_ventas', r'$5.000'), findsOneWidget);
+    expect(enTotal('total_gastos', r'$1.500'), findsOneWidget);
   });
 
   testWidgets('el filtro por usuario oculta los movimientos de otros',
@@ -64,14 +70,13 @@ void main() {
     await cargarHoy();
     await montar(tester);
 
-    await tester.tap(find.byKey(const Key('filtro_usuario')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Beto').last);
+    await tester.tap(find.byKey(Key('filtro_usuario_$beto')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Hielo · Beto'), findsOneWidget);
-    expect(find.text(r'$5.000'), findsNothing);
-    expect(find.text('Gasto · Ana'), findsNothing);
+    expect(enLista('Hielo · Beto'), findsOneWidget);
+    expect(enLista(r'$5.000'), findsNothing);
+    expect(enLista('Gasto · Ana'), findsNothing);
+    expect(enTotal('total_ventas', r'$0'), findsOneWidget);
   });
 
   testWidgets('una venta registrada con la pantalla abierta aparece sola',
@@ -82,8 +87,8 @@ void main() {
     await ventas.registrarVenta(monto: 8000, esFiado: true, usuarioId: ana);
     await tester.pumpAndSettle();
 
-    expect(find.text(r'$8.000'), findsOneWidget);
-    expect(find.text('Fiado · Ana'), findsOneWidget);
+    expect(enLista(r'$8.000'), findsOneWidget);
+    expect(enLista('Fiado · Ana'), findsOneWidget);
   });
 
   testWidgets('el día anterior muestra solo los movimientos de ese día',
@@ -101,7 +106,7 @@ void main() {
     await tester.tap(find.byKey(const Key('boton_dia_anterior')));
     await tester.pumpAndSettle();
 
-    expect(find.text(r'$7.000'), findsOneWidget);
-    expect(find.text(r'$5.000'), findsNothing);
+    expect(enLista(r'$7.000'), findsOneWidget);
+    expect(enLista(r'$5.000'), findsNothing);
   });
 }
