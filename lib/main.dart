@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'screens/raiz_app.dart';
+import 'ui/tema_app.dart';
 
 void main() {
   runApp(const ProviderScope(child: AppVentas()));
@@ -14,7 +15,7 @@ class AppVentas extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'App Ventas',
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.teal),
+      theme: temaApp(),
       home: const RaizApp(),
     );
   }

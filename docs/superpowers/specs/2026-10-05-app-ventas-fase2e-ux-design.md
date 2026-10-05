@@ -51,7 +51,7 @@ Hecha sobre capturas del emulador `app_ventas_ligero` (720×1560) y el código.
 | Token | Valor | Uso |
 |---|---|---|
 | `primario` | `#1E3A8A` | Marca, navegación activa, selección, enlaces |
-| `entra` | `#16A34A` | Ventas, ganancia, botón Cobrar, abonos |
+| `entra` | `#15803D` | Ventas, ganancia, botón Cobrar, abonos |
 | `sale` | `#DC2626` | Gastos, errores, acciones destructivas |
 | `fiado` | `#B45309` | Fiado, por cobrar (fondo suave `#FEF3C7`) |
 | `fondo` | `#F7F9FC` | Fondo de pantallas |
@@ -157,7 +157,7 @@ Todo par texto/fondo usado cumple contraste ≥ 4.5:1 (texto grande ≥ 3:1).
 ### Historial
 
 - `SelectorFecha` + chips de usuario ("Todos", cada usuario).
-- Fila de totales del filtro: "Entró $X" (`entra`) · "Salió $Y" (`sale`).
+- Fila de totales del filtro: "Ventas $X" (`entra`) · "Gastos $Y" (`sale`).
 - Filas con ícono y color según entra/sale; vacío: `EstadoVacio` "Sin movimientos este día".
 
 ### Ajustes (antes "Config")
