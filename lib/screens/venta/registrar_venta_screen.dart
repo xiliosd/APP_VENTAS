@@ -6,6 +6,15 @@ import '../../providers/clientes_providers.dart';
 import '../../providers/productos_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
+import '../../providers/ticket_provider.dart';
+import '../../ui/avisos.dart';
+import '../../ui/boton_principal.dart';
+import '../../ui/colores_app.dart';
+import '../../ui/hoja_inferior.dart';
+import '../../ui/monto.dart';
+import '../../ui/mosaico.dart';
+import '../../ui/selector_segmentado.dart';
+import '../../ui/teclado_monto.dart';
 import '../../util/formato_moneda.dart';
 import '../../widgets/monto_rapido_grid.dart';
 
@@ -18,129 +27,418 @@ class RegistrarVentaScreen extends ConsumerStatefulWidget {
 }
 
 class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
-  final _montoLibreController = TextEditingController();
-  final _nombreClienteNuevoController = TextEditingController();
-  bool _esFiado = false;
-  Cliente? _clienteSeleccionado;
+  /// Evita registrar dos veces el mismo ticket con un doble toque.
+  bool _cobrando = false;
 
-  Future<void> _registrar(int monto, {int? productoId}) async {
-    final sesion = ref.read(sesionProvider).usuarioActivo!;
-    int? clienteId;
+  Future<void> _otroMonto() async {
+    final monto = await mostrarHojaInferior<int>(
+      context,
+      titulo: 'Otro monto',
+      builder: (_) => const _HojaOtroMonto(),
+    );
+    if (monto != null) ref.read(ticketProvider.notifier).agregarMonto(monto);
+  }
 
-    if (_esFiado) {
-      if (_clienteSeleccionado != null) {
-        clienteId = _clienteSeleccionado!.id;
-      } else if (_nombreClienteNuevoController.text.trim().isNotEmpty) {
-        clienteId = await ref.read(clienteRepositoryProvider).crearCliente(
-              nombre: _nombreClienteNuevoController.text.trim(),
-            );
-      } else {
-        return; // fiado requiere cliente
+  Future<void> _verTicket() => mostrarHojaInferior<void>(
+        context,
+        titulo: 'Ticket',
+        builder: (_) => const _HojaTicket(),
+      );
+
+  Future<void> _cobrar() async {
+    if (_cobrando) return;
+    setState(() => _cobrando = true);
+    try {
+      final ticket = ref.read(ticketProvider);
+      final sesion = ref.read(sesionProvider).usuarioActivo!;
+      int? clienteId;
+      if (ticket.esFiado) {
+        final cliente = ticket.cliente!;
+        clienteId = cliente.id ??
+            await ref
+                .read(clienteRepositoryProvider)
+                .obtenerOCrearCliente(cliente.nombre);
       }
+      final ventaRepo = ref.read(ventaRepositoryProvider);
+      final ventaId = await ventaRepo.registrarVenta(
+        monto: ticket.total,
+        productoId: ticket.productoIdUnico,
+        esFiado: ticket.esFiado,
+        clienteId: clienteId,
+        usuarioId: sesion.id,
+      );
+      if (!mounted) return;
+      avisar(
+        context,
+        'Venta registrada · ${formatoMoneda(ticket.total)}',
+        onDeshacer: () => ventaRepo.eliminarVenta(ventaId),
+      );
+      Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _cobrando = false);
     }
-
-    await ref.read(ventaRepositoryProvider).registrarVenta(
-          monto: monto,
-          productoId: productoId,
-          esFiado: _esFiado,
-          clienteId: clienteId,
-          usuarioId: sesion.id,
-        );
-
-    if (mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
+    final ticket = ref.watch(ticketProvider);
+    final notifier = ref.read(ticketProvider.notifier);
     final productosAsync = ref.watch(productosActivosProvider);
-    final clientesAsync = ref.watch(listaClientesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Registrar venta')),
-      body: SingleChildScrollView(
+      appBar: AppBar(title: const Text('Nueva venta')),
+      body: ListView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Productos frecuentes', style: TextStyle(fontSize: 16)),
-            const SizedBox(height: 8),
-            productosAsync.when(
-              data: (productos) => Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: productos.map((producto) {
-                  return ElevatedButton(
-                    key: Key('producto_${producto.id}'),
-                    onPressed: () =>
-                        _registrar(producto.precio, productoId: producto.id),
-                    child: Text(
-                      '${producto.nombre}\n${formatoMoneda(producto.precio)}',
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }).toList(),
-              ),
-              loading: () => const CircularProgressIndicator(),
-              error: (e, st) => Text('Error: $e'),
-            ),
-            const SizedBox(height: 16),
-            const Text('Montos rápidos', style: TextStyle(fontSize: 16)),
-            const SizedBox(height: 8),
-            MontoRapidoGrid(onSeleccionar: (monto) => _registrar(monto)),
-            const SizedBox(height: 16),
-            TextField(
-              key: const Key('campo_monto_libre'),
-              controller: _montoLibreController,
-              decoration: const InputDecoration(labelText: 'Monto libre'),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              key: const Key('boton_registrar_monto_libre'),
-              onPressed: () {
-                final monto = int.tryParse(_montoLibreController.text.trim());
-                if (monto != null && monto > 0) _registrar(monto);
-              },
-              child: const Text('Registrar monto libre'),
-            ),
-            const SizedBox(height: 16),
-            CheckboxListTile(
-              key: const Key('checkbox_fiado'),
-              title: const Text('Fiado'),
-              value: _esFiado,
-              onChanged: (value) => setState(() => _esFiado = value ?? false),
-            ),
-            if (_esFiado)
-              clientesAsync.when(
-                data: (clientes) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    DropdownButton<Cliente>(
-                      key: const Key('dropdown_cliente'),
-                      hint: const Text('Elegir cliente existente'),
-                      value: _clienteSeleccionado,
-                      items: clientes
-                          .map((c) =>
-                              DropdownMenuItem(value: c, child: Text(c.nombre)))
-                          .toList(),
-                      onChanged: (c) =>
-                          setState(() => _clienteSeleccionado = c),
-                    ),
-                    TextField(
-                      key: const Key('campo_cliente_nuevo'),
-                      controller: _nombreClienteNuevoController,
-                      decoration: const InputDecoration(
-                        labelText: 'O nombre de cliente nuevo',
-                      ),
-                    ),
-                  ],
+        children: [
+          SelectorSegmentado<bool>(
+            key: const Key('selector_tipo_venta'),
+            opciones: const {false: 'Contado', true: 'Fiado'},
+            valor: ticket.esFiado,
+            onCambio: notifier.cambiarFiado,
+          ),
+          if (ticket.esFiado) ...[
+            const SizedBox(height: 12),
+            const _SelectorCliente(),
+          ],
+          const _Seccion('PRODUCTOS'),
+          productosAsync.when(
+            data: (productos) => GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 1.25,
+              children: [
+                for (final p in productos)
+                  Mosaico(
+                    key: Key('producto_${p.id}'),
+                    titulo: p.nombre,
+                    subtitulo: formatoMoneda(p.precio),
+                    cantidad: ticket.cantidadDe('p${p.id}'),
+                    onTap: () => notifier.agregarProducto(p),
+                  ),
+                Mosaico(
+                  key: const Key('boton_otro_monto'),
+                  titulo: '+ Otro',
+                  subtitulo: 'monto',
+                  destacado: true,
+                  onTap: _otroMonto,
                 ),
-                loading: () => const CircularProgressIndicator(),
-                error: (e, st) => Text('Error: $e'),
+              ],
+            ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, st) => Text('Error: $e'),
+          ),
+          const _Seccion('MONTOS RÁPIDOS'),
+          MontoRapidoGrid(
+            onSeleccionar: notifier.agregarMonto,
+            cantidadDe: (monto) => ticket.cantidadDe('m$monto'),
+          ),
+        ],
+      ),
+      bottomNavigationBar: _BarraCobro(
+        ticket: ticket,
+        cobrando: _cobrando,
+        onCobrar: _cobrar,
+        onVerTicket: _verTicket,
+        onVaciar: notifier.vaciar,
+      ),
+    );
+  }
+}
+
+class _Seccion extends StatelessWidget {
+  const _Seccion(this.texto);
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, bottom: 8),
+      child: Text(
+        texto,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+          color: ColoresApp.textoSecundario,
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectorCliente extends ConsumerStatefulWidget {
+  const _SelectorCliente();
+
+  @override
+  ConsumerState<_SelectorCliente> createState() => _SelectorClienteState();
+}
+
+class _SelectorClienteState extends ConsumerState<_SelectorCliente> {
+  final _controller = TextEditingController();
+  String _busqueda = '';
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ticket = ref.watch(ticketProvider);
+    final notifier = ref.read(ticketProvider.notifier);
+    final elegido = ticket.cliente;
+    if (elegido != null) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: InputChip(
+          key: const Key('cliente_elegido'),
+          avatar: const Icon(Icons.person_rounded, size: 18),
+          label: Text(elegido.nombre),
+          onDeleted: () => notifier.elegirCliente(null),
+        ),
+      );
+    }
+
+    final clientes =
+        ref.watch(listaClientesProvider).valueOrNull ?? const <Cliente>[];
+    final texto = _busqueda.trim();
+    final buscado = texto.toLowerCase();
+    final sugeridos = clientes
+        .where((c) => c.nombre.toLowerCase().contains(buscado))
+        .take(6)
+        .toList();
+    final existeExacto =
+        clientes.any((c) => c.nombre.trim().toLowerCase() == buscado);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          key: const Key('campo_cliente'),
+          controller: _controller,
+          decoration: InputDecoration(
+            labelText: '¿A quién le fías?',
+            prefixIcon: const Icon(Icons.search_rounded),
+            errorText: ticket.estaVacio ? null : 'Elige o escribe el cliente',
+          ),
+          onChanged: (valor) => setState(() => _busqueda = valor),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final c in sugeridos)
+              ActionChip(
+                key: Key('cliente_sugerido_${c.id}'),
+                label: Text(c.nombre),
+                onPressed: () => notifier
+                    .elegirCliente(ClienteTicket(id: c.id, nombre: c.nombre)),
+              ),
+            if (texto.isNotEmpty && !existeExacto)
+              ActionChip(
+                key: const Key('boton_cliente_nuevo'),
+                avatar: const Icon(Icons.person_add_alt_rounded, size: 18),
+                label: Text('Nuevo: $texto'),
+                onPressed: () =>
+                    notifier.elegirCliente(ClienteTicket(nombre: texto)),
               ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+class _BarraCobro extends StatelessWidget {
+  const _BarraCobro({
+    required this.ticket,
+    required this.cobrando,
+    required this.onCobrar,
+    required this.onVerTicket,
+    required this.onVaciar,
+  });
+
+  final Ticket ticket;
+  final bool cobrando;
+  final VoidCallback onCobrar;
+  final VoidCallback onVerTicket;
+  final VoidCallback onVaciar;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = formatoMoneda(ticket.total);
+    final texto = !ticket.esFiado
+        ? 'Cobrar $total'
+        : ticket.cliente == null
+            ? 'Fiar $total'
+            : 'Fiar $total a ${ticket.cliente!.nombre}';
+    final String? aviso = ticket.estaVacio
+        ? 'Agrega algo para cobrar'
+        : (ticket.esFiado && ticket.cliente == null)
+            ? 'Falta elegir el cliente'
+            : null;
+    final n = ticket.cantidadArticulos;
+
+    return Material(
+      color: ColoresApp.superficie,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: ColoresApp.borde)),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      n == 1 ? '1 artículo' : '$n artículos',
+                      key: const Key('texto_articulos'),
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          const TextStyle(color: ColoresApp.textoSecundario),
+                    ),
+                  ),
+                  TextButton(
+                    key: const Key('boton_ver_ticket'),
+                    onPressed: ticket.estaVacio ? null : onVerTicket,
+                    child: const Text('Ver ticket'),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    key: const Key('boton_vaciar'),
+                    style:
+                        TextButton.styleFrom(foregroundColor: ColoresApp.sale),
+                    onPressed: ticket.estaVacio ? null : onVaciar,
+                    child: const Text('Vaciar'),
+                  ),
+                ],
+              ),
+              if (aviso != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    aviso,
+                    style: const TextStyle(
+                        fontSize: 13, color: ColoresApp.textoSecundario),
+                  ),
+                ),
+              BotonPrincipal(
+                key: const Key('boton_cobrar'),
+                texto: texto,
+                variante: VarianteBoton.entra,
+                onPressed: ticket.puedeCobrar && !cobrando ? onCobrar : null,
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _HojaTicket extends ConsumerWidget {
+  const _HojaTicket();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ticket = ref.watch(ticketProvider);
+    final notifier = ref.read(ticketProvider.notifier);
+    if (ticket.estaVacio) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('El ticket está vacío', textAlign: TextAlign.center),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final linea in ticket.lineas)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(linea.etiqueta,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle:
+                Text('${linea.cantidad} × ${formatoMoneda(linea.precio)}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  key: Key('restar_${linea.clave}'),
+                  tooltip: 'Quitar uno',
+                  icon: const Icon(Icons.remove_circle_outline_rounded),
+                  onPressed: () => notifier.restar(linea.clave),
+                ),
+                IconButton(
+                  key: Key('sumar_${linea.clave}'),
+                  tooltip: 'Agregar uno',
+                  icon: const Icon(Icons.add_circle_outline_rounded),
+                  onPressed: () => notifier.sumar(linea.clave),
+                ),
+                IconButton(
+                  key: Key('quitar_${linea.clave}'),
+                  tooltip: 'Quitar del ticket',
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: ColoresApp.sale),
+                  onPressed: () => notifier.quitar(linea.clave),
+                ),
+              ],
+            ),
+          ),
+        const Divider(),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            const Text('Total',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const Spacer(),
+            Monto(ticket.total, tamano: 22),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _HojaOtroMonto extends StatefulWidget {
+  const _HojaOtroMonto();
+
+  @override
+  State<_HojaOtroMonto> createState() => _HojaOtroMontoState();
+}
+
+class _HojaOtroMontoState extends State<_HojaOtroMonto> {
+  int _monto = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(child: Monto(_monto, tamano: 36)),
+        const SizedBox(height: 12),
+        TecladoMonto(
+          onTecla: (tecla) =>
+              setState(() => _monto = aplicarTecla(_monto, tecla)),
+        ),
+        const SizedBox(height: 12),
+        BotonPrincipal(
+          key: const Key('boton_agregar_monto'),
+          texto: 'Agregar al ticket',
+          onPressed:
+              _monto > 0 ? () => Navigator.of(context).pop(_monto) : null,
+        ),
+      ],
     );
   }
 }

@@ -15,7 +15,7 @@ void main() {
 
   setUp(() {
     container = ProviderContainer();
-    suscripcion = container.listen(ticketProvider, (_, __) {});
+    suscripcion = container.listen(ticketProvider, (_, _) {});
   });
 
   tearDown(() => container.dispose());

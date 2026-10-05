@@ -1,26 +1,36 @@
 import 'package:flutter/material.dart';
 
+import '../ui/mosaico.dart';
 import '../util/formato_moneda.dart';
 
 class MontoRapidoGrid extends StatelessWidget {
-  const MontoRapidoGrid({super.key, required this.onSeleccionar});
+  const MontoRapidoGrid({super.key, required this.onSeleccionar, this.cantidadDe});
 
   final void Function(int monto) onSeleccionar;
+
+  /// Cuántas veces está ese monto en el ticket (para la insignia).
+  final int Function(int monto)? cantidadDe;
 
   static const montos = [1000, 2000, 5000, 10000, 20000, 50000];
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: montos.map((monto) {
-        return ElevatedButton(
-          key: Key('monto_rapido_$monto'),
-          onPressed: () => onSeleccionar(monto),
-          child: Text(formatoMoneda(monto)),
-        );
-      }).toList(),
+    return GridView.count(
+      crossAxisCount: 3,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      childAspectRatio: 1.6,
+      children: [
+        for (final monto in montos)
+          Mosaico(
+            key: Key('monto_rapido_$monto'),
+            titulo: formatoMoneda(monto),
+            cantidad: cantidadDe?.call(monto) ?? 0,
+            onTap: () => onSeleccionar(monto),
+          ),
+      ],
     );
   }
 }
