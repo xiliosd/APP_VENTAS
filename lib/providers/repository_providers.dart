@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../repositories/cliente_repository.dart';
 import '../repositories/fiado_repository.dart';
 import '../repositories/gasto_repository.dart';
+import '../repositories/historial_repository.dart';
 import '../repositories/producto_repository.dart';
 import '../repositories/resumen_repository.dart';
 import '../repositories/usuario_repository.dart';
@@ -36,6 +37,13 @@ final gastoRepositoryProvider = Provider(
 final resumenRepositoryProvider = Provider(
   (ref) => ResumenRepository(
     ref.watch(databaseProvider),
+    ref.watch(ventaRepositoryProvider),
+    ref.watch(gastoRepositoryProvider),
+  ),
+);
+
+final historialRepositoryProvider = Provider(
+  (ref) => HistorialRepository(
     ref.watch(ventaRepositoryProvider),
     ref.watch(gastoRepositoryProvider),
   ),
