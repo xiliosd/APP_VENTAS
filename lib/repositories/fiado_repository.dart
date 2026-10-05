@@ -14,6 +14,20 @@ class ClienteConSaldo {
   final DateTime fechaDeudaMasAntigua;
 }
 
+enum TipoMovimientoFiado { venta, abono }
+
+class MovimientoFiado {
+  const MovimientoFiado({
+    required this.tipo,
+    required this.monto,
+    required this.fecha,
+  });
+
+  final TipoMovimientoFiado tipo;
+  final int monto;
+  final DateTime fecha;
+}
+
 class FiadoRepository {
   FiadoRepository(this._db);
 
@@ -88,5 +102,24 @@ class FiadoRepository {
           ..where((p) => p.clienteId.equals(clienteId))
           ..orderBy([(p) => OrderingTerm.desc(p.fecha)]))
         .get();
+  }
+
+  Future<List<MovimientoFiado>> movimientosCliente(int clienteId) async {
+    final ventas = await ventasFiadasCliente(clienteId);
+    final pagos = await pagosCliente(clienteId);
+    return [
+      for (final v in ventas)
+        MovimientoFiado(
+          tipo: TipoMovimientoFiado.venta,
+          monto: v.monto,
+          fecha: v.fecha,
+        ),
+      for (final p in pagos)
+        MovimientoFiado(
+          tipo: TipoMovimientoFiado.abono,
+          monto: p.monto,
+          fecha: p.fecha,
+        ),
+    ]..sort((a, b) => b.fecha.compareTo(a.fecha));
   }
 }

@@ -90,4 +90,46 @@ void main() {
     expect(pagos, hasLength(1));
     expect(pagos.single.monto, 2000);
   });
+
+  test(
+      'movimientosCliente mezcla ventas fiadas y abonos del cliente, '
+      'más reciente primero', () async {
+    await venderFiado(5000, DateTime(2026, 9, 1));
+    await repo.registrarPago(
+      clienteId: clienteId,
+      monto: 2000,
+      usuarioId: usuarioId,
+      fecha: DateTime(2026, 9, 2),
+    );
+    await venderFiado(1000, DateTime(2026, 9, 3));
+    // Venta de contado del mismo cliente: no es fiado, no debe aparecer.
+    await db.into(db.ventas).insert(
+          VentasCompanion.insert(
+            monto: 9999,
+            fecha: DateTime(2026, 9, 4),
+            clienteId: Value(clienteId),
+            usuarioId: usuarioId,
+          ),
+        );
+    // Abono de otro cliente: no debe aparecer.
+    final otroCliente = await db.into(db.clientes).insert(
+          ClientesCompanion.insert(nombre: 'Doña Rosa'),
+        );
+    await repo.registrarPago(
+      clienteId: otroCliente,
+      monto: 777,
+      usuarioId: usuarioId,
+      fecha: DateTime(2026, 9, 5),
+    );
+
+    final movimientos = await repo.movimientosCliente(clienteId);
+
+    expect(movimientos.map((m) => m.tipo), [
+      TipoMovimientoFiado.venta,
+      TipoMovimientoFiado.abono,
+      TipoMovimientoFiado.venta,
+    ]);
+    expect(movimientos.map((m) => m.monto), [1000, 2000, 5000]);
+    expect(movimientos.first.fecha, DateTime(2026, 9, 3));
+  });
 }
