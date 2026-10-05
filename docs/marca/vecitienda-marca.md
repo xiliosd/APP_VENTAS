@@ -86,5 +86,5 @@ La app es Flutter: al aplicarlo, estos valores se traducen a `lib/ui/colores_app
 
 - **Contraste:** el verde `#16A34A` da 3.1:1 con texto blanco y sobre blanco; la Fase 2E fijó como regla ≥ 4.5:1 y por eso usa `#15803D`. Al aplicar la marca hay que decidir con el usuario: mantener `#16A34A` solo para el logo/acentos y un verde más oscuro para texto y botones, o aceptar el contraste menor.
 - **Radio de botones:** el brief pide 16 px (hoy 12 px en la app); tarjetas 12 px coincide.
-- **Logo:** el brief describe el isotipo pero no incluye el archivo; hará falta el SVG/PNG o diseñarlo.
+- **Logo:** entregado como `docs/marca/logo-vecitienda.jpeg` (JPEG 2816×1536, fondo blanco, isotipo + "VeciTienda" + slogan). Colores observados: azul ≈ `#1F4F96` (contorno y nombre), verde ≈ `#1E9E4A` (toldo y flecha). Para el ícono del lanzador y la app hará falta el isotipo solo (toldo + casita + flecha), cuadrado y con fondo transparente; idealmente en SVG o PNG de al menos 1024×1024. Si no hay vector, se recorta/vectoriza del JPEG.
 - **Alcance probable:** nombre en `MaterialApp.title`, `MarcaApp`, nombre e ícono del launcher Android (`android:label`, mipmaps), fuente de títulos (Poppins/Nunito/Outfit) empaquetada, paleta y radios en el tema, header azul en Inicio.
