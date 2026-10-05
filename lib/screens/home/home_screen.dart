@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/database.dart';
 import '../../providers/sesion_provider.dart';
-import '../configuracion/productos_screen.dart';
-import '../configuracion/usuarios_screen.dart';
+import '../../ui/avatar_inicial.dart';
+import '../configuracion/ajustes_screen.dart';
 import '../fiado/lista_fiado_screen.dart';
 import '../gasto/registrar_gasto_screen.dart';
 import '../historial/historial_screen.dart';
@@ -26,38 +27,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (!sesion.haySesion) return const SizedBox.shrink();
     final usuario = sesion.usuarioActivo!;
 
-    final tabs = <_TabInfo>[
-      const _TabInfo('Resumen', Icons.dashboard, ResumenScreen()),
-      const _TabInfo('Fiado', Icons.people, ListaFiadoScreen()),
-      const _TabInfo('Historial', Icons.history, HistorialScreen()),
+    final tabs = <_Pestana>[
+      const _Pestana('Inicio', Icons.space_dashboard_outlined,
+          Icons.space_dashboard_rounded, ResumenScreen()),
+      const _Pestana('Fiado', Icons.people_outline_rounded,
+          Icons.people_rounded, ListaFiadoScreen()),
+      const _Pestana('Historial', Icons.receipt_long_outlined,
+          Icons.receipt_long_rounded, HistorialScreen()),
       if (sesion.esAdmin)
-        const _TabInfo('Config', Icons.settings, _ConfiguracionMenu()),
+        const _Pestana('Ajustes', Icons.settings_outlined,
+            Icons.settings_rounded, AjustesScreen()),
     ];
-
     if (_tabActual >= tabs.length) _tabActual = 0;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Hola, ${usuario.nombre}'),
-        actions: [
-          IconButton(
-            key: const Key('boton_cerrar_sesion'),
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(sesionProvider.notifier).cerrarSesion(),
-          ),
-        ],
+        title: Text(_tabActual == 0
+            ? 'Hola, ${usuario.nombre}'
+            : tabs[_tabActual].titulo),
+        actions: [_MenuCuenta(usuario: usuario), const SizedBox(width: 8)],
       ),
       body: tabs[_tabActual].pantalla,
-      bottomNavigationBar: BottomNavigationBar(
-        // Con 4 pestañas el tipo por defecto es "shifting", que deja los
-        // íconos casi blancos sobre la barra clara (invisibles).
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _tabActual,
-        onTap: (index) => setState(() => _tabActual = index),
-        items: tabs
-            .map((t) =>
-                BottomNavigationBarItem(icon: Icon(t.icono), label: t.titulo))
-            .toList(),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _tabActual,
+        onDestinationSelected: (i) => setState(() => _tabActual = i),
+        destinations: [
+          for (final t in tabs)
+            NavigationDestination(
+              icon: Icon(t.icono),
+              selectedIcon: Icon(t.iconoActivo),
+              label: t.titulo,
+            ),
+        ],
       ),
       floatingActionButton: _tabActual == 0
           ? Column(
@@ -71,7 +72,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         builder: (_) => const RegistrarVentaScreen()),
                   ),
                   label: const Text('+ Venta'),
-                  icon: const Icon(Icons.add_shopping_cart),
                 ),
                 const SizedBox(height: 8),
                 FloatingActionButton.extended(
@@ -81,8 +81,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     MaterialPageRoute(
                         builder: (_) => const RegistrarGastoScreen()),
                   ),
-                  label: const Text('+ Gasto'),
-                  icon: const Icon(Icons.remove_shopping_cart),
+                  label: const Text('− Gasto'),
                 ),
               ],
             )
@@ -91,35 +90,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _TabInfo {
-  const _TabInfo(this.titulo, this.icono, this.pantalla);
+class _Pestana {
+  const _Pestana(this.titulo, this.icono, this.iconoActivo, this.pantalla);
 
   final String titulo;
   final IconData icono;
+  final IconData iconoActivo;
   final Widget pantalla;
 }
 
-class _ConfiguracionMenu extends StatelessWidget {
-  const _ConfiguracionMenu();
+class _MenuCuenta extends ConsumerWidget {
+  const _MenuCuenta({required this.usuario});
+
+  final Usuario usuario;
 
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      children: [
-        ListTile(
-          key: const Key('menu_productos'),
-          title: const Text('Productos'),
-          leading: const Icon(Icons.inventory),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const ProductosScreen()),
-          ),
-        ),
-        ListTile(
-          key: const Key('menu_usuarios'),
-          title: const Text('Usuarios'),
-          leading: const Icon(Icons.group),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const UsuariosScreen()),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<String>(
+      key: const Key('menu_cuenta'),
+      tooltip: 'Cuenta',
+      icon: AvatarInicial(id: usuario.id, nombre: usuario.nombre, radio: 16),
+      onSelected: (_) => ref.read(sesionProvider.notifier).cerrarSesion(),
+      itemBuilder: (_) => [
+        PopupMenuItem<String>(
+          key: const Key('boton_cerrar_sesion'),
+          value: 'salir',
+          child: Row(
+            children: [
+              const Icon(Icons.logout_rounded),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text('Cerrar sesión (${usuario.nombre})',
+                    overflow: TextOverflow.ellipsis),
+              ),
+            ],
           ),
         ),
       ],

@@ -1,0 +1,81 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../providers/sesion_provider.dart';
+import '../../ui/colores_app.dart';
+import 'productos_screen.dart';
+import 'usuarios_screen.dart';
+
+class AjustesScreen extends ConsumerWidget {
+  const AjustesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const _Titulo('TIENDA'),
+        Card(
+          child: Column(
+            children: [
+              ListTile(
+                key: const Key('menu_productos'),
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: const Text('Productos'),
+                subtitle: const Text('Catálogo y precios'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProductosScreen()),
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                key: const Key('menu_usuarios'),
+                leading: const Icon(Icons.group_outlined),
+                title: const Text('Usuarios'),
+                subtitle: const Text('Administradores, vendedores y PIN'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const UsuariosScreen()),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        const _Titulo('CUENTA'),
+        Card(
+          child: ListTile(
+            key: const Key('ajustes_cerrar_sesion'),
+            leading: const Icon(Icons.logout_rounded, color: ColoresApp.sale),
+            title: const Text('Cerrar sesión',
+                style: TextStyle(color: ColoresApp.sale)),
+            onTap: () => ref.read(sesionProvider.notifier).cerrarSesion(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Titulo extends StatelessWidget {
+  const _Titulo(this.texto);
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        texto,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+          color: ColoresApp.textoSecundario,
+        ),
+      ),
+    );
+  }
+}

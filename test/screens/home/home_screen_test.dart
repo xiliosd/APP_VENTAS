@@ -1,5 +1,4 @@
 import 'package:app_ventas/data/database.dart';
-import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/screens/home/home_screen.dart';
 import 'package:drift/native.dart';
@@ -7,97 +6,82 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Future<ProviderContainer> _containerConSesion(
-  AppDatabase db, {
-  required String rol,
-}) async {
-  final usuarioId = await db.into(db.usuarios).insert(
-        UsuariosCompanion.insert(nombre: 'Persona', rol: rol, pinHash: 'x'),
-      );
-  final usuario =
-      await (db.select(db.usuarios)..where((u) => u.id.equals(usuarioId)))
-          .getSingle();
-  final container = ProviderContainer(
-    overrides: [databaseProvider.overrideWithValue(db)],
-  );
-  container.read(sesionProvider.notifier).state =
-      SesionState(usuarioActivo: usuario);
-  return container;
-}
+import '../../support/montaje.dart';
 
 void main() {
-  testWidgets('el admin ve la pestaña Config', (tester) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container = await _containerConSesion(db, rol: 'admin');
+  late AppDatabase db;
+
+  setUp(() => db = AppDatabase(NativeDatabase.memory()));
+  tearDown(() => db.close());
+
+  Future<ProviderContainer> montar(WidgetTester tester,
+      {String rol = 'admin'}) async {
+    final container = await containerConSesion(db, rol: rol);
     addTearDown(container.dispose);
-
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: HomeScreen()),
-      ),
-    );
+    await tester.pumpWidget(appDePrueba(container, inicio: const HomeScreen()));
     await tester.pumpAndSettle();
+    return container;
+  }
 
-    expect(find.text('Config'), findsOneWidget);
-  });
-
-  testWidgets('el vendedor no ve la pestaña Config', (tester) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container = await _containerConSesion(db, rol: 'vendedor');
-    addTearDown(container.dispose);
-
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: HomeScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
+  testWidgets('el admin ve la pestaña Ajustes', (tester) async {
+    await montar(tester);
+    expect(find.text('Ajustes'), findsOneWidget);
     expect(find.text('Config'), findsNothing);
   });
 
-  testWidgets('cerrar sesión limpia el usuario activo', (tester) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container = await _containerConSesion(db, rol: 'admin');
-    addTearDown(container.dispose);
+  testWidgets('el vendedor no ve la pestaña Ajustes', (tester) async {
+    await montar(tester, rol: 'vendedor');
+    expect(find.text('Ajustes'), findsNothing);
+  });
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: HomeScreen()),
-      ),
-    );
+  testWidgets('en Inicio saluda y en otra pestaña muestra su título',
+      (tester) async {
+    await montar(tester);
+    expect(find.descendant(
+            of: find.byType(AppBar), matching: find.text('Hola, Ana')),
+        findsOneWidget);
+
+    await tester.tap(find.text('Ajustes'));
     await tester.pumpAndSettle();
+    expect(find.descendant(
+            of: find.byType(AppBar), matching: find.text('Ajustes')),
+        findsOneWidget);
+  });
 
+  testWidgets('cerrar sesión desde el menú de la cuenta', (tester) async {
+    final container = await montar(tester);
+
+    await tester.tap(find.byKey(const Key('menu_cuenta')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('boton_cerrar_sesion')));
     await tester.pumpAndSettle();
 
     expect(container.read(sesionProvider).haySesion, isFalse);
   });
 
+  testWidgets('Ajustes tiene Productos, Usuarios y Cerrar sesión',
+      (tester) async {
+    final container = await montar(tester);
+
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('menu_productos')), findsOneWidget);
+    expect(find.byKey(const Key('menu_usuarios')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('ajustes_cerrar_sesion')));
+    await tester.pumpAndSettle();
+    expect(container.read(sesionProvider).haySesion, isFalse);
+  });
+
   testWidgets('los íconos de las pestañas se ven oscuros sobre la barra clara',
       (tester) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final container = await _containerConSesion(db, rol: 'admin');
-    addTearDown(container.dispose);
+    await montar(tester);
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: HomeScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // Con 4 pestañas BottomNavigationBar usa por defecto el modo "shifting",
-    // que pinta los íconos casi blancos sobre el fondo claro: invisibles.
-    for (final icono in [Icons.people, Icons.history, Icons.settings]) {
+    for (final icono in [
+      Icons.people_outline_rounded,
+      Icons.receipt_long_outlined,
+      Icons.settings_outlined,
+    ]) {
       final elemento = tester.element(find.byIcon(icono));
       expect(IconTheme.of(elemento).color!.computeLuminance(), lessThan(0.5),
           reason: 'el ícono $icono debe verse sobre el fondo de la barra');
