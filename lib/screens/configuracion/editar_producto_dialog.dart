@@ -26,6 +26,10 @@ class _EditarProductoDialogState extends ConsumerState<EditarProductoDialog> {
   String? _errorNombre;
   String? _errorPrecio;
 
+  /// True mientras se guarda; un segundo toque no debe volver a hacer pop,
+  /// porque cerraría también la pantalla de Productos.
+  bool _guardando = false;
+
   @override
   void dispose() {
     _nombreController.dispose();
@@ -34,6 +38,7 @@ class _EditarProductoDialogState extends ConsumerState<EditarProductoDialog> {
   }
 
   Future<void> _guardar() async {
+    if (_guardando) return;
     final nombre = _nombreController.text.trim();
     final precio = parsearMonto(_precioController.text);
     setState(() {
@@ -43,12 +48,17 @@ class _EditarProductoDialogState extends ConsumerState<EditarProductoDialog> {
     });
     if (_errorNombre != null || _errorPrecio != null) return;
 
-    await ref.read(productoRepositoryProvider).actualizarProducto(
-          widget.producto.id,
-          nombre: nombre,
-          precio: precio,
-        );
-    if (mounted) Navigator.of(context).pop(true);
+    setState(() => _guardando = true);
+    try {
+      await ref.read(productoRepositoryProvider).actualizarProducto(
+            widget.producto.id,
+            nombre: nombre,
+            precio: precio,
+          );
+      if (mounted) Navigator.of(context).pop(true);
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
   }
 
   @override
@@ -80,7 +90,7 @@ class _EditarProductoDialogState extends ConsumerState<EditarProductoDialog> {
         ),
         FilledButton(
           key: const Key('boton_guardar_producto'),
-          onPressed: _guardar,
+          onPressed: _guardando ? null : _guardar,
           child: const Text('Guardar'),
         ),
       ],

@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/providers/repository_providers.dart';
+import 'package:app_ventas/repositories/producto_repository.dart';
 import 'package:app_ventas/screens/configuracion/productos_screen.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -98,4 +102,50 @@ void main() {
     expect(find.byKey(Key('producto_item_$id')), findsOneWidget);
     expect(find.text('Inactivos'), findsNothing);
   });
+
+  testWidgets('un doble toque en Guardar producto cierra solo el diálogo',
+      (tester) async {
+    final id = await crearArepa();
+    final guardado = Completer<void>();
+    final navegador = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          productoRepositoryProvider
+              .overrideWithValue(_ProductoRepositoryLento(db, guardado.future)),
+        ],
+        child: MaterialApp(navigatorKey: navegador, home: const Text('Inicio')),
+      ),
+    );
+    navegador.currentState!
+        .push(MaterialPageRoute(builder: (_) => const ProductosScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(Key('producto_item_$id')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_guardar_producto')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_guardar_producto')));
+    await tester.pump();
+    guardado.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(ProductosScreen), findsOneWidget);
+  });
+}
+
+/// Espera a [_espera] antes de guardar los cambios, para simular la latencia
+/// de la base de datos en segundo plano.
+class _ProductoRepositoryLento extends ProductoRepository {
+  _ProductoRepositoryLento(super.db, this._espera);
+
+  final Future<void> _espera;
+
+  @override
+  Future<void> actualizarProducto(int id, {String? nombre, int? precio}) async {
+    await _espera;
+    return super.actualizarProducto(id, nombre: nombre, precio: precio);
+  }
 }

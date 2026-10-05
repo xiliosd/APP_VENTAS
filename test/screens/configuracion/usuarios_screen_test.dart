@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/providers/repository_providers.dart';
 import 'package:app_ventas/repositories/usuario_repository.dart';
 import 'package:app_ventas/screens/configuracion/usuarios_screen.dart';
 import 'package:drift/native.dart';
@@ -103,4 +106,52 @@ void main() {
     expect(find.text('El PIN debe tener 4 dígitos'), findsOneWidget);
     expect(await repo.verificarPin(id, '1111'), isNotNull);
   });
+
+  testWidgets('un doble toque en Guardar PIN cierra solo el diálogo',
+      (tester) async {
+    final id = await UsuarioRepository(db)
+        .crearUsuario(nombre: 'Beto', rol: 'vendedor', pin: '1111');
+    final guardado = Completer<void>();
+    final navegador = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          usuarioRepositoryProvider
+              .overrideWithValue(_UsuarioRepositoryLento(db, guardado.future)),
+        ],
+        child: MaterialApp(navigatorKey: navegador, home: const Text('Inicio')),
+      ),
+    );
+    navegador.currentState!
+        .push(MaterialPageRoute(builder: (_) => const UsuariosScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(Key('usuario_item_$id')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('campo_nuevo_pin')), '9999');
+    await tester.tap(find.byKey(const Key('boton_guardar_pin')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_guardar_pin')));
+    await tester.pump();
+    guardado.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(UsuariosScreen), findsOneWidget);
+  });
+}
+
+/// Espera a [_espera] antes de guardar el PIN, para simular la latencia de la
+/// base de datos en segundo plano.
+class _UsuarioRepositoryLento extends UsuarioRepository {
+  _UsuarioRepositoryLento(super.db, this._espera);
+
+  final Future<void> _espera;
+
+  @override
+  Future<void> resetearPin(int usuarioId, String nuevoPin) async {
+    await _espera;
+    return super.resetearPin(usuarioId, nuevoPin);
+  }
 }

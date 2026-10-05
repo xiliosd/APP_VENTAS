@@ -24,6 +24,10 @@ class _DetalleClienteScreenState extends ConsumerState<DetalleClienteScreen> {
   final _montoController = TextEditingController();
   String? _errorMonto;
 
+  /// True mientras se valida y guarda un abono; evita que un doble toque
+  /// registre el mismo abono dos veces.
+  bool _guardando = false;
+
   int get _clienteId => widget.clienteConSaldo.cliente.id;
 
   @override
@@ -33,6 +37,16 @@ class _DetalleClienteScreenState extends ConsumerState<DetalleClienteScreen> {
   }
 
   Future<void> _registrarAbono() async {
+    if (_guardando) return;
+    setState(() => _guardando = true);
+    try {
+      await _guardarAbono();
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  Future<void> _guardarAbono() async {
     final monto = parsearMonto(_montoController.text);
     if (monto == null || monto <= 0) {
       setState(() => _errorMonto = 'Escribe un monto válido');
@@ -40,6 +54,7 @@ class _DetalleClienteScreenState extends ConsumerState<DetalleClienteScreen> {
     }
     final fiadoRepo = ref.read(fiadoRepositoryProvider);
     final saldo = await fiadoRepo.saldoCliente(_clienteId);
+    if (!mounted) return;
     if (monto > saldo) {
       setState(() => _errorMonto =
           'El abono no puede ser mayor que la deuda (${formatoMoneda(saldo)})');
@@ -95,7 +110,7 @@ class _DetalleClienteScreenState extends ConsumerState<DetalleClienteScreen> {
             const SizedBox(height: 8),
             ElevatedButton(
               key: const Key('boton_registrar_abono'),
-              onPressed: _registrarAbono,
+              onPressed: _guardando ? null : _registrarAbono,
               child: const Text('Registrar abono'),
             ),
             const SizedBox(height: 24),

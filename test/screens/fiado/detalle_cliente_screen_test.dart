@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/providers/repository_providers.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/repositories/fiado_repository.dart';
 import 'package:app_ventas/screens/fiado/detalle_cliente_screen.dart';
@@ -17,7 +20,8 @@ void main() {
 
   /// Crea un cliente que debe $5.000 (una venta fiada el 01/09/2026 10:00),
   /// abre su detalle con una sesión activa y devuelve el id del cliente.
-  Future<int> montarDetalle(WidgetTester tester) async {
+  Future<int> montarDetalle(WidgetTester tester,
+      {List<Override> overrides = const []}) async {
     final usuarioId = await db.into(db.usuarios).insert(
           UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
         );
@@ -41,7 +45,7 @@ void main() {
             .getSingle();
 
     final container = ProviderContainer(
-      overrides: [databaseProvider.overrideWithValue(db)],
+      overrides: [databaseProvider.overrideWithValue(db), ...overrides],
     );
     container.read(sesionProvider.notifier).state =
         SesionState(usuarioActivo: usuario);
@@ -118,4 +122,42 @@ void main() {
     expect(find.text('Escribe un monto válido'), findsOneWidget);
     expect(await FiadoRepository(db).saldoCliente(clienteId), 5000);
   });
+
+
+  testWidgets('un doble toque en Registrar abono registra un solo abono',
+      (tester) async {
+    // En producción la base corre en otro isolate, así que la lectura del
+    // saldo tarda; el Completer reproduce esa espera para que el segundo
+    // toque llegue mientras el primero sigue en curso.
+    final lectura = Completer<void>();
+    final clienteId = await montarDetalle(tester, overrides: [
+      fiadoRepositoryProvider
+          .overrideWithValue(_FiadoRepositoryLento(db, lectura.future)),
+    ]);
+
+    await tester.enterText(find.byKey(const Key('campo_monto_abono')), '2000');
+    await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pump();
+    lectura.complete();
+    await tester.pumpAndSettle();
+
+    expect(await FiadoRepository(db).pagosCliente(clienteId), hasLength(1));
+    expect(await FiadoRepository(db).saldoCliente(clienteId), 3000);
+  });
+}
+
+/// Espera a [_espera] antes de leer el saldo, para simular la latencia de la
+/// base de datos en segundo plano.
+class _FiadoRepositoryLento extends FiadoRepository {
+  _FiadoRepositoryLento(super.db, this._espera);
+
+  final Future<void> _espera;
+
+  @override
+  Future<int> saldoCliente(int clienteId) async {
+    await _espera;
+    return super.saldoCliente(clienteId);
+  }
 }

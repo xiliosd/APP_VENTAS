@@ -22,4 +22,13 @@ void main() {
     expect(parsearMonto('12,5'), isNull);
     expect(parsearMonto(''), isNull);
   });
+
+  test('parsearMonto rechaza números que parecen decimales', () {
+    expect(parsearMonto('2.5'), isNull);
+    expect(parsearMonto('1.50'), isNull);
+    expect(parsearMonto('1.0000'), isNull);
+    expect(parsearMonto('.500'), isNull);
+    expect(parsearMonto('1.000.000'), 1000000);
+    expect(parsearMonto(r'$ 12.500'), 12500);
+  });
 }
