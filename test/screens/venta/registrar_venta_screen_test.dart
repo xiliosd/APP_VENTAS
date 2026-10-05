@@ -204,4 +204,44 @@ void main() {
     expect(find.text('Agrega algo para cobrar'), findsOneWidget);
     expect(await db.select(db.ventas).get(), isEmpty);
   });
+
+  testWidgets('escribir el nombre basta para fiar y no duplica clientes',
+      (tester) async {
+    final pedro = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
+    await abrirVenta(tester);
+
+    await tester.tap(find.text('Fiado'));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('monto_rapido_1000')));
+    await tester.enterText(find.byKey(const Key('campo_cliente')), 'don pedro ');
+    await tester.pump();
+    expect(find.text(r'Fiar $1.000 a don pedro'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+
+    expect(await db.select(db.clientes).get(), hasLength(1));
+    expect((await db.select(db.ventas).get()).single.clienteId, pedro);
+  });
+
+  testWidgets('los productos no se desbordan con letra grande en celular pequeño',
+      (tester) async {
+    await db.into(db.productos).insert(
+        ProductosCompanion.insert(nombre: 'Arroz Diana libra', precio: 3800));
+    await db.into(db.productos).insert(
+        ProductosCompanion.insert(nombre: 'Pan', precio: 123456789));
+    await tester.pumpWidget(appDePrueba(container, navegador: navegador));
+    tester.view.physicalSize = const Size(720, 1560);
+    tester.view.devicePixelRatio = 2;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    navegador.currentState!.push(
+        MaterialPageRoute(builder: (_) => const RegistrarVentaScreen()));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
 }

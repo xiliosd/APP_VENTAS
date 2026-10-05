@@ -4,7 +4,11 @@ import '../ui/mosaico.dart';
 import '../util/formato_moneda.dart';
 
 class MontoRapidoGrid extends StatelessWidget {
-  const MontoRapidoGrid({super.key, required this.onSeleccionar, this.cantidadDe});
+  const MontoRapidoGrid({
+    super.key,
+    required this.onSeleccionar,
+    this.cantidadDe,
+  });
 
   final void Function(int monto) onSeleccionar;
 
@@ -15,13 +19,8 @@ class MontoRapidoGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      childAspectRatio: 1.6,
+    return GrillaMosaicos(
+      conSubtitulo: false,
       children: [
         for (final monto in montos)
           Mosaico(

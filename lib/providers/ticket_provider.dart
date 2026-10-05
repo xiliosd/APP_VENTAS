@@ -22,12 +22,12 @@ class LineaTicket {
   int get subtotal => precio * cantidad;
 
   LineaTicket conCantidad(int nueva) => LineaTicket(
-        clave: clave,
-        etiqueta: etiqueta,
-        precio: precio,
-        cantidad: nueva,
-        productoId: productoId,
-      );
+    clave: clave,
+    etiqueta: etiqueta,
+    precio: precio,
+    cantidad: nueva,
+    productoId: productoId,
+  );
 }
 
 /// Cliente de una venta fiada. [id] null = cliente nuevo por crear al cobrar.
@@ -39,11 +39,27 @@ class ClienteTicket {
 }
 
 class Ticket {
-  const Ticket({this.lineas = const [], this.esFiado = false, this.cliente});
+  const Ticket({
+    this.lineas = const [],
+    this.esFiado = false,
+    this.cliente,
+    this.nombreEscrito = '',
+  });
 
   final List<LineaTicket> lineas;
   final bool esFiado;
   final ClienteTicket? cliente;
+
+  /// Lo escrito en "¿A quién le fías?" sin tocar una sugerencia. Basta para
+  /// fiar: al cobrar se busca (o crea) el cliente con ese nombre.
+  final String nombreEscrito;
+
+  /// Cliente con el que se fía: el elegido o, si no hay, el nombre escrito.
+  ClienteTicket? get clienteParaCobrar {
+    if (cliente != null) return cliente;
+    final nombre = nombreEscrito.trim();
+    return nombre.isEmpty ? null : ClienteTicket(nombre: nombre);
+  }
 
   int get total => lineas.fold(0, (suma, l) => suma + l.subtotal);
   int get cantidadArticulos => lineas.fold(0, (suma, l) => suma + l.cantidad);
@@ -54,7 +70,7 @@ class Ticket {
   int? get productoIdUnico =>
       lineas.length == 1 ? lineas.single.productoId : null;
 
-  bool get puedeCobrar => !estaVacio && (!esFiado || cliente != null);
+  bool get puedeCobrar => !estaVacio && (!esFiado || clienteParaCobrar != null);
 
   int cantidadDe(String clave) {
     for (final linea in lineas) {
@@ -68,39 +84,57 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
   @override
   Ticket build() => const Ticket();
 
-  void agregarProducto(Producto producto) => _agregar(LineaTicket(
-        clave: 'p${producto.id}',
-        etiqueta: producto.nombre,
-        precio: producto.precio,
-        productoId: producto.id,
-      ));
+  void agregarProducto(Producto producto) => _agregar(
+    LineaTicket(
+      clave: 'p${producto.id}',
+      etiqueta: producto.nombre,
+      precio: producto.precio,
+      productoId: producto.id,
+    ),
+  );
 
   void agregarMonto(int monto) {
     if (monto <= 0) return;
-    _agregar(LineaTicket(
-      clave: 'm$monto',
-      etiqueta: formatoMoneda(monto),
-      precio: monto,
-    ));
+    _agregar(
+      LineaTicket(
+        clave: 'm$monto',
+        etiqueta: formatoMoneda(monto),
+        precio: monto,
+      ),
+    );
   }
 
   void sumar(String clave) => _cambiarCantidad(clave, 1);
 
   void restar(String clave) => _cambiarCantidad(clave, -1);
 
-  void quitar(String clave) => _conLineas(
-      [for (final l in state.lineas) if (l.clave != clave) l]);
+  void quitar(String clave) => _conLineas([
+    for (final l in state.lineas)
+      if (l.clave != clave) l,
+  ]);
 
   void vaciar() => _conLineas(const []);
 
   void cambiarFiado(bool esFiado) => state = Ticket(
-        lineas: state.lineas,
-        esFiado: esFiado,
-        cliente: esFiado ? state.cliente : null,
-      );
+    lineas: state.lineas,
+    esFiado: esFiado,
+    cliente: esFiado ? state.cliente : null,
+    nombreEscrito: esFiado ? state.nombreEscrito : '',
+  );
 
-  void elegirCliente(ClienteTicket? cliente) => state =
-      Ticket(lineas: state.lineas, esFiado: state.esFiado, cliente: cliente);
+  void elegirCliente(ClienteTicket? cliente) => state = Ticket(
+    lineas: state.lineas,
+    esFiado: state.esFiado,
+    cliente: cliente,
+    nombreEscrito: state.nombreEscrito,
+  );
+
+  void escribirCliente(String nombre) => state = Ticket(
+    lineas: state.lineas,
+    esFiado: state.esFiado,
+    cliente: state.cliente,
+    nombreEscrito: nombre,
+  );
 
   void _agregar(LineaTicket nueva) {
     if (state.cantidadDe(nueva.clave) > 0) {
@@ -111,17 +145,22 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
   }
 
   void _cambiarCantidad(String clave, int delta) => _conLineas([
-        for (final l in state.lineas)
-          if (l.clave != clave)
-            l
-          else if (l.cantidad + delta > 0)
-            l.conCantidad(l.cantidad + delta),
-      ]);
+    for (final l in state.lineas)
+      if (l.clave != clave)
+        l
+      else if (l.cantidad + delta > 0)
+        l.conCantidad(l.cantidad + delta),
+  ]);
 
-  void _conLineas(List<LineaTicket> lineas) => state =
-      Ticket(lineas: lineas, esFiado: state.esFiado, cliente: state.cliente);
+  void _conLineas(List<LineaTicket> lineas) => state = Ticket(
+    lineas: lineas,
+    esFiado: state.esFiado,
+    cliente: state.cliente,
+    nombreEscrito: state.nombreEscrito,
+  );
 }
 
 /// Ticket de la pantalla "Nueva venta". Se descarta al salir de la pantalla.
-final ticketProvider =
-    NotifierProvider.autoDispose<TicketNotifier, Ticket>(TicketNotifier.new);
+final ticketProvider = NotifierProvider.autoDispose<TicketNotifier, Ticket>(
+  TicketNotifier.new,
+);

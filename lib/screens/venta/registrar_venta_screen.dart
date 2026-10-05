@@ -40,10 +40,10 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
   }
 
   Future<void> _verTicket() => mostrarHojaInferior<void>(
-        context,
-        titulo: 'Ticket',
-        builder: (_) => const _HojaTicket(),
-      );
+    context,
+    titulo: 'Ticket',
+    builder: (_) => const _HojaTicket(),
+  );
 
   Future<void> _cobrar() async {
     if (_cobrando) return;
@@ -53,8 +53,9 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       final sesion = ref.read(sesionProvider).usuarioActivo!;
       int? clienteId;
       if (ticket.esFiado) {
-        final cliente = ticket.cliente!;
-        clienteId = cliente.id ??
+        final cliente = ticket.clienteParaCobrar!;
+        clienteId =
+            cliente.id ??
             await ref
                 .read(clienteRepositoryProvider)
                 .obtenerOCrearCliente(cliente.nombre);
@@ -102,13 +103,8 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
           ],
           const _Seccion('PRODUCTOS'),
           productosAsync.when(
-            data: (productos) => GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 1.25,
+            data: (productos) => GrillaMosaicos(
+              conSubtitulo: true,
               children: [
                 for (final p in productos)
                   Mosaico(
@@ -212,8 +208,9 @@ class _SelectorClienteState extends ConsumerState<_SelectorCliente> {
         .where((c) => c.nombre.toLowerCase().contains(buscado))
         .take(6)
         .toList();
-    final existeExacto =
-        clientes.any((c) => c.nombre.trim().toLowerCase() == buscado);
+    final existeExacto = clientes.any(
+      (c) => c.nombre.trim().toLowerCase() == buscado,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,9 +221,14 @@ class _SelectorClienteState extends ConsumerState<_SelectorCliente> {
           decoration: InputDecoration(
             labelText: '¿A quién le fías?',
             prefixIcon: const Icon(Icons.search_rounded),
-            errorText: ticket.estaVacio ? null : 'Elige o escribe el cliente',
+            errorText: ticket.estaVacio || texto.isNotEmpty
+                ? null
+                : 'Escribe o elige el cliente',
           ),
-          onChanged: (valor) => setState(() => _busqueda = valor),
+          onChanged: (valor) {
+            setState(() => _busqueda = valor);
+            notifier.escribirCliente(valor);
+          },
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -237,8 +239,9 @@ class _SelectorClienteState extends ConsumerState<_SelectorCliente> {
               ActionChip(
                 key: Key('cliente_sugerido_${c.id}'),
                 label: Text(c.nombre),
-                onPressed: () => notifier
-                    .elegirCliente(ClienteTicket(id: c.id, nombre: c.nombre)),
+                onPressed: () => notifier.elegirCliente(
+                  ClienteTicket(id: c.id, nombre: c.nombre),
+                ),
               ),
             if (texto.isNotEmpty && !existeExacto)
               ActionChip(
@@ -273,16 +276,17 @@ class _BarraCobro extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = formatoMoneda(ticket.total);
+    final cliente = ticket.clienteParaCobrar;
     final texto = !ticket.esFiado
         ? 'Cobrar $total'
-        : ticket.cliente == null
-            ? 'Fiar $total'
-            : 'Fiar $total a ${ticket.cliente!.nombre}';
+        : cliente == null
+        ? 'Fiar $total'
+        : 'Fiar $total a ${cliente.nombre}';
     final String? aviso = ticket.estaVacio
         ? 'Agrega algo para cobrar'
-        : (ticket.esFiado && ticket.cliente == null)
-            ? 'Falta elegir el cliente'
-            : null;
+        : (ticket.esFiado && cliente == null)
+        ? 'Falta elegir el cliente'
+        : null;
     final n = ticket.cantidadArticulos;
 
     return Material(
@@ -304,22 +308,35 @@ class _BarraCobro extends StatelessWidget {
                       n == 1 ? '1 artículo' : '$n artículos',
                       key: const Key('texto_articulos'),
                       overflow: TextOverflow.ellipsis,
-                      style:
-                          const TextStyle(color: ColoresApp.textoSecundario),
+                      style: const TextStyle(color: ColoresApp.textoSecundario),
                     ),
                   ),
-                  TextButton(
-                    key: const Key('boton_ver_ticket'),
-                    onPressed: ticket.estaVacio ? null : onVerTicket,
-                    child: const Text('Ver ticket'),
+                  // Los botones también ceden espacio con letra grande.
+                  Flexible(
+                    child: TextButton(
+                      key: const Key('boton_ver_ticket'),
+                      onPressed: ticket.estaVacio ? null : onVerTicket,
+                      child: const Text(
+                        'Ver ticket',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
                   const Spacer(),
-                  TextButton(
-                    key: const Key('boton_vaciar'),
-                    style:
-                        TextButton.styleFrom(foregroundColor: ColoresApp.sale),
-                    onPressed: ticket.estaVacio ? null : onVaciar,
-                    child: const Text('Vaciar'),
+                  Flexible(
+                    child: TextButton(
+                      key: const Key('boton_vaciar'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: ColoresApp.sale,
+                      ),
+                      onPressed: ticket.estaVacio ? null : onVaciar,
+                      child: const Text(
+                        'Vaciar',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -329,7 +346,9 @@ class _BarraCobro extends StatelessWidget {
                   child: Text(
                     aviso,
                     style: const TextStyle(
-                        fontSize: 13, color: ColoresApp.textoSecundario),
+                      fontSize: 13,
+                      color: ColoresApp.textoSecundario,
+                    ),
                   ),
                 ),
               BotonPrincipal(
@@ -365,10 +384,13 @@ class _HojaTicket extends ConsumerWidget {
         for (final linea in ticket.lineas)
           ListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(linea.etiqueta,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle:
-                Text('${linea.cantidad} × ${formatoMoneda(linea.precio)}'),
+            title: Text(
+              linea.etiqueta,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              '${linea.cantidad} × ${formatoMoneda(linea.precio)}',
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -387,8 +409,10 @@ class _HojaTicket extends ConsumerWidget {
                 IconButton(
                   key: Key('quitar_${linea.clave}'),
                   tooltip: 'Quitar del ticket',
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      color: ColoresApp.sale),
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: ColoresApp.sale,
+                  ),
                   onPressed: () => notifier.quitar(linea.clave),
                 ),
               ],
@@ -398,8 +422,10 @@ class _HojaTicket extends ConsumerWidget {
         const SizedBox(height: 8),
         Row(
           children: [
-            const Text('Total',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const Text(
+              'Total',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
             const Spacer(),
             Monto(ticket.total, tamano: 22),
           ],
@@ -435,8 +461,9 @@ class _HojaOtroMontoState extends State<_HojaOtroMonto> {
         BotonPrincipal(
           key: const Key('boton_agregar_monto'),
           texto: 'Agregar al ticket',
-          onPressed:
-              _monto > 0 ? () => Navigator.of(context).pop(_monto) : null,
+          onPressed: _monto > 0
+              ? () => Navigator.of(context).pop(_monto)
+              : null,
         ),
       ],
     );

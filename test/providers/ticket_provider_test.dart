@@ -92,4 +92,17 @@ void main() {
 
     expect(container.read(ticketProvider).estaVacio, isTrue);
   });
+
+  test('un nombre escrito cuenta como cliente al fiar', () {
+    notifier().agregarMonto(1000);
+    notifier().cambiarFiado(true);
+    notifier().escribirCliente('  Pedro ');
+
+    expect(ticket().puedeCobrar, isTrue);
+    expect(ticket().clienteParaCobrar!.nombre, 'Pedro');
+    expect(ticket().clienteParaCobrar!.id, isNull);
+
+    notifier().escribirCliente('   ');
+    expect(ticket().puedeCobrar, isFalse);
+  });
 }
