@@ -1,83 +1,128 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/screens/home/resumen_screen.dart';
+import 'package:app_ventas/ui/monto.dart';
+import 'package:app_ventas/ui/tema_app.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('muestra los totales del día', (tester) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final usuarioId = await db.into(db.usuarios).insert(
+  late AppDatabase db;
+  late int ana;
+
+  setUp(() async {
+    db = AppDatabase(NativeDatabase.memory());
+    ana = await db.into(db.usuarios).insert(
           UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
         );
-    await db.into(db.ventas).insert(
-          VentasCompanion.insert(
-            monto: 5000,
-            fecha: DateTime.now(),
-            usuarioId: usuarioId,
-          ),
-        );
-    await db.into(db.gastos).insert(
-          GastosCompanion.insert(
-            monto: 1000,
-            fecha: DateTime.now(),
-            usuarioId: usuarioId,
-          ),
-        );
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [databaseProvider.overrideWithValue(db)],
-        child: const MaterialApp(home: Scaffold(body: ResumenScreen())),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text(r'Vendiste: $5.000'), findsOneWidget);
-    expect(find.text(r'Gastaste: $1.000'), findsOneWidget);
-    expect(find.text(r'Por cobrar: $0'), findsOneWidget);
   });
 
-  testWidgets('navegar al día anterior muestra los totales de ese día',
-      (tester) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final usuarioId = await db.into(db.usuarios).insert(
-          UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
-        );
-    final ahora = DateTime.now();
-    await db.into(db.ventas).insert(
-          VentasCompanion.insert(
-              monto: 5000, fecha: ahora, usuarioId: usuarioId),
-        );
-    await db.into(db.ventas).insert(
-          VentasCompanion.insert(
-            monto: 7000,
-            fecha: DateTime(ahora.year, ahora.month, ahora.day - 1, 12),
-            usuarioId: usuarioId,
-          ),
-        );
+  tearDown(() => db.close());
 
+  Future<void> montar(WidgetTester tester, {VoidCallback? onVerFiado}) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [databaseProvider.overrideWithValue(db)],
-        child: const MaterialApp(home: Scaffold(body: ResumenScreen())),
+        child: MaterialApp(
+          theme: temaApp(),
+          home: Scaffold(body: ResumenScreen(onVerFiado: onVerFiado)),
+        ),
       ),
     );
     await tester.pumpAndSettle();
+  }
+
+  Finder enTarjeta(String clave, String texto) => find.descendant(
+      of: find.byKey(Key(clave)), matching: find.text(texto));
+
+  Future<void> vender(int monto, {bool fiado = false, DateTime? fecha}) async {
+    int? clienteId;
+    if (fiado) {
+      clienteId = await db
+          .into(db.clientes)
+          .insert(ClientesCompanion.insert(nombre: 'Cliente $monto'));
+    }
+    await db.into(db.ventas).insert(VentasCompanion.insert(
+          monto: monto,
+          fecha: fecha ?? DateTime.now(),
+          esFiado: Value(fiado),
+          clienteId: Value(clienteId),
+          usuarioId: ana,
+        ));
+  }
+
+  testWidgets('muestra ventas, gastos, ganancia y por cobrar del día',
+      (tester) async {
+    await vender(5000);
+    await vender(2000, fiado: true);
+    await db.into(db.gastos).insert(GastosCompanion.insert(
+        monto: 1000, fecha: DateTime.now(), usuarioId: ana));
+
+    await montar(tester);
+
+    expect(enTarjeta('tarjeta_ventas', r'$7.000'), findsOneWidget);
+    expect(enTarjeta('tarjeta_ventas', '2 ventas · 1 fiada'), findsOneWidget);
+    expect(enTarjeta('tarjeta_gastos', r'$1.000'), findsOneWidget);
+    expect(enTarjeta('tarjeta_ganancia', r'$6.000'), findsOneWidget);
+    expect(enTarjeta('tarjeta_por_cobrar', r'$2.000'), findsOneWidget);
+    expect(enTarjeta('tarjeta_por_cobrar', '1 cliente'), findsOneWidget);
+  });
+
+  testWidgets('una ganancia negativa se muestra en rojo', (tester) async {
+    await db.into(db.gastos).insert(GastosCompanion.insert(
+        monto: 3000, fecha: DateTime.now(), usuarioId: ana));
+
+    await montar(tester);
+
+    final monto = tester.widget<Monto>(find.descendant(
+        of: find.byKey(const Key('tarjeta_ganancia')),
+        matching: find.byType(Monto)));
+    expect(monto.valor, -3000);
+    expect(monto.tono, TonoMonto.sale);
+  });
+
+  testWidgets('tocar Por cobrar llama onVerFiado', (tester) async {
+    var llamado = false;
+    await montar(tester, onVerFiado: () => llamado = true);
+
+    await tester.tap(find.byKey(const Key('tarjeta_por_cobrar')));
+    expect(llamado, isTrue);
+  });
+
+  testWidgets('navegar al día anterior muestra las ventas de ese día',
+      (tester) async {
+    final ahora = DateTime.now();
+    await vender(5000);
+    await vender(7000,
+        fecha: DateTime(ahora.year, ahora.month, ahora.day - 1, 12));
+
+    await montar(tester);
     expect(find.text('Hoy'), findsOneWidget);
-    expect(find.text(r'Vendiste: $5.000'), findsOneWidget);
+    expect(enTarjeta('tarjeta_ventas', r'$5.000'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('boton_dia_anterior')));
     await tester.pumpAndSettle();
-    expect(find.text(r'Vendiste: $7.000'), findsOneWidget);
+    expect(enTarjeta('tarjeta_ventas', r'$7.000'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('boton_dia_siguiente')));
     await tester.pumpAndSettle();
     expect(find.text('Hoy'), findsOneWidget);
-    expect(find.text(r'Vendiste: $5.000'), findsOneWidget);
+    expect(enTarjeta('tarjeta_ventas', r'$5.000'), findsOneWidget);
+  });
+
+  testWidgets('cifras grandes no desbordan en un celular pequeño',
+      (tester) async {
+    tester.view.physicalSize = const Size(720, 1560);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await vender(123456789);
+    await vender(98765432, fiado: true);
+
+    await montar(tester);
+
+    expect(tester.takeException(), isNull);
   });
 }

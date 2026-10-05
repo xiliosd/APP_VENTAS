@@ -6,9 +6,7 @@ import '../../providers/sesion_provider.dart';
 import '../../ui/avatar_inicial.dart';
 import '../configuracion/ajustes_screen.dart';
 import '../fiado/lista_fiado_screen.dart';
-import '../gasto/registrar_gasto_screen.dart';
 import '../historial/historial_screen.dart';
-import '../venta/registrar_venta_screen.dart';
 import 'resumen_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -28,8 +26,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final usuario = sesion.usuarioActivo!;
 
     final tabs = <_Pestana>[
-      const _Pestana('Inicio', Icons.space_dashboard_outlined,
-          Icons.space_dashboard_rounded, ResumenScreen()),
+      _Pestana('Inicio', Icons.space_dashboard_outlined,
+          Icons.space_dashboard_rounded,
+          ResumenScreen(onVerFiado: () => setState(() => _tabActual = 1))),
       const _Pestana('Fiado', Icons.people_outline_rounded,
           Icons.people_rounded, ListaFiadoScreen()),
       const _Pestana('Historial', Icons.receipt_long_outlined,
@@ -60,32 +59,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
         ],
       ),
-      floatingActionButton: _tabActual == 0
-          ? Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FloatingActionButton.extended(
-                  key: const Key('boton_nueva_venta'),
-                  heroTag: 'venta',
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const RegistrarVentaScreen()),
-                  ),
-                  label: const Text('+ Venta'),
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton.extended(
-                  key: const Key('boton_nuevo_gasto'),
-                  heroTag: 'gasto',
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const RegistrarGastoScreen()),
-                  ),
-                  label: const Text('− Gasto'),
-                ),
-              ],
-            )
-          : null,
     );
   }
 }

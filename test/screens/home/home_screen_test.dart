@@ -87,4 +87,16 @@ void main() {
           reason: 'el ícono $icono debe verse sobre el fondo de la barra');
     }
   });
+
+  testWidgets('tocar Por cobrar en Inicio abre la pestaña Fiado',
+      (tester) async {
+    await montar(tester);
+
+    await tester.tap(find.byKey(const Key('tarjeta_por_cobrar')));
+    await tester.pumpAndSettle();
+
+    expect(find.descendant(
+            of: find.byType(AppBar), matching: find.text('Fiado')),
+        findsOneWidget);
+  });
 }
