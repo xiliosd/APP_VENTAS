@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'colores_app.dart';
+import 'tipografia.dart';
 
 const _fuente = 'Inter';
 
@@ -22,6 +23,8 @@ ThemeData temaApp() {
   );
   final redondeado =
       RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
+  final redondeadoBoton =
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(16));
   const textoBoton = TextStyle(
       fontFamily: _fuente, fontSize: 16, fontWeight: FontWeight.w700);
   final bordeCampo = OutlineInputBorder(
@@ -34,19 +37,14 @@ ThemeData temaApp() {
     colorScheme: esquema,
     fontFamily: _fuente,
     scaffoldBackgroundColor: ColoresApp.fondo,
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: ColoresApp.superficie,
       foregroundColor: ColoresApp.texto,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      titleTextStyle: TextStyle(
-        fontFamily: _fuente,
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        color: ColoresApp.texto,
-      ),
-      shape: Border(bottom: BorderSide(color: ColoresApp.borde)),
+      titleTextStyle: estiloTitulo(tamano: 20),
+      shape: const Border(bottom: BorderSide(color: ColoresApp.borde)),
     ),
     cardTheme: CardThemeData(
       color: ColoresApp.superficie,
@@ -60,14 +58,14 @@ ThemeData temaApp() {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size(64, 52),
-        shape: redondeado,
+        shape: redondeadoBoton,
         textStyle: textoBoton,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(64, 52),
-        shape: redondeado,
+        shape: redondeadoBoton,
         textStyle: textoBoton,
         side: const BorderSide(color: ColoresApp.borde),
       ),

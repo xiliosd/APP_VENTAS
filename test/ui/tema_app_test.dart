@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:app_ventas/ui/colores_app.dart';
 import 'package:app_ventas/ui/tema_app.dart';
+import 'package:app_ventas/ui/tipografia.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -16,6 +17,7 @@ void main() {
   test('los pares de texto y fondo cumplen contraste 4.5:1', () {
     const pares = <String, (Color, Color)>{
       'texto/fondo': (ColoresApp.texto, ColoresApp.fondo),
+      'texto/superficie': (ColoresApp.texto, ColoresApp.superficie),
       'secundario/fondo': (ColoresApp.textoSecundario, ColoresApp.fondo),
       'secundario/superficie': (ColoresApp.textoSecundario, ColoresApp.superficie),
       'primario/superficie': (ColoresApp.primario, ColoresApp.superficie),
@@ -51,5 +53,35 @@ void main() {
           reason: archivo);
     }
     expect(File('pubspec.yaml').readAsStringSync(), contains('family: Inter'));
+  });
+
+  test('la paleta es la de VeciTienda', () {
+    expect(ColoresApp.primario, const Color(0xFF1A539B));
+    expect(ColoresApp.marcaVerde, const Color(0xFF16A34A));
+    expect(ColoresApp.fondo, const Color(0xFFF8FAFC));
+    expect(ColoresApp.texto, const Color(0xFF1E293B));
+    expect(ColoresApp.entraSuave, const Color(0xFFBBF7D0));
+    expect(ColoresApp.saleSuave, const Color(0xFFFECACA));
+  });
+
+  test('el verde de marca solo se usa en gráficos: ≥ 3:1 sobre blanco', () {
+    expect(contraste(ColoresApp.marcaVerde, ColoresApp.superficie),
+        greaterThanOrEqualTo(3));
+  });
+
+  test('los títulos usan Nunito ExtraBold con el eje de peso fijado', () {
+    final estilo = estiloTitulo(tamano: 20);
+    expect(estilo.fontFamily, 'Nunito');
+    expect(estilo.fontWeight, FontWeight.w800);
+    expect(estilo.fontVariations, const [FontVariation('wght', 800)]);
+    expect(temaApp().appBarTheme.titleTextStyle!.fontFamily, 'Nunito');
+    expect(File('assets/fonts/Nunito-Variable.ttf').existsSync(), isTrue);
+    expect(File('pubspec.yaml').readAsStringSync(), contains('family: Nunito'));
+  });
+
+  test('los botones principales tienen radio 16', () {
+    final forma = temaApp().filledButtonTheme.style!.shape!.resolve({})!
+        as RoundedRectangleBorder;
+    expect(forma.borderRadius, BorderRadius.circular(16));
   });
 }

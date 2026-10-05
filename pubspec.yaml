@@ -82,6 +82,9 @@ flutter:
           weight: 700
         - asset: assets/fonts/Inter-ExtraBold.ttf
           weight: 800
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito-Variable.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:
