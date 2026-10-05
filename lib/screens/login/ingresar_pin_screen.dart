@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/sesion_provider.dart';
+import '../../ui/avatar_inicial.dart';
+import '../../ui/colores_app.dart';
 import '../../widgets/teclado_numerico.dart';
 
 class IngresarPinScreen extends ConsumerStatefulWidget {
@@ -49,25 +51,82 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final usuario = widget.usuario;
     return Scaffold(
-      appBar: AppBar(title: Text('Hola, ${widget.usuario.nombre}')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '${'●' * _pin.length}${'○' * (4 - _pin.length)}',
-              style: const TextStyle(fontSize: 32, letterSpacing: 8),
-            ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(_error!, style: const TextStyle(color: Colors.red)),
+      appBar: AppBar(),
+      body: SafeArea(
+        // Desplazable para pantallas bajas o letra grande; en pantallas
+        // altas el teclado queda abajo gracias al Spacer.
+        child: LayoutBuilder(
+          builder: (context, limites) => SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: limites.maxHeight - 48),
+              child: IntrinsicHeight(
+                child: Column(
+                  children: [
+                    AvatarInicial(
+                      id: usuario.id,
+                      nombre: usuario.nombre,
+                      radio: 32,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Hola, ${usuario.nombre}',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Ingresa tu PIN',
+                      style: TextStyle(color: ColoresApp.textoSecundario),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (var i = 0; i < 4; i++)
+                          Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 8),
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: i < _pin.length
+                                  ? ColoresApp.primario
+                                  : Colors.transparent,
+                              border: Border.all(
+                                color: ColoresApp.primario,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    SizedBox(
+                      height: 32,
+                      child: _error == null
+                          ? null
+                          : Center(
+                              child: Text(
+                                _error!,
+                                style: const TextStyle(color: ColoresApp.sale),
+                              ),
+                            ),
+                    ),
+                    const Spacer(),
+                    TecladoNumerico(
+                      onDigito: _presionarDigito,
+                      onBorrar: _borrar,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
-            const SizedBox(height: 24),
-            TecladoNumerico(onDigito: _presionarDigito, onBorrar: _borrar),
-          ],
+            ),
+          ),
         ),
       ),
     );

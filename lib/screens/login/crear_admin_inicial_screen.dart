@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../providers/usuarios_providers.dart';
+import '../../ui/boton_principal.dart';
+import '../../ui/colores_app.dart';
+import '../../ui/marca_app.dart';
+import '../../util/pin_hash.dart';
 
 class CrearAdminInicialScreen extends ConsumerStatefulWidget {
   const CrearAdminInicialScreen({super.key});
@@ -19,6 +23,13 @@ class _CrearAdminInicialScreenState
   final _pinController = TextEditingController();
   String? _error;
 
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    _pinController.dispose();
+    super.dispose();
+  }
+
   Future<void> _crear() async {
     final nombre = _nombreController.text.trim();
     final pin = _pinController.text.trim();
@@ -26,7 +37,7 @@ class _CrearAdminInicialScreenState
       setState(() => _error = 'Escribe tu nombre');
       return;
     }
-    if (!RegExp(r'^\d{4}$').hasMatch(pin)) {
+    if (!esPinValido(pin)) {
       setState(() => _error = 'El PIN debe tener 4 dígitos');
       return;
     }
@@ -41,16 +52,19 @@ class _CrearAdminInicialScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Configura tu tienda')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(24),
           children: [
+            const MarcaApp(),
+            const SizedBox(height: 32),
+            const Text('Configura tu tienda',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
             const Text(
-              'Crea el usuario administrador de tu tienda',
-              style: TextStyle(fontSize: 18),
-              textAlign: TextAlign.center,
+              'Crea el usuario administrador. Con él podrás agregar productos '
+              'y vendedores.',
+              style: TextStyle(color: ColoresApp.textoSecundario),
             ),
             const SizedBox(height: 24),
             TextField(
@@ -68,12 +82,16 @@ class _CrearAdminInicialScreenState
               maxLength: 4,
             ),
             if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 16),
-            ElevatedButton(
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(_error!,
+                    style: const TextStyle(color: ColoresApp.sale)),
+              ),
+            const SizedBox(height: 8),
+            BotonPrincipal(
               key: const Key('boton_crear_admin'),
+              texto: 'Crear tienda',
               onPressed: _crear,
-              child: const Text('Crear'),
             ),
           ],
         ),

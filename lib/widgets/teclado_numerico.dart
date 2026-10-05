@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../ui/colores_app.dart';
+
+/// Teclado del PIN: botones circulares grandes.
 class TecladoNumerico extends StatelessWidget {
   const TecladoNumerico({
     super.key,
@@ -26,17 +29,27 @@ class TecladoNumerico extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: fila.map((texto) {
             if (texto.isEmpty) {
-              return const SizedBox(width: 72, height: 72);
+              return const SizedBox(width: 88, height: 80);
             }
             return Padding(
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.all(8),
               child: SizedBox(
-                width: 64,
-                height: 64,
+                width: 72,
+                height: 72,
                 child: ElevatedButton(
                   key: Key('tecla_$texto'),
                   onPressed: () => texto == '⌫' ? onBorrar() : onDigito(texto),
-                  child: Text(texto, style: const TextStyle(fontSize: 22)),
+                  style: ElevatedButton.styleFrom(
+                    shape: const CircleBorder(),
+                    padding: EdgeInsets.zero,
+                    foregroundColor: ColoresApp.texto,
+                  ),
+                  child: texto == '⌫'
+                      ? const Icon(Icons.backspace_outlined,
+                          semanticLabel: 'Borrar')
+                      : Text(texto,
+                          style: const TextStyle(
+                              fontSize: 26, fontWeight: FontWeight.w600)),
                 ),
               ),
             );

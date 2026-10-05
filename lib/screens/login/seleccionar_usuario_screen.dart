@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/usuarios_providers.dart';
+import '../../ui/avatar_inicial.dart';
+import '../../ui/colores_app.dart';
+import '../../ui/marca_app.dart';
 import 'ingresar_pin_screen.dart';
 
 class SeleccionarUsuarioScreen extends ConsumerWidget {
@@ -11,25 +14,47 @@ class SeleccionarUsuarioScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final usuariosAsync = ref.watch(listaUsuariosProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('¿Quién eres?')),
-      body: usuariosAsync.when(
-        data: (usuarios) => ListView(
-          children: usuarios
-              .map((usuario) => ListTile(
-                    key: Key('usuario_${usuario.id}'),
-                    leading: const Icon(Icons.person, size: 32),
-                    title: Text(usuario.nombre,
-                        style: const TextStyle(fontSize: 20)),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => IngresarPinScreen(usuario: usuario),
+      body: SafeArea(
+        child: usuariosAsync.when(
+          data: (usuarios) => ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              const MarcaApp(),
+              const SizedBox(height: 32),
+              const Text('¿Quién eres?',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              const Text('Toca tu nombre para entrar',
+                  style: TextStyle(color: ColoresApp.textoSecundario)),
+              const SizedBox(height: 16),
+              for (final usuario in usuarios)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Card(
+                    child: ListTile(
+                      key: Key('usuario_${usuario.id}'),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 6),
+                      leading: AvatarInicial(
+                          id: usuario.id, nombre: usuario.nombre, radio: 22),
+                      title: Text(usuario.nombre,
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w700)),
+                      subtitle: Text(etiquetaRol(usuario.rol)),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => IngresarPinScreen(usuario: usuario),
+                        ),
                       ),
                     ),
-                  ))
-              .toList(),
+                  ),
+                ),
+            ],
+          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, st) => Center(child: Text('Error: $e')),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
       ),
     );
   }
