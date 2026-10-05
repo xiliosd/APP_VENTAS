@@ -1,4 +1,5 @@
 import 'package:app_ventas/data/database.dart';
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,4 +21,25 @@ void main() {
     expect(usuarios.single.id, id);
     expect(usuarios.single.nombre, 'Admin');
   });
+
+  test('cerrar la base dos veces solo la cierra una vez', () async {
+    final contador = _ContadorCierres();
+    final db = AppDatabase(NativeDatabase.memory().interceptWith(contador));
+    await db.customSelect('SELECT 1').get();
+
+    await db.close();
+    await db.close();
+
+    expect(contador.cierres, 1);
+  });
+}
+
+class _ContadorCierres extends QueryInterceptor {
+  int cierres = 0;
+
+  @override
+  Future<void> close(QueryExecutor inner) {
+    cierres++;
+    return inner.close();
+  }
 }

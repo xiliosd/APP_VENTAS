@@ -77,10 +77,20 @@ class AppDatabase extends _$AppDatabase {
 
   static QueryExecutor _openConnection() {
     return LazyDatabase(() async {
-      final dbFolder = await getApplicationDocumentsDirectory();
-      final file = File(p.join(dbFolder.path, 'app_ventas.sqlite'));
-      return NativeDatabase.createInBackground(file);
+      return NativeDatabase.createInBackground(await archivoBaseDatos());
     });
+  }
+
+  bool _cerrada = false;
+
+  /// Cerrar dos veces no hace nada la segunda vez: al restaurar un respaldo
+  /// la base se cierra antes de reemplazar el archivo, y otra vez cuando se
+  /// invalida `databaseProvider`.
+  @override
+  Future<void> close() async {
+    if (_cerrada) return;
+    _cerrada = true;
+    await super.close();
   }
 
   // Closes query streams synchronously instead of debouncing them with a
@@ -94,4 +104,10 @@ class AppDatabase extends _$AppDatabase {
     if (executor is DatabaseConnection) return executor;
     return DatabaseConnection(executor, closeStreamsSynchronously: true);
   }
+}
+
+/// Archivo SQLite de la app en el celular.
+Future<File> archivoBaseDatos() async {
+  final carpeta = await getApplicationDocumentsDirectory();
+  return File(p.join(carpeta.path, 'app_ventas.sqlite'));
 }
