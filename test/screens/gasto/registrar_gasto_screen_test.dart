@@ -1,45 +1,59 @@
 import 'package:app_ventas/data/database.dart';
-import 'package:app_ventas/providers/database_provider.dart';
-import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/screens/gasto/registrar_gasto_screen.dart';
+import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/montaje.dart';
+
 void main() {
-  testWidgets('registrar un gasto lo guarda en la base de datos', (tester) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final usuarioId = await db.into(db.usuarios).insert(
-          UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
-        );
-    final usuario =
-        await (db.select(db.usuarios)..where((u) => u.id.equals(usuarioId)))
-            .getSingle();
+  late AppDatabase db;
+  late ProviderContainer container;
+  final navegador = GlobalKey<NavigatorState>();
 
-    final container = ProviderContainer(
-      overrides: [databaseProvider.overrideWithValue(db)],
-    );
-    container.read(sesionProvider.notifier).state =
-        SesionState(usuarioActivo: usuario);
-    addTearDown(container.dispose);
+  setUp(() async {
+    db = AppDatabase(NativeDatabase.memory());
+    container = await containerConSesion(db);
+  });
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(home: RegistrarGastoScreen()),
-      ),
-    );
+  tearDown(() async {
+    container.dispose();
+    await db.close();
+  });
 
-    await tester.enterText(find.byKey(const Key('campo_monto_gasto')), '20000');
+  Future<void> abrirGasto(WidgetTester tester) async {
+    await tester.pumpWidget(appDePrueba(container, navegador: navegador));
+    navegador.currentState!.push(
+        MaterialPageRoute(builder: (_) => const RegistrarGastoScreen()));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('registrar un gasto lo guarda, vuelve y lo confirma',
+      (tester) async {
+    await abrirGasto(tester);
+
+    await tester.tap(find.byKey(const Key('tecla_monto_2')));
+    await tester.tap(find.byKey(const Key('tecla_monto_0')));
+    await tester.tap(find.byKey(const Key('tecla_monto_000')));
     await tester.enterText(
         find.byKey(const Key('campo_descripcion_gasto')), 'Bolsas');
     await tester.tap(find.byKey(const Key('boton_registrar_gasto')));
     await tester.pumpAndSettle();
 
-    final gastos = await db.select(db.gastos).get();
-    expect(gastos.single.monto, 20000);
-    expect(gastos.single.descripcion, 'Bolsas');
+    final gasto = (await db.select(db.gastos).get()).single;
+    expect(gasto.monto, 20000);
+    expect(gasto.descripcion, 'Bolsas');
+    expect(find.text('Inicio'), findsOneWidget);
+    expect(find.text(r'Gasto registrado · $20.000'), findsOneWidget);
+  });
+
+  testWidgets('con monto 0 no se puede registrar', (tester) async {
+    await abrirGasto(tester);
+
+    final boton = tester
+        .widget<BotonPrincipal>(find.byKey(const Key('boton_registrar_gasto')));
+    expect(boton.onPressed, isNull);
   });
 }
