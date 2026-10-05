@@ -39,6 +39,7 @@ final resumenRepositoryProvider = Provider(
     ref.watch(databaseProvider),
     ref.watch(ventaRepositoryProvider),
     ref.watch(gastoRepositoryProvider),
+    ref.watch(fiadoRepositoryProvider),
   ),
 );
 

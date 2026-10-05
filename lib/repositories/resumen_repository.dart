@@ -1,4 +1,5 @@
 import '../data/database.dart';
+import 'fiado_repository.dart';
 import 'gasto_repository.dart';
 import 'venta_repository.dart';
 
@@ -15,11 +16,17 @@ class ResumenDia {
 }
 
 class ResumenRepository {
-  ResumenRepository(this._db, this._ventaRepository, this._gastoRepository);
+  ResumenRepository(
+    this._db,
+    this._ventaRepository,
+    this._gastoRepository,
+    this._fiadoRepository,
+  );
 
   final AppDatabase _db;
   final VentaRepository _ventaRepository;
   final GastoRepository _gastoRepository;
+  final FiadoRepository _fiadoRepository;
 
   Future<ResumenDia> resumenDelDia(DateTime dia, {int? usuarioId}) async {
     final ventas = await _ventaRepository.ventasDelDia(dia, usuarioId: usuarioId);
@@ -27,9 +34,9 @@ class ResumenRepository {
 
     final totalVendido = ventas.fold<int>(0, (suma, v) => suma + v.monto);
     final totalGastado = gastos.fold<int>(0, (suma, g) => suma + g.monto);
-    final totalPorCobrar = ventas
-        .where((v) => v.esFiado)
-        .fold<int>(0, (suma, v) => suma + v.monto);
+    // Deuda de toda la tienda al cierre del día, no solo lo fiado ese día.
+    // No depende de usuarioId: la deuda es del cliente, no del vendedor.
+    final totalPorCobrar = await _fiadoRepository.deudaTotalAl(dia);
 
     return ResumenDia(
       totalVendido: totalVendido,

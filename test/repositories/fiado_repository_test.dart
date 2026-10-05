@@ -132,4 +132,67 @@ void main() {
     expect(movimientos.map((m) => m.monto), [1000, 2000, 5000]);
     expect(movimientos.first.fecha, DateTime(2026, 9, 3));
   });
+
+  test('deudaTotalAl suma lo que deben todos los clientes, descontando abonos',
+      () async {
+    final rosa = await db.into(db.clientes).insert(
+          ClientesCompanion.insert(nombre: 'Doña Rosa'),
+        );
+    await venderFiado(5000, DateTime(2026, 9, 1));
+    await repo.registrarPago(
+        clienteId: clienteId,
+        monto: 2000,
+        usuarioId: usuarioId,
+        fecha: DateTime(2026, 9, 2));
+    await db.into(db.ventas).insert(
+          VentasCompanion.insert(
+            monto: 4000,
+            fecha: DateTime(2026, 9, 2),
+            esFiado: const Value(true),
+            clienteId: Value(rosa),
+            usuarioId: usuarioId,
+          ),
+        );
+
+    expect(await repo.deudaTotalAl(DateTime(2026, 9, 2)), 7000);
+  });
+
+  test('deudaTotalAl no cuenta a quien pagó todo ni resta saldos a favor',
+      () async {
+    final rosa = await db.into(db.clientes).insert(
+          ClientesCompanion.insert(nombre: 'Doña Rosa'),
+        );
+    await venderFiado(5000, DateTime(2026, 9, 1));
+    await db.into(db.ventas).insert(
+          VentasCompanion.insert(
+            monto: 1000,
+            fecha: DateTime(2026, 9, 1),
+            esFiado: const Value(true),
+            clienteId: Value(rosa),
+            usuarioId: usuarioId,
+          ),
+        );
+    // Doña Rosa abona de más: queda con saldo a favor, que no debe restar
+    // a la deuda de Don Pedro.
+    await repo.registrarPago(
+        clienteId: rosa,
+        monto: 3000,
+        usuarioId: usuarioId,
+        fecha: DateTime(2026, 9, 1));
+
+    expect(await repo.deudaTotalAl(DateTime(2026, 9, 1)), 5000);
+  });
+
+  test('deudaTotalAl ignora ventas y abonos posteriores al día', () async {
+    await venderFiado(5000, DateTime(2026, 9, 1, 18));
+    await repo.registrarPago(
+        clienteId: clienteId,
+        monto: 2000,
+        usuarioId: usuarioId,
+        fecha: DateTime(2026, 9, 2, 8));
+    await venderFiado(1000, DateTime(2026, 9, 2, 9));
+
+    expect(await repo.deudaTotalAl(DateTime(2026, 9, 1)), 5000);
+    expect(await repo.deudaTotalAl(DateTime(2026, 9, 2)), 4000);
+  });
 }

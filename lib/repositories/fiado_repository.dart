@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../data/database.dart';
+import '../util/fecha_util.dart';
 
 class ClienteConSaldo {
   const ClienteConSaldo({
@@ -121,5 +122,30 @@ class FiadoRepository {
           fecha: p.fecha,
         ),
     ]..sort((a, b) => b.fecha.compareTo(a.fecha));
+  }
+
+  /// Lo que deben todos los clientes al cierre de [dia]: ventas fiadas menos
+  /// abonos hechos hasta ese momento. Un cliente con saldo a favor cuenta
+  /// como 0, para que no reste a la deuda de los demás.
+  Future<int> deudaTotalAl(DateTime dia) async {
+    final corte = finDelDia(dia);
+    final ventas = await (_db.select(_db.ventas)
+          ..where((v) =>
+              v.esFiado.equals(true) &
+              v.clienteId.isNotNull() &
+              v.fecha.isSmallerOrEqualValue(corte)))
+        .get();
+    final pagos = await (_db.select(_db.pagosFiado)
+          ..where((p) => p.fecha.isSmallerOrEqualValue(corte)))
+        .get();
+
+    final saldos = <int, int>{};
+    for (final v in ventas) {
+      saldos.update(v.clienteId!, (s) => s + v.monto, ifAbsent: () => v.monto);
+    }
+    for (final p in pagos) {
+      saldos.update(p.clienteId, (s) => s - p.monto, ifAbsent: () => -p.monto);
+    }
+    return saldos.values.where((s) => s > 0).fold<int>(0, (suma, s) => suma + s);
   }
 }
