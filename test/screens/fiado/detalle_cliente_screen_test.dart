@@ -10,10 +10,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('registrar un abono descuenta el saldo en la base de datos',
-      (tester) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
+  late AppDatabase db;
+
+  setUp(() => db = AppDatabase(NativeDatabase.memory()));
+  tearDown(() => db.close());
+
+  /// Crea un cliente que debe $5.000 (una venta fiada el 01/09/2026 10:00),
+  /// abre su detalle con una sesión activa y devuelve el id del cliente.
+  Future<int> montarDetalle(WidgetTester tester) async {
     final usuarioId = await db.into(db.usuarios).insert(
           UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
         );
@@ -26,7 +30,7 @@ void main() {
     await db.into(db.ventas).insert(
           VentasCompanion.insert(
             monto: 5000,
-            fecha: DateTime.now(),
+            fecha: DateTime(2026, 9, 1, 10, 0),
             esFiado: const Value(true),
             clienteId: Value(clienteId),
             usuarioId: usuarioId,
@@ -51,18 +55,67 @@ void main() {
             clienteConSaldo: ClienteConSaldo(
               cliente: cliente,
               saldo: 5000,
-              fechaDeudaMasAntigua: DateTime.now(),
+              fechaDeudaMasAntigua: DateTime(2026, 9, 1),
             ),
           ),
         ),
       ),
     );
+    await tester.pumpAndSettle();
+    return clienteId;
+  }
 
-    await tester.enterText(find.byKey(const Key('campo_monto_abono')), '2000');
+  testWidgets('muestra los movimientos del cliente', (tester) async {
+    await montarDetalle(tester);
+
+    expect(find.text(r'Debe: $5.000'), findsOneWidget);
+    expect(find.text('Movimientos'), findsOneWidget);
+    expect(find.text('Venta fiada'), findsOneWidget);
+    expect(find.text('01/09/2026 10:00'), findsOneWidget);
+  });
+
+  testWidgets(
+      'registrar un abono actualiza saldo y movimientos y la pantalla '
+      'sigue abierta', (tester) async {
+    final clienteId = await montarDetalle(tester);
+
+    await tester.enterText(find.byKey(const Key('campo_monto_abono')), '2.000');
     await tester.tap(find.byKey(const Key('boton_registrar_abono')));
     await tester.pumpAndSettle();
 
-    final saldo = await FiadoRepository(db).saldoCliente(clienteId);
-    expect(saldo, 3000);
+    expect(await FiadoRepository(db).saldoCliente(clienteId), 3000);
+    expect(find.byType(DetalleClienteScreen), findsOneWidget);
+    expect(find.text(r'Debe: $3.000'), findsOneWidget);
+    expect(find.text('Abono registrado'), findsOneWidget);
+    expect(find.text('Abono'), findsOneWidget);
+    final campo =
+        tester.widget<TextField>(find.byKey(const Key('campo_monto_abono')));
+    expect(campo.controller!.text, isEmpty);
+  });
+
+  testWidgets('un abono mayor que la deuda muestra error y no se registra',
+      (tester) async {
+    final clienteId = await montarDetalle(tester);
+
+    await tester.enterText(find.byKey(const Key('campo_monto_abono')), '9000');
+    await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(r'El abono no puede ser mayor que la deuda ($5.000)'),
+        findsOneWidget);
+    expect(await FiadoRepository(db).saldoCliente(clienteId), 5000);
+    expect(find.text('Abono'), findsNothing);
+  });
+
+  testWidgets('un monto inválido muestra error y no se registra',
+      (tester) async {
+    final clienteId = await montarDetalle(tester);
+
+    await tester.enterText(find.byKey(const Key('campo_monto_abono')), 'abc');
+    await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Escribe un monto válido'), findsOneWidget);
+    expect(await FiadoRepository(db).saldoCliente(clienteId), 5000);
   });
 }

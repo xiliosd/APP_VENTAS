@@ -15,3 +15,15 @@ final clientesConDeudaProvider = FutureProvider<List<ClienteConSaldo>>((ref) {
   ref.watch(_cambiosFiadoProvider);
   return ref.watch(fiadoRepositoryProvider).listaClientesConDeuda();
 });
+
+final saldoClienteProvider =
+    FutureProvider.autoDispose.family<int, int>((ref, clienteId) {
+  ref.watch(_cambiosFiadoProvider);
+  return ref.watch(fiadoRepositoryProvider).saldoCliente(clienteId);
+});
+
+final movimientosClienteProvider = FutureProvider.autoDispose
+    .family<List<MovimientoFiado>, int>((ref, clienteId) {
+  ref.watch(_cambiosFiadoProvider);
+  return ref.watch(fiadoRepositoryProvider).movimientosCliente(clienteId);
+});
