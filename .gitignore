@@ -32,3 +32,6 @@ Thumbs.db
 test/support/sqlite3.dll
 test/support/sqlite3.def
 .worktrees/
+
+# Visual brainstorming and plan workspaces (local scratch)
+.superpowers/
