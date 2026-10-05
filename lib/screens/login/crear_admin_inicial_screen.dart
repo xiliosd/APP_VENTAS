@@ -7,6 +7,7 @@ import '../../providers/usuarios_providers.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/marca_app.dart';
+import '../../ui/tipografia.dart';
 import '../../util/pin_hash.dart';
 
 class CrearAdminInicialScreen extends ConsumerStatefulWidget {
@@ -60,8 +61,7 @@ class _CrearAdminInicialScreenState
           children: [
             const MarcaApp(),
             const SizedBox(height: 32),
-            const Text('Configura tu tienda',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+            Text('Configura tu tienda', style: estiloTitulo()),
             const SizedBox(height: 4),
             const Text(
               'Crea el usuario administrador. Con él podrás agregar productos '

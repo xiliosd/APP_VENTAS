@@ -1,33 +1,48 @@
 import 'package:flutter/material.dart';
 
 import 'colores_app.dart';
+import 'tipografia.dart';
 
-/// Ícono y nombre de la app, para las pantallas de entrada.
+/// Isotipo y nombre de la app (y, si se pide, el slogan), para las pantallas
+/// de entrada.
 class MarcaApp extends StatelessWidget {
-  const MarcaApp({super.key});
+  const MarcaApp({super.key, this.conSlogan = false});
+
+  final bool conSlogan;
+
+  static const slogan = 'La tranquilidad de tu tienda, en tu bolsillo.';
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: ColoresApp.primario,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(Icons.storefront_rounded, color: Colors.white),
+        Row(
+          children: [
+            Image.asset(
+              'assets/marca/isotipo.png',
+              key: const Key('isotipo_marca'),
+              width: 56,
+              height: 56,
+              semanticLabel: 'Logo de VeciTienda',
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                'VeciTienda',
+                style: estiloTitulo(tamano: 28, color: ColoresApp.primario),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        const Text(
-          'App Ventas',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-            color: ColoresApp.primario,
+        if (conSlogan) ...[
+          const SizedBox(height: 8),
+          const Text(
+            slogan,
+            style: TextStyle(fontSize: 15, color: ColoresApp.textoSecundario),
           ),
-        ),
+        ],
       ],
     );
   }

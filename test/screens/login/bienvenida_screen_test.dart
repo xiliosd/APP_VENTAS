@@ -34,6 +34,10 @@ void main() {
 
     expect(find.byKey(const Key('boton_crear_tienda')), findsOneWidget);
     expect(find.byKey(const Key('boton_restaurar_tienda')), findsNothing);
+    expect(find.text('VeciTienda'), findsOneWidget);
+    expect(find.text('La tranquilidad de tu tienda, en tu bolsillo.'),
+        findsOneWidget);
+    expect(find.byKey(const Key('isotipo_marca')), findsOneWidget);
   });
 
   testWidgets('con respaldo configurado ofrece restaurar', (tester) async {

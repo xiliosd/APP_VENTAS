@@ -24,7 +24,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('App Ventas'), findsOneWidget);
+    expect(find.text('VeciTienda'), findsOneWidget);
+    expect(find.byKey(const Key('isotipo_marca')), findsOneWidget);
     expect(find.text('¿Quién eres?'), findsOneWidget);
     expect(find.text('Administrador'), findsOneWidget);
     expect(find.text('Vendedor'), findsOneWidget);

@@ -5,6 +5,7 @@ import '../../respaldo/respaldo_provider.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/marca_app.dart';
+import '../../ui/tipografia.dart';
 import '../respaldo/verificar_telefono_screen.dart';
 import 'crear_admin_inicial_screen.dart';
 
@@ -22,10 +23,9 @@ class BienvenidaScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            const MarcaApp(),
+            const MarcaApp(conSlogan: true),
             const SizedBox(height: 32),
-            const Text('Bienvenido',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+            Text('Bienvenido', style: estiloTitulo()),
             const SizedBox(height: 4),
             const Text(
               'Registra ventas, fiados y gastos de tu tienda, incluso sin '
