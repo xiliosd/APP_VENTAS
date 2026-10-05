@@ -86,6 +86,10 @@ La Fase 2 se divide en subproyectos, cada uno con su spec y plan en `docs/superp
 - **2A — Pantallas pendientes de la Fase 1** (hecho): resetear PIN y varios
   administradores, editar/reactivar productos, historial y saldo vivo del
   cliente con fiado, resumen por día, historial por día y usuario con gastos.
+- **2E — Experiencia de usuario y diseño visual** (hecho): sistema visual
+  "claro y confiable" (`lib/ui/`), venta tipo ticket con "Cobrar" y Deshacer,
+  Inicio con tarjetas de ventas/gastos/ganancia/por cobrar, avisos de
+  confirmación y estados vacíos en todas las pantallas.
 - **2B/2C — Respaldo en la nube (Supabase) e identidad de la tienda por OTP**
   (pendiente). Resuelve el riesgo de pérdida de datos descrito arriba.
 - **2D — Cobro digital por QR (Bre-B / Nequi / Daviplata)** (pendiente).
