@@ -42,4 +42,18 @@ void main() {
     expect(producto.nombre, 'Arepa con queso');
     expect(producto.precio, 4000);
   });
+
+  test('reactivarProducto lo devuelve a activos y lo saca de inactivos',
+      () async {
+    final id = await repo.crearProducto(nombre: 'Arepa', precio: 3000);
+    await repo.desactivarProducto(id);
+
+    expect((await repo.observarProductosInactivos().first).single.id, id);
+    expect(await repo.observarProductosActivos().first, isEmpty);
+
+    await repo.reactivarProducto(id);
+
+    expect((await repo.observarProductosActivos().first).single.id, id);
+    expect(await repo.observarProductosInactivos().first, isEmpty);
+  });
 }

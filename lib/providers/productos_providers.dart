@@ -6,3 +6,7 @@ import 'repository_providers.dart';
 final productosActivosProvider = StreamProvider<List<Producto>>((ref) {
   return ref.watch(productoRepositoryProvider).observarProductosActivos();
 });
+
+final productosInactivosProvider = StreamProvider<List<Producto>>((ref) {
+  return ref.watch(productoRepositoryProvider).observarProductosInactivos();
+});

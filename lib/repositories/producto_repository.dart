@@ -33,4 +33,14 @@ class ProductoRepository {
     return (_db.update(_db.productos)..where((p) => p.id.equals(id)))
         .write(const ProductosCompanion(activo: Value(false)));
   }
+
+  Stream<List<Producto>> observarProductosInactivos() {
+    return (_db.select(_db.productos)..where((p) => p.activo.equals(false)))
+        .watch();
+  }
+
+  Future<void> reactivarProducto(int id) {
+    return (_db.update(_db.productos)..where((p) => p.id.equals(id)))
+        .write(const ProductosCompanion(activo: Value(true)));
+  }
 }
