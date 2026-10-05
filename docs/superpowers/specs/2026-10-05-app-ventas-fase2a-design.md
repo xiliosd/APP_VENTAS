@@ -73,6 +73,9 @@ resumen e historial son visibles para ambos roles, con todos los datos de la tie
 
 - El saldo ("Debe: $X") se lee de un provider reactivo, no del valor recibido al abrir la
   pantalla, de modo que se actualiza en cuanto se registra un abono.
+- El monto del abono acepta separador de miles ("2.000"). Un monto inválido muestra "Escribe un
+  monto válido"; un abono mayor que la deuda se rechaza con "El abono no puede ser mayor que la
+  deuda ($X)" y no se registra.
 - Tras registrar un abono la pantalla **ya no se cierra**: limpia el campo, muestra un SnackBar
   "Abono registrado" y el saldo e historial se actualizan. Si el saldo llega a 0 el cliente sale
   de la lista "me deben" (comportamiento existente del provider de la lista).
@@ -152,6 +155,8 @@ Todos los providers de lectura que dependen de datos mutables escuchan
 
 ## Manejo de errores
 
+- Los campos de dinero (precio de producto, abono) aceptan el separador de miles colombiano
+  ("3.000", "$3.000") y rechazan signos y decimales.
 - Validación en formularios y diálogos con mensaje visible (`errorText` del campo); nunca un
   botón que no hace nada sin explicar por qué.
 - Errores de carga de providers: se mantiene el patrón existente (`Text('Error: $e')`).
