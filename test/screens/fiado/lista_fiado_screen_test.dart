@@ -8,11 +8,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('muestra clientes con deuda y el mensaje vacío cuando no hay deudas',
-      (tester) async {
-    final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
+  late AppDatabase db;
 
+  setUp(() => db = AppDatabase(NativeDatabase.memory()));
+  tearDown(() => db.close());
+
+  Future<void> montar(WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [databaseProvider.overrideWithValue(db)],
@@ -20,33 +21,39 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Nadie te debe por ahora'), findsOneWidget);
+  }
 
-    final usuarioId = await db.into(db.usuarios).insert(
+  testWidgets('sin deudas muestra el estado vacío', (tester) async {
+    await montar(tester);
+    expect(find.text('Nadie te debe'), findsOneWidget);
+    expect(find.text('Las ventas fiadas aparecerán aquí'), findsOneWidget);
+  });
+
+  testWidgets('muestra el total y cada cliente con desde cuándo debe',
+      (tester) async {
+    final ana = await db.into(db.usuarios).insert(
           UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
         );
-    final clienteId = await db
+    final pedro = await db
         .into(db.clientes)
         .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
-    await db.into(db.ventas).insert(
-          VentasCompanion.insert(
-            monto: 5000,
-            fecha: DateTime.now(),
-            esFiado: const Value(true),
-            clienteId: Value(clienteId),
-            usuarioId: usuarioId,
-          ),
-        );
+    final ahora = DateTime.now();
+    await db.into(db.ventas).insert(VentasCompanion.insert(
+          monto: 5000,
+          fecha: DateTime(ahora.year, ahora.month, ahora.day - 1, 10),
+          esFiado: const Value(true),
+          clienteId: Value(pedro),
+          usuarioId: ana,
+        ));
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [databaseProvider.overrideWithValue(db)],
-        child: const MaterialApp(home: ListaFiadoScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await montar(tester);
 
+    expect(
+        find.descendant(
+            of: find.byKey(const Key('tarjeta_te_deben')),
+            matching: find.text(r'$5.000')),
+        findsOneWidget);
     expect(find.text('Don Pedro'), findsOneWidget);
-    expect(find.text(r'$5.000'), findsOneWidget);
+    expect(find.text('Debe desde ayer'), findsOneWidget);
   });
 }

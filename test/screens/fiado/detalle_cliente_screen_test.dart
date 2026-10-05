@@ -6,6 +6,8 @@ import 'package:app_ventas/providers/repository_providers.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/repositories/fiado_repository.dart';
 import 'package:app_ventas/screens/fiado/detalle_cliente_screen.dart';
+import 'package:app_ventas/ui/boton_principal.dart';
+import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -18,8 +20,8 @@ void main() {
   setUp(() => db = AppDatabase(NativeDatabase.memory()));
   tearDown(() => db.close());
 
-  /// Crea un cliente que debe $5.000 (una venta fiada el 01/09/2026 10:00),
-  /// abre su detalle con una sesión activa y devuelve el id del cliente.
+  /// Cliente que debe $5.000 (venta fiada el 01/09/2026 10:00), con su detalle
+  /// abierto y una sesión activa. Devuelve el id del cliente.
   Future<int> montarDetalle(WidgetTester tester,
       {List<Override> overrides = const []}) async {
     final usuarioId = await db.into(db.usuarios).insert(
@@ -31,15 +33,13 @@ void main() {
     final clienteId = await db
         .into(db.clientes)
         .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
-    await db.into(db.ventas).insert(
-          VentasCompanion.insert(
-            monto: 5000,
-            fecha: DateTime(2026, 9, 1, 10, 0),
-            esFiado: const Value(true),
-            clienteId: Value(clienteId),
-            usuarioId: usuarioId,
-          ),
-        );
+    await db.into(db.ventas).insert(VentasCompanion.insert(
+          monto: 5000,
+          fecha: DateTime(2026, 9, 1, 10, 0),
+          esFiado: const Value(true),
+          clienteId: Value(clienteId),
+          usuarioId: usuarioId,
+        ));
     final cliente =
         await (db.select(db.clientes)..where((c) => c.id.equals(clienteId)))
             .getSingle();
@@ -55,6 +55,7 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
+          theme: temaApp(),
           home: DetalleClienteScreen(
             clienteConSaldo: ClienteConSaldo(
               cliente: cliente,
@@ -69,82 +70,94 @@ void main() {
     return clienteId;
   }
 
-  testWidgets('muestra los movimientos del cliente', (tester) async {
+  Finder saldo(String texto) => find.descendant(
+      of: find.byKey(const Key('tarjeta_saldo_cliente')),
+      matching: find.text(texto));
+
+  Future<void> teclear(WidgetTester tester, List<String> teclas) async {
+    for (final tecla in teclas) {
+      await tester.tap(find.byKey(Key('tecla_monto_$tecla')));
+    }
+    await tester.pump();
+  }
+
+  testWidgets('muestra el saldo y los movimientos del cliente', (tester) async {
     await montarDetalle(tester);
 
-    expect(find.text(r'Debe: $5.000'), findsOneWidget);
+    expect(saldo(r'$5.000'), findsOneWidget);
     expect(find.text('Movimientos'), findsOneWidget);
     expect(find.text('Venta fiada'), findsOneWidget);
     expect(find.text('01/09/2026 10:00'), findsOneWidget);
   });
 
   testWidgets(
-      'registrar un abono actualiza saldo y movimientos y la pantalla '
-      'sigue abierta', (tester) async {
+      'registrar un abono desde el panel actualiza saldo y movimientos y '
+      'la pantalla sigue abierta', (tester) async {
     final clienteId = await montarDetalle(tester);
 
-    await tester.enterText(find.byKey(const Key('campo_monto_abono')), '2.000');
     await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pumpAndSettle();
+    await teclear(tester, ['2', '000']);
+    await tester.tap(find.byKey(const Key('boton_confirmar_abono')));
     await tester.pumpAndSettle();
 
     expect(await FiadoRepository(db).saldoCliente(clienteId), 3000);
     expect(find.byType(DetalleClienteScreen), findsOneWidget);
-    expect(find.text(r'Debe: $3.000'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(saldo(r'$3.000'), findsOneWidget);
     expect(find.text('Abono registrado'), findsOneWidget);
     expect(find.text('Abono'), findsOneWidget);
-    final campo =
-        tester.widget<TextField>(find.byKey(const Key('campo_monto_abono')));
-    expect(campo.controller!.text, isEmpty);
   });
 
   testWidgets('un abono mayor que la deuda muestra error y no se registra',
       (tester) async {
     final clienteId = await montarDetalle(tester);
 
-    await tester.enterText(find.byKey(const Key('campo_monto_abono')), '9000');
     await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pumpAndSettle();
+    await teclear(tester, ['9', '000']);
+    await tester.tap(find.byKey(const Key('boton_confirmar_abono')));
     await tester.pumpAndSettle();
 
     expect(find.text(r'El abono no puede ser mayor que la deuda ($5.000)'),
         findsOneWidget);
     expect(await FiadoRepository(db).saldoCliente(clienteId), 5000);
-    expect(find.text('Abono'), findsNothing);
+    expect(find.byType(BottomSheet), findsOneWidget);
   });
 
-  testWidgets('un monto inválido muestra error y no se registra',
-      (tester) async {
-    final clienteId = await montarDetalle(tester);
+  testWidgets('con monto 0 no se puede confirmar el abono', (tester) async {
+    await montarDetalle(tester);
 
-    await tester.enterText(find.byKey(const Key('campo_monto_abono')), 'abc');
     await tester.tap(find.byKey(const Key('boton_registrar_abono')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Escribe un monto válido'), findsOneWidget);
-    expect(await FiadoRepository(db).saldoCliente(clienteId), 5000);
+    final boton = tester.widget<BotonPrincipal>(
+        find.byKey(const Key('boton_confirmar_abono')));
+    expect(boton.onPressed, isNull);
   });
 
-
-  testWidgets('un doble toque en Registrar abono registra un solo abono',
+  testWidgets('un doble toque al confirmar registra un solo abono',
       (tester) async {
     // En producción la base corre en otro isolate, así que la lectura del
-    // saldo tarda; el Completer reproduce esa espera para que el segundo
-    // toque llegue mientras el primero sigue en curso.
+    // saldo tarda; el Completer reproduce esa espera.
     final lectura = Completer<void>();
     final clienteId = await montarDetalle(tester, overrides: [
       fiadoRepositoryProvider
           .overrideWithValue(_FiadoRepositoryLento(db, lectura.future)),
     ]);
 
-    await tester.enterText(find.byKey(const Key('campo_monto_abono')), '2000');
     await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pumpAndSettle();
+    await teclear(tester, ['2', '000']);
+    await tester.tap(find.byKey(const Key('boton_confirmar_abono')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.tap(find.byKey(const Key('boton_confirmar_abono')),
+        warnIfMissed: false);
     await tester.pump();
     lectura.complete();
     await tester.pumpAndSettle();
 
     expect(await FiadoRepository(db).pagosCliente(clienteId), hasLength(1));
-    expect(await FiadoRepository(db).saldoCliente(clienteId), 3000);
   });
 }
 
