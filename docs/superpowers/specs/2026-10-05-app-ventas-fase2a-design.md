@@ -1,7 +1,7 @@
 # App de ventas — Fase 2A (completar pantallas pendientes de la Fase 1)
 
 **Fecha:** 2026-10-05
-**Estado:** Borrador para revisión
+**Estado:** Implementado
 **Base:** `docs/superpowers/specs/2026-09-02-app-ventas-fase1-design.md`
 
 ## Contexto y alcance

@@ -79,16 +79,17 @@ sincronización ni backup en esta fase. Cualquier fase futura que agregue
 sincronización en la nube debe tratar esto como el riesgo principal a
 resolver.
 
-## Alcance no cubierto en esta fase
+## Fase 2
 
-Estas capacidades tienen su repositorio ya implementado y probado, pero
-ninguna pantalla las usa todavía — quedan como candidatas para una Fase 2:
+La Fase 2 se divide en subproyectos, cada uno con su spec y plan en `docs/superpowers/`:
 
-- Resetear el PIN de un vendedor olvidado (`UsuarioRepository.resetearPin`).
-- Editar un producto existente (`ProductoRepository.actualizarProducto`).
-- Ver el historial de ventas fiadas y pagos de un cliente
-  (`FiadoRepository.ventasFiadasCliente` / `pagosCliente`).
-- Navegar el resumen diario a días anteriores (hoy está fijo en la fecha
-  actual).
-- Filtrar el historial por usuario/día e incluir los gastos (hoy solo
-  muestra las ventas de hoy).
+- **2A — Pantallas pendientes de la Fase 1** (hecho): resetear PIN y varios
+  administradores, editar/reactivar productos, historial y saldo vivo del
+  cliente con fiado, resumen por día, historial por día y usuario con gastos.
+- **2B/2C — Respaldo en la nube (Supabase) e identidad de la tienda por OTP**
+  (pendiente). Resuelve el riesgo de pérdida de datos descrito arriba.
+- **2D — Cobro digital por QR (Bre-B / Nequi / Daviplata)** (pendiente).
+
+Fuera de alcance por ahora: editar o anular ventas, abonos o gastos ya
+registrados; eliminar usuarios o cambiar su rol; rangos de fechas
+(semana/mes) y reportes exportables.
