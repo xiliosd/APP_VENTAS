@@ -1,0 +1,58 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../respaldo/respaldo_provider.dart';
+import '../../ui/boton_principal.dart';
+import '../../ui/colores_app.dart';
+import '../../ui/marca_app.dart';
+import '../respaldo/verificar_telefono_screen.dart';
+import 'crear_admin_inicial_screen.dart';
+
+/// Primera pantalla cuando el celular no tiene usuarios: crear la tienda o
+/// restaurar un respaldo.
+class BienvenidaScreen extends ConsumerWidget {
+  const BienvenidaScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hayRespaldo =
+        ref.watch(respaldoProvider).fase != FaseRespaldo.noConfigurado;
+    return Scaffold(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            const MarcaApp(),
+            const SizedBox(height: 32),
+            const Text('Bienvenido',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            const Text(
+              'Registra ventas, fiados y gastos de tu tienda, incluso sin '
+              'internet.',
+              style: TextStyle(color: ColoresApp.textoSecundario),
+            ),
+            const SizedBox(height: 32),
+            BotonPrincipal(
+              key: const Key('boton_crear_tienda'),
+              texto: 'Crear tienda nueva',
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const CrearAdminInicialScreen())),
+            ),
+            if (hayRespaldo) ...[
+              const SizedBox(height: 12),
+              BotonPrincipal(
+                key: const Key('boton_restaurar_tienda'),
+                texto: 'Ya tengo una tienda: restaurar respaldo',
+                variante: VarianteBoton.contorno,
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const VerificarTelefonoScreen(
+                        modo: ModoVerificacion.restaurar))),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

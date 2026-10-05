@@ -47,6 +47,8 @@ class _CrearAdminInicialScreenState
     ref.invalidate(listaUsuariosProvider);
     ref.invalidate(haySesionUsuariosProvider);
     await ref.read(sesionProvider.notifier).iniciarSesion(id, pin);
+    // Se abrió desde la Bienvenida: al entrar, quitarla de encima del Inicio.
+    if (mounted && Navigator.of(context).canPop()) Navigator.of(context).pop();
   }
 
   @override
