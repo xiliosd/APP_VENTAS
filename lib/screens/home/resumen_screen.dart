@@ -2,23 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/resumen_providers.dart';
+import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
+import '../../widgets/selector_fecha.dart';
 
-class ResumenScreen extends ConsumerWidget {
+class ResumenScreen extends ConsumerStatefulWidget {
   const ResumenScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final resumenAsync = ref.watch(resumenDelDiaProvider);
-    final porVendedorAsync = ref.watch(resumenPorVendedorProvider);
+  ConsumerState<ResumenScreen> createState() => _ResumenScreenState();
+}
+
+class _ResumenScreenState extends ConsumerState<ResumenScreen> {
+  DateTime _dia = inicioDelDia(DateTime.now());
+
+  @override
+  Widget build(BuildContext context) {
+    final resumenAsync = ref.watch(resumenDelDiaProvider(_dia));
+    final porVendedorAsync = ref.watch(resumenPorVendedorProvider(_dia));
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Hoy',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          SelectorFecha(
+            dia: _dia,
+            onCambio: (dia) => setState(() => _dia = inicioDelDia(dia)),
+          ),
           const SizedBox(height: 8),
           resumenAsync.when(
             data: (resumen) => Column(
@@ -40,7 +51,8 @@ class ResumenScreen extends ConsumerWidget {
               children: mapa.entries
                   .map((entrada) => ListTile(
                         title: Text(entrada.key.nombre),
-                        trailing: Text(formatoMoneda(entrada.value.totalVendido)),
+                        trailing:
+                            Text(formatoMoneda(entrada.value.totalVendido)),
                       ))
                   .toList(),
             ),

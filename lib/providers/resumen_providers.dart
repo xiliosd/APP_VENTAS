@@ -13,13 +13,17 @@ final _cambiosResumenProvider = StreamProvider<void>((ref) {
   return ref.watch(databaseProvider).tableUpdates().map((_) {});
 });
 
-final resumenDelDiaProvider = FutureProvider.autoDispose<ResumenDia>((ref) {
+/// The key must be a day normalized with `inicioDelDia`, so that every read
+/// of the same day hits the same cached provider.
+final resumenDelDiaProvider =
+    FutureProvider.autoDispose.family<ResumenDia, DateTime>((ref, dia) {
   ref.watch(_cambiosResumenProvider);
-  return ref.watch(resumenRepositoryProvider).resumenDelDia(DateTime.now());
+  return ref.watch(resumenRepositoryProvider).resumenDelDia(dia);
 });
 
-final resumenPorVendedorProvider =
-    FutureProvider.autoDispose<Map<Usuario, ResumenDia>>((ref) {
+/// Same key contract as [resumenDelDiaProvider].
+final resumenPorVendedorProvider = FutureProvider.autoDispose
+    .family<Map<Usuario, ResumenDia>, DateTime>((ref, dia) {
   ref.watch(_cambiosResumenProvider);
-  return ref.watch(resumenRepositoryProvider).resumenPorVendedor(DateTime.now());
+  return ref.watch(resumenRepositoryProvider).resumenPorVendedor(dia);
 });
