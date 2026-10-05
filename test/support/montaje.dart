@@ -2,7 +2,6 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/ui/tema_app.dart';
-import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
