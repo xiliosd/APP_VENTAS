@@ -1,8 +1,11 @@
 import 'dart:io';
 
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/respaldo/nube_respaldo.dart';
 import 'package:app_ventas/respaldo/restaurador.dart';
+import 'package:app_ventas/respaldo/respaldo_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Nube en memoria: sin red. `subir` solo recuerda el archivo (no lo lee),
 /// para poder usarse dentro de `testWidgets`.
@@ -81,4 +84,21 @@ class RestauradorFalso extends Restaurador {
     llamadas++;
     return resultado;
   }
+}
+
+/// Container con [db] en memoria, la [nube] dada (null = no configurado),
+/// un copiador sin I/O y un restaurador falso.
+ProviderContainer containerRespaldo(
+  AppDatabase db,
+  NubeRespaldo? nube, {
+  Restaurador? restaurador,
+}) {
+  return ProviderContainer(overrides: [
+    databaseProvider.overrideWithValue(db),
+    nubeRespaldoProvider.overrideWithValue(nube),
+    copiadorProvider
+        .overrideWithValue(() async => File('copia_de_prueba.sqlite')),
+    restauradorProvider.overrideWithValue(
+        restaurador ?? RestauradorFalso(ResultadoRestauracion.restaurado)),
+  ]);
 }
