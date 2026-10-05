@@ -202,7 +202,7 @@ class _VerificarTelefonoScreenState
   }
 
   Future<void> _terminarActivacion() async {
-    await _respaldo.respaldarAhora();
+    await _respaldo.activar();
     if (!mounted) return;
     avisar(context, 'Respaldo activado');
     Navigator.of(context).pop();

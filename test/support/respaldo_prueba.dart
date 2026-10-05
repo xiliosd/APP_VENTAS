@@ -6,6 +6,7 @@ import 'package:app_ventas/respaldo/nube_respaldo.dart';
 import 'package:app_ventas/respaldo/restaurador.dart';
 import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Nube en memoria: sin red. `subir` solo recuerda el archivo (no lo lee),
 /// para poder usarse dentro de `testWidgets`.
@@ -27,6 +28,9 @@ class NubeRespaldoFalsa implements NubeRespaldo {
 
   /// Si no es null, `subir` lanza este error.
   Object? errorAlSubir;
+
+  /// Si no es null, `fechaUltimoRespaldo` lanza este error.
+  Object? errorAlConsultar;
 
   @override
   bool get haySesion => _sesion;
@@ -51,7 +55,10 @@ class NubeRespaldoFalsa implements NubeRespaldo {
   Future<void> cerrarSesion() async => _sesion = false;
 
   @override
-  Future<DateTime?> fechaUltimoRespaldo() async => fecha;
+  Future<DateTime?> fechaUltimoRespaldo() async {
+    if (errorAlConsultar != null) throw errorAlConsultar!;
+    return fecha;
+  }
 
   @override
   Future<void> subir(File copia) async {
@@ -70,35 +77,49 @@ class NubeRespaldoFalsa implements NubeRespaldo {
 /// Restaurador sin archivos: devuelve [resultado] y cuenta las llamadas.
 class RestauradorFalso extends Restaurador {
   RestauradorFalso(this.resultado)
-      : super(
-          archivoBase: () async => File('no_usado.sqlite'),
-          directorioTemporal: () async => Directory.systemTemp,
-        );
+    : super(
+        archivoBase: () async => File('no_usado.sqlite'),
+        directorioTemporal: () async => Directory.systemTemp,
+      );
 
   final ResultadoRestauracion resultado;
   int llamadas = 0;
 
   @override
   Future<ResultadoRestauracion> restaurar(
-      NubeRespaldo nube, AppDatabase db) async {
+    NubeRespaldo nube,
+    AppDatabase db,
+  ) async {
     llamadas++;
     return resultado;
   }
 }
 
 /// Container con [db] en memoria, la [nube] dada (null = no configurado),
-/// un copiador sin I/O y un restaurador falso.
-ProviderContainer containerRespaldo(
+/// un copiador sin I/O y un restaurador falso. [habilitado] es la marca
+/// guardada de "respaldo activado"; por defecto, activado si la nube ya tiene
+/// sesión (el caso de una tienda que ya activó su respaldo).
+Future<ProviderContainer> containerRespaldo(
   AppDatabase db,
   NubeRespaldo? nube, {
   Restaurador? restaurador,
-}) {
-  return ProviderContainer(overrides: [
-    databaseProvider.overrideWithValue(db),
-    nubeRespaldoProvider.overrideWithValue(nube),
-    copiadorProvider
-        .overrideWithValue(() async => File('copia_de_prueba.sqlite')),
-    restauradorProvider.overrideWithValue(
-        restaurador ?? RestauradorFalso(ResultadoRestauracion.restaurado)),
-  ]);
+  bool? habilitado,
+}) async {
+  SharedPreferences.setMockInitialValues({
+    if (habilitado ?? (nube?.haySesion ?? false)) claveRespaldoHabilitado: true,
+  });
+  final preferencias = await SharedPreferences.getInstance();
+  return ProviderContainer(
+    overrides: [
+      databaseProvider.overrideWithValue(db),
+      preferenciasProvider.overrideWithValue(preferencias),
+      nubeRespaldoProvider.overrideWithValue(nube),
+      copiadorProvider.overrideWithValue(
+        () async => File('copia_de_prueba.sqlite'),
+      ),
+      restauradorProvider.overrideWithValue(
+        restaurador ?? RestauradorFalso(ResultadoRestauracion.restaurado),
+      ),
+    ],
+  );
 }

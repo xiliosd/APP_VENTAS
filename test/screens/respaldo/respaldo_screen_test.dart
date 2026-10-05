@@ -17,12 +17,14 @@ void main() {
   tearDown(() => db.close());
 
   Future<void> abrir(WidgetTester tester, NubeRespaldo? nube) async {
-    final container = containerRespaldo(db, nube);
+    final container = await containerRespaldo(db, nube);
     addTearDown(container.dispose);
-    await tester.pumpWidget(UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp(theme: temaApp(), home: const RespaldoScreen()),
-    ));
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(theme: temaApp(), home: const RespaldoScreen()),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 

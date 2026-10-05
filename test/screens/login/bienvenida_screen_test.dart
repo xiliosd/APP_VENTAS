@@ -16,17 +16,20 @@ void main() {
   tearDown(() => db.close());
 
   Future<void> abrir(WidgetTester tester, NubeRespaldoFalsa? nube) async {
-    final container = containerRespaldo(db, nube);
+    final container = await containerRespaldo(db, nube);
     addTearDown(container.dispose);
-    await tester.pumpWidget(UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp(theme: temaApp(), home: const BienvenidaScreen()),
-    ));
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(theme: temaApp(), home: const BienvenidaScreen()),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
-  testWidgets('sin respaldo configurado solo ofrece crear la tienda',
-      (tester) async {
+  testWidgets('sin respaldo configurado solo ofrece crear la tienda', (
+    tester,
+  ) async {
     await abrir(tester, null);
 
     expect(find.byKey(const Key('boton_crear_tienda')), findsOneWidget);
@@ -40,7 +43,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final pantalla = tester.widget<VerificarTelefonoScreen>(
-        find.byType(VerificarTelefonoScreen));
+      find.byType(VerificarTelefonoScreen),
+    );
     expect(pantalla.modo, ModoVerificacion.restaurar);
   });
 }

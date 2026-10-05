@@ -22,26 +22,37 @@ void main() {
     ModoVerificacion modo = ModoVerificacion.activar,
     RestauradorFalso? restaurador,
   }) async {
-    final container = containerRespaldo(db, nube, restaurador: restaurador);
+    final container = await containerRespaldo(
+      db,
+      nube,
+      restaurador: restaurador,
+    );
     addTearDown(container.dispose);
-    await tester.pumpWidget(UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp(
-        theme: temaApp(),
-        navigatorKey: navegador,
-        home: const Scaffold(body: Text('Inicio')),
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: temaApp(),
+          navigatorKey: navegador,
+          home: const Scaffold(body: Text('Inicio')),
+        ),
       ),
-    ));
-    navegador.currentState!.push(MaterialPageRoute(
-        builder: (_) => VerificarTelefonoScreen(modo: modo)));
+    );
+    navegador.currentState!.push(
+      MaterialPageRoute(builder: (_) => VerificarTelefonoScreen(modo: modo)),
+    );
     await tester.pumpAndSettle();
     return container;
   }
 
-  Future<void> enviarYVerificar(WidgetTester tester,
-      {String codigo = '123456'}) async {
+  Future<void> enviarYVerificar(
+    WidgetTester tester, {
+    String codigo = '123456',
+  }) async {
     await tester.enterText(
-        find.byKey(const Key('campo_telefono')), '3001234567');
+      find.byKey(const Key('campo_telefono')),
+      '3001234567',
+    );
     await tester.tap(find.byKey(const Key('boton_enviar_codigo')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('campo_codigo')), codigo);
@@ -49,42 +60,52 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('un celular inválido muestra error y no envía código',
-      (tester) async {
+  testWidgets('un celular inválido muestra error y no envía código', (
+    tester,
+  ) async {
     final nube = NubeRespaldoFalsa();
     await abrir(tester, nube);
 
-    await tester.enterText(find.byKey(const Key('campo_telefono')), '6011234567');
+    await tester.enterText(
+      find.byKey(const Key('campo_telefono')),
+      '6011234567',
+    );
     await tester.tap(find.byKey(const Key('boton_enviar_codigo')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Escribe un celular de 10 dígitos que empiece por 3'),
-        findsOneWidget);
+    expect(
+      find.text('Escribe un celular de 10 dígitos que empiece por 3'),
+      findsOneWidget,
+    );
     expect(nube.enviados, isEmpty);
   });
 
-  testWidgets('código incorrecto muestra error; el correcto activa y respalda',
-      (tester) async {
-    final nube = NubeRespaldoFalsa();
-    await abrir(tester, nube);
+  testWidgets(
+    'código incorrecto muestra error; el correcto activa y respalda',
+    (tester) async {
+      final nube = NubeRespaldoFalsa();
+      await abrir(tester, nube);
 
-    await enviarYVerificar(tester, codigo: '000000');
-    expect(nube.enviados, ['+573001234567']);
-    expect(find.text('Código incorrecto o vencido'), findsOneWidget);
+      await enviarYVerificar(tester, codigo: '000000');
+      expect(nube.enviados, ['+573001234567']);
+      expect(find.text('Código incorrecto o vencido'), findsOneWidget);
 
-    await tester.enterText(find.byKey(const Key('campo_codigo')), '123456');
-    await tester.tap(find.byKey(const Key('boton_verificar')));
-    await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('campo_codigo')), '123456');
+      await tester.tap(find.byKey(const Key('boton_verificar')));
+      await tester.pumpAndSettle();
 
-    expect(nube.subidas, 1);
-    expect(find.text('Inicio'), findsOneWidget);
-    expect(find.text('Respaldo activado'), findsOneWidget);
-  });
+      expect(nube.subidas, 1);
+      expect(find.text('Inicio'), findsOneWidget);
+      expect(find.text('Respaldo activado'), findsOneWidget);
+    },
+  );
 
   testWidgets('Reenviar código se habilita a los 60 segundos', (tester) async {
     await abrir(tester, NubeRespaldoFalsa());
     await tester.enterText(
-        find.byKey(const Key('campo_telefono')), '3001234567');
+      find.byKey(const Key('campo_telefono')),
+      '3001234567',
+    );
     await tester.tap(find.byKey(const Key('boton_enviar_codigo')));
     await tester.pumpAndSettle();
 
@@ -96,8 +117,9 @@ void main() {
     expect(reenviar().onPressed, isNotNull);
   });
 
-  testWidgets('con respaldo existente, Cancelar cierra sesión sin subir nada',
-      (tester) async {
+  testWidgets('con respaldo existente, Cancelar cierra sesión sin subir nada', (
+    tester,
+  ) async {
     final nube = NubeRespaldoFalsa(fecha: DateTime(2026, 10, 3, 14, 32));
     await abrir(tester, nube);
 
@@ -124,48 +146,68 @@ void main() {
     expect(find.text('Respaldo activado'), findsOneWidget);
   });
 
-  testWidgets('con respaldo existente, Restaurar pide confirmación y restaura',
-      (tester) async {
-    final nube = NubeRespaldoFalsa(fecha: DateTime(2026, 10, 3, 14, 32));
-    final restaurador = RestauradorFalso(ResultadoRestauracion.restaurado);
-    await abrir(tester, nube, restaurador: restaurador);
+  testWidgets(
+    'con respaldo existente, Restaurar pide confirmación y restaura',
+    (tester) async {
+      final nube = NubeRespaldoFalsa(fecha: DateTime(2026, 10, 3, 14, 32));
+      final restaurador = RestauradorFalso(ResultadoRestauracion.restaurado);
+      await abrir(tester, nube, restaurador: restaurador);
 
-    await enviarYVerificar(tester);
-    await tester.tap(find.byKey(const Key('boton_restaurar_existente')));
-    await tester.pumpAndSettle();
-    expect(find.text('Se reemplazarán los datos de este celular'),
-        findsOneWidget);
-    await tester.tap(find.byKey(const Key('boton_confirmar_restaurar')));
-    await tester.pumpAndSettle();
+      await enviarYVerificar(tester);
+      await tester.tap(find.byKey(const Key('boton_restaurar_existente')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Se reemplazarán los datos de este celular'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('boton_confirmar_restaurar')));
+      await tester.pumpAndSettle();
 
-    expect(restaurador.llamadas, 1);
-    expect(find.text('Respaldo restaurado. Entra con tu PIN.'), findsOneWidget);
-  });
+      expect(restaurador.llamadas, 1);
+      expect(
+        find.text('Respaldo restaurado. Entra con tu PIN.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('restaurar sin respaldo avisa y vuelve atrás', (tester) async {
     final restaurador = RestauradorFalso(ResultadoRestauracion.sinRespaldo);
-    await abrir(tester, NubeRespaldoFalsa(),
-        modo: ModoVerificacion.restaurar, restaurador: restaurador);
-
-    await enviarYVerificar(tester);
-
-    expect(find.text('No encontramos un respaldo para este número'),
-        findsOneWidget);
-    expect(find.text('Inicio'), findsOneWidget);
-  });
-
-  testWidgets('restaurar un respaldo dañado muestra el error y no sale',
-      (tester) async {
-    final restaurador = RestauradorFalso(ResultadoRestauracion.invalido);
-    await abrir(tester, NubeRespaldoFalsa(),
-        modo: ModoVerificacion.restaurar, restaurador: restaurador);
+    await abrir(
+      tester,
+      NubeRespaldoFalsa(),
+      modo: ModoVerificacion.restaurar,
+      restaurador: restaurador,
+    );
 
     await enviarYVerificar(tester);
 
     expect(
-        find.text(
-            'El respaldo no se pudo leer; tus datos actuales no se tocaron'),
-        findsOneWidget);
+      find.text('No encontramos un respaldo para este número'),
+      findsOneWidget,
+    );
+    expect(find.text('Inicio'), findsOneWidget);
+  });
+
+  testWidgets('restaurar un respaldo dañado muestra el error y no sale', (
+    tester,
+  ) async {
+    final restaurador = RestauradorFalso(ResultadoRestauracion.invalido);
+    await abrir(
+      tester,
+      NubeRespaldoFalsa(),
+      modo: ModoVerificacion.restaurar,
+      restaurador: restaurador,
+    );
+
+    await enviarYVerificar(tester);
+
+    expect(
+      find.text(
+        'El respaldo no se pudo leer; tus datos actuales no se tocaron',
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(VerificarTelefonoScreen), findsOneWidget);
   });
 }

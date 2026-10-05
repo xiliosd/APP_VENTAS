@@ -18,29 +18,39 @@ class Restaurador {
   /// Si devuelve [ResultadoRestauracion.restaurado], [db] quedó cerrada y el
   /// archivo local reemplazado: quien llama debe abrir una base nueva.
   Future<ResultadoRestauracion> restaurar(
-      NubeRespaldo nube, AppDatabase db) async {
+    NubeRespaldo nube,
+    AppDatabase db,
+  ) async {
     if (await nube.fechaUltimoRespaldo() == null) {
       return ResultadoRestauracion.sinRespaldo;
     }
     final temporal = await directorioTemporal();
-    final descargado = File(p.join(temporal.path, 'restaurar_app_ventas.sqlite'));
+    final descargado = File(
+      p.join(temporal.path, 'restaurar_app_ventas.sqlite'),
+    );
     if (await descargado.exists()) await descargado.delete();
     await nube.descargar(descargado);
 
-    if (!CopiaBaseDatos.esCopiaValida(descargado,
-        versionMaxima: db.schemaVersion)) {
+    if (!CopiaBaseDatos.esCopiaValida(
+      descargado,
+      versionMaxima: db.schemaVersion,
+    )) {
       await descargado.delete();
       return ResultadoRestauracion.invalido;
     }
 
-    await db.close();
     final base = await archivoBase();
+    // Se copia primero junto a la base y luego se renombra: si el celular se
+    // apaga a mitad de la copia, la base original sigue intacta.
+    final nueva = await descargado.copy('${base.path}.nuevo');
+    await descargado.delete();
+
+    await db.close();
     for (final sufijo in ['-wal', '-shm', '-journal']) {
       final auxiliar = File('${base.path}$sufijo');
       if (await auxiliar.exists()) await auxiliar.delete();
     }
-    await descargado.copy(base.path);
-    await descargado.delete();
+    await nueva.rename(base.path);
     return ResultadoRestauracion.restaurado;
   }
 }
