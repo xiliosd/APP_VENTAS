@@ -70,14 +70,27 @@ artefacto de build). Para instalarlo en un emulador o dispositivo conectado:
 adb install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-## Riesgo conocido: pérdida de datos
+## Respaldo en la nube (opcional)
 
-Toda la información (ventas, fiados, gastos, usuarios) vive únicamente en el
-archivo SQLite local del dispositivo. Si el celular se pierde, se daña o se
-formatea sin respaldo, **los datos se pierden permanentemente** — no hay
-sincronización ni backup en esta fase. Cualquier fase futura que agregue
-sincronización en la nube debe tratar esto como el riesgo principal a
-resolver.
+Sin configuración la app funciona 100% local. Para habilitar el respaldo:
+
+1. Configurar un proyecto Supabase como describe la Task 9 de
+   `docs/superpowers/plans/2026-10-05-app-ventas-fase2bc-respaldo.md`
+   (login por teléfono, bucket privado `respaldos` y sus políticas RLS).
+2. Compilar pasando las claves (nunca se guardan en el repo):
+
+```bash
+flutter run --dart-define=SUPABASE_URL=https://xxxx.supabase.co --dart-define=SUPABASE_ANON_KEY=<publishable o anon key>
+```
+
+Con el respaldo activo (Ajustes → Respaldo) la base se sube sola 30 s
+después de cada cambio y al abrir la app. En un celular nuevo, la pantalla
+de Bienvenida permite restaurarla verificando el mismo número.
+
+**Riesgo restante:** sin respaldo activo, perder el celular es perder los
+datos. Los PIN se guardan como SHA-256 sin sal: quien obtenga el archivo de
+respaldo podría deducirlos; el acceso al respaldo está limitado al número
+de la tienda (RLS).
 
 ## Fase 2
 
@@ -91,7 +104,7 @@ La Fase 2 se divide en subproyectos, cada uno con su spec y plan en `docs/superp
   Inicio con tarjetas de ventas/gastos/ganancia/por cobrar, avisos de
   confirmación y estados vacíos en todas las pantallas.
 - **2B/2C — Respaldo en la nube (Supabase) e identidad de la tienda por OTP**
-  (pendiente). Resuelve el riesgo de pérdida de datos descrito arriba.
+  (hecho; requiere configurar Supabase, ver arriba).
 - **2D — Cobro digital por QR (Bre-B / Nequi / Daviplata)** (pendiente).
 
 Fuera de alcance por ahora: editar o anular ventas, abonos o gastos ya
