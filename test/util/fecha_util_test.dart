@@ -26,4 +26,12 @@ void main() {
   test('formatoFechaHora une fecha y hora', () {
     expect(formatoFechaHora(DateTime(2026, 9, 2, 7, 5)), '02/09/2026 07:05');
   });
+
+  test('textoDebeDesde usa hoy, ayer o hace N días', () {
+    final hoy = DateTime(2026, 10, 5, 9);
+    expect(textoDebeDesde(DateTime(2026, 10, 5, 7), hoy), 'Debe desde hoy');
+    expect(textoDebeDesde(DateTime(2026, 10, 4, 23), hoy), 'Debe desde ayer');
+    expect(textoDebeDesde(DateTime(2026, 9, 23), hoy),
+        'Debe desde hace 12 días');
+  });
 }

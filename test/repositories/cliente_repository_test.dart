@@ -39,4 +39,20 @@ void main() {
   test('obtenerCliente con id inexistente devuelve null', () async {
     expect(await repo.obtenerCliente(999), isNull);
   });
+
+  test('obtenerOCrearCliente reutiliza un cliente con el mismo nombre',
+      () async {
+    final id = await repo.crearCliente(nombre: 'Don Pedro');
+
+    expect(await repo.obtenerOCrearCliente('  don pedro '), id);
+    expect(await repo.listarClientes(), hasLength(1));
+  });
+
+  test('obtenerOCrearCliente crea el cliente si no existe, sin espacios',
+      () async {
+    final id = await repo.obtenerOCrearCliente('  Doña Rosa ');
+
+    final cliente = await repo.obtenerCliente(id);
+    expect(cliente!.nombre, 'Doña Rosa');
+  });
 }

@@ -40,4 +40,10 @@ class VentaRepository {
     }
     return query.get();
   }
+
+  /// Solo para "Deshacer" justo después de cobrar; no es una función de
+  /// anular ventas pasadas.
+  Future<void> eliminarVenta(int id) {
+    return (_db.delete(_db.ventas)..where((v) => v.id.equals(id))).go();
+  }
 }

@@ -13,3 +13,11 @@ String formatoHora(DateTime fecha) =>
 
 String formatoFechaHora(DateTime fecha) =>
     '${formatoFecha(fecha)} ${formatoHora(fecha)}';
+
+/// "Debe desde hoy", "Debe desde ayer" o "Debe desde hace N días".
+String textoDebeDesde(DateTime desde, DateTime hoy) {
+  final dias = inicioDelDia(hoy).difference(inicioDelDia(desde)).inDays;
+  if (dias <= 0) return 'Debe desde hoy';
+  if (dias == 1) return 'Debe desde ayer';
+  return 'Debe desde hace $dias días';
+}

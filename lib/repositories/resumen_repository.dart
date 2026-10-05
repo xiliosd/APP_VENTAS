@@ -8,11 +8,17 @@ class ResumenDia {
     required this.totalVendido,
     required this.totalGastado,
     required this.totalPorCobrar,
+    required this.cantidadVentas,
+    required this.cantidadFiadas,
+    required this.clientesConDeuda,
   });
 
   final int totalVendido;
   final int totalGastado;
   final int totalPorCobrar;
+  final int cantidadVentas;
+  final int cantidadFiadas;
+  final int clientesConDeuda;
 }
 
 class ResumenRepository {
@@ -42,6 +48,9 @@ class ResumenRepository {
       totalVendido: totalVendido,
       totalGastado: totalGastado,
       totalPorCobrar: totalPorCobrar,
+      cantidadVentas: ventas.length,
+      cantidadFiadas: ventas.where((v) => v.esFiado).length,
+      clientesConDeuda: await _fiadoRepository.clientesConDeudaAl(dia),
     );
   }
 

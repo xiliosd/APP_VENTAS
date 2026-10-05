@@ -124,10 +124,9 @@ class FiadoRepository {
     ]..sort((a, b) => b.fecha.compareTo(a.fecha));
   }
 
-  /// Lo que deben todos los clientes al cierre de [dia]: ventas fiadas menos
-  /// abonos hechos hasta ese momento. Un cliente con saldo a favor cuenta
-  /// como 0, para que no reste a la deuda de los demás.
-  Future<int> deudaTotalAl(DateTime dia) async {
+  /// Saldo de cada cliente al cierre de [dia]: ventas fiadas menos abonos
+  /// hechos hasta ese momento.
+  Future<Map<int, int>> _saldosAl(DateTime dia) async {
     final corte = finDelDia(dia);
     final ventas = await (_db.select(_db.ventas)
           ..where((v) =>
@@ -146,6 +145,21 @@ class FiadoRepository {
     for (final p in pagos) {
       saldos.update(p.clienteId, (s) => s - p.monto, ifAbsent: () => -p.monto);
     }
-    return saldos.values.where((s) => s > 0).fold<int>(0, (suma, s) => suma + s);
+    return saldos;
+  }
+
+  /// Lo que deben todos los clientes al cierre de [dia]. Un cliente con saldo
+  /// a favor cuenta como 0, para que no reste a la deuda de los demás.
+  Future<int> deudaTotalAl(DateTime dia) async {
+    final saldos = await _saldosAl(dia);
+    return saldos.values
+        .where((s) => s > 0)
+        .fold<int>(0, (suma, s) => suma + s);
+  }
+
+  /// Cuántos clientes deben algo al cierre de [dia].
+  Future<int> clientesConDeudaAl(DateTime dia) async {
+    final saldos = await _saldosAl(dia);
+    return saldos.values.where((s) => s > 0).length;
   }
 }

@@ -70,4 +70,17 @@ void main() {
     expect(ventasVendedor1, hasLength(1));
     expect(ventasVendedor1.single.monto, 1000);
   });
+
+  test('eliminarVenta borra solo esa venta', () async {
+    final usuarioId = await crearUsuario();
+    final id1 = await repo.registrarVenta(
+        monto: 1000, esFiado: false, usuarioId: usuarioId);
+    final id2 = await repo.registrarVenta(
+        monto: 2000, esFiado: false, usuarioId: usuarioId);
+
+    await repo.eliminarVenta(id1);
+
+    final ventas = await db.select(db.ventas).get();
+    expect(ventas.map((v) => v.id), [id2]);
+  });
 }

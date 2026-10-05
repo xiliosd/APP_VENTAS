@@ -106,4 +106,23 @@ void main() {
     final resumen = await repo.resumenDelDia(dia);
     expect(resumen.totalPorCobrar, 6000);
   });
+
+  test('resumenDelDia cuenta ventas, fiadas y clientes con deuda', () async {
+    final pedro = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
+    await ventaRepo.registrarVenta(
+        monto: 5000, esFiado: false, usuarioId: vendedor1, fecha: dia);
+    await ventaRepo.registrarVenta(
+        monto: 2000,
+        esFiado: true,
+        clienteId: pedro,
+        usuarioId: vendedor1,
+        fecha: dia);
+
+    final resumen = await repo.resumenDelDia(dia);
+    expect(resumen.cantidadVentas, 2);
+    expect(resumen.cantidadFiadas, 1);
+    expect(resumen.clientesConDeuda, 1);
+  });
 }

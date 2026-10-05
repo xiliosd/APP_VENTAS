@@ -22,4 +22,15 @@ class ClienteRepository {
     return (_db.select(_db.clientes)..where((c) => c.id.equals(id)))
         .getSingleOrNull();
   }
+
+  /// Id del cliente cuyo nombre coincide con [nombre] (sin importar
+  /// mayúsculas ni espacios de los extremos); si no existe, lo crea.
+  Future<int> obtenerOCrearCliente(String nombre) async {
+    final limpio = nombre.trim();
+    final buscado = limpio.toLowerCase();
+    for (final cliente in await listarClientes()) {
+      if (cliente.nombre.trim().toLowerCase() == buscado) return cliente.id;
+    }
+    return crearCliente(nombre: limpio);
+  }
 }

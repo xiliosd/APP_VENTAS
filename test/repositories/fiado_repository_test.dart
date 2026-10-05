@@ -195,4 +195,27 @@ void main() {
     expect(await repo.deudaTotalAl(DateTime(2026, 9, 1)), 5000);
     expect(await repo.deudaTotalAl(DateTime(2026, 9, 2)), 4000);
   });
+
+  test('clientesConDeudaAl cuenta solo clientes con saldo positivo', () async {
+    final rosa = await db.into(db.clientes).insert(
+          ClientesCompanion.insert(nombre: 'Doña Rosa'),
+        );
+    await venderFiado(5000, DateTime(2026, 9, 1));
+    await db.into(db.ventas).insert(
+          VentasCompanion.insert(
+            monto: 1000,
+            fecha: DateTime(2026, 9, 1),
+            esFiado: const Value(true),
+            clienteId: Value(rosa),
+            usuarioId: usuarioId,
+          ),
+        );
+    await repo.registrarPago(
+        clienteId: rosa,
+        monto: 1000,
+        usuarioId: usuarioId,
+        fecha: DateTime(2026, 9, 1));
+
+    expect(await repo.clientesConDeudaAl(DateTime(2026, 9, 1)), 1);
+  });
 }
