@@ -1,7 +1,7 @@
 # Fase 3A — Corregir y anular movimientos
 
 **Fecha:** 2026-10-06
-**Estado:** Diseño aprobado, pendiente de plan
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con Fase 1, 2A, 2E, 2B+2C, marca VeciTienda y 2D integradas.
 
 ## Objetivo
