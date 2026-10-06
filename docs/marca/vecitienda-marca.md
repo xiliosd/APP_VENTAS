@@ -1,7 +1,7 @@
 # VeciTienda — Marca e identidad gráfica
 
 **Fecha de recepción:** 2026-10-05
-**Estado:** Pendiente de aplicar. Se ejecuta **después** de terminar las 9 tareas de la Fase 2B+2C (respaldo en la nube), como un subproyecto propio con su propio diseño y plan.
+**Estado:** Aplicado (ver docs/superpowers/specs/2026-10-05-vecitienda-marca-design.md).
 **Fuente:** brief entregado por el usuario (transcrito sin cambios de contenido).
 
 ## 1. Definición de marca

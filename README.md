@@ -1,4 +1,6 @@
-# App de Ventas
+# VeciTienda
+
+*La tranquilidad de tu tienda, en tu bolsillo.*
 
 App móvil offline (Android) para tenderos y vendedores informales en Colombia:
 registro rápido de ventas, fiado (crédito a clientes) con cobro parcial, gastos,
@@ -105,6 +107,9 @@ La Fase 2 se divide en subproyectos, cada uno con su spec y plan en `docs/superp
   confirmación y estados vacíos en todas las pantallas.
 - **2B/2C — Respaldo en la nube (Supabase) e identidad de la tienda por OTP**
   (hecho; requiere configurar Supabase, ver arriba).
+- **Marca VeciTienda** (hecho): nombre, isotipo e íconos Android
+  (`tool/generar_iconos.py` los regenera desde `docs/marca/`), paleta azul
+  cobalto + verde esmeralda con contraste AA, títulos en Nunito.
 - **2D — Cobro digital por QR (Bre-B / Nequi / Daviplata)** (pendiente).
 
 Fuera de alcance por ahora: editar o anular ventas, abonos o gastos ya

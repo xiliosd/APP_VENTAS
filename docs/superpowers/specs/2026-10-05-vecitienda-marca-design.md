@@ -1,7 +1,7 @@
 # VeciTienda — aplicar la marca
 
 **Fecha:** 2026-10-05
-**Estado:** Borrador para revisión
+**Estado:** Implementado
 **Fuentes:** `docs/marca/vecitienda-marca.md` (brief del usuario) y `docs/marca/logo-vecitienda.jpeg`
 **Base:** sistema visual de la Fase 2E (`lib/ui/`), respaldo 2B+2C ya integrado.
 
