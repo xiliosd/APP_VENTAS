@@ -48,6 +48,7 @@ final historialRepositoryProvider = Provider(
   (ref) => HistorialRepository(
     ref.watch(ventaRepositoryProvider),
     ref.watch(gastoRepositoryProvider),
+    ref.watch(correccionRepositoryProvider),
   ),
 );
 

@@ -1,4 +1,5 @@
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/repositories/correccion_repository.dart';
 import 'package:app_ventas/repositories/fiado_repository.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -245,5 +246,44 @@ void main() {
     final movimientos = await repo.movimientosCliente(clienteId);
     expect(movimientos.firstWhere((m) => m.monto == 2000).medioPago,
         MedioPago.transferencia);
+  });
+
+  test('movimientosCliente trae lo anulado marcado con su corrección',
+      () async {
+    final ana = await (db.select(db.usuarios)
+          ..where((u) => u.id.equals(usuarioId)))
+        .getSingle();
+    final correcciones =
+        CorreccionRepository(db, reloj: () => DateTime(2026, 9, 3));
+    final ventaId = await db.into(db.ventas).insert(VentasCompanion.insert(
+          monto: 5000,
+          fecha: DateTime(2026, 9, 1),
+          esFiado: const Value(true),
+          clienteId: Value(clienteId),
+          usuarioId: usuarioId,
+        ));
+    final pagoId = await repo.registrarPago(
+        clienteId: clienteId,
+        monto: 2000,
+        usuarioId: usuarioId,
+        fecha: DateTime(2026, 9, 2));
+    await correcciones.anularPago(pagoId, por: ana);
+    await correcciones.corregirVenta(ventaId,
+        monto: 6000, esFiado: true, clienteId: clienteId, por: ana);
+
+    final movimientos = await repo.movimientosCliente(clienteId);
+
+    final abono =
+        movimientos.singleWhere((m) => m.tipo == TipoMovimientoFiado.abono);
+    expect(abono.id, pagoId);
+    expect(abono.usuarioId, usuarioId);
+    expect(abono.anulado, isTrue);
+    expect(abono.ultimaCorreccion!.accion, AccionCorreccion.anulado);
+    final venta =
+        movimientos.singleWhere((m) => m.tipo == TipoMovimientoFiado.venta);
+    expect(venta.id, ventaId);
+    expect(venta.monto, 6000);
+    expect(venta.ultimaCorreccion!.antes, r'$5.000 · Fiado · Don Pedro');
+    expect(await repo.saldoCliente(clienteId), 6000);
   });
 }

@@ -1,4 +1,5 @@
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/repositories/correccion_repository.dart';
 import 'package:app_ventas/repositories/gasto_repository.dart';
 import 'package:app_ventas/repositories/historial_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
@@ -18,7 +19,7 @@ void main() {
     db = AppDatabase(NativeDatabase.memory());
     ventaRepo = VentaRepository(db);
     gastoRepo = GastoRepository(db);
-    repo = HistorialRepository(ventaRepo, gastoRepo);
+    repo = HistorialRepository(ventaRepo, gastoRepo, CorreccionRepository(db));
     ana = await db.into(db.usuarios).insert(
           UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
         );
@@ -92,5 +93,48 @@ void main() {
     final movimientos = await repo.movimientosDelDia(dia);
 
     expect(movimientos.single.medioPago, MedioPago.transferencia);
+  });
+
+  test('trae lo anulado marcado, la última corrección y el cliente', () async {
+    final usuarioAna =
+        await (db.select(db.usuarios)..where((u) => u.id.equals(ana))).getSingle();
+    final correcciones =
+        CorreccionRepository(db, reloj: () => DateTime(2026, 9, 2, 18));
+    final pedro = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
+    final anulada = await ventaRepo.registrarVenta(
+        monto: 5000, esFiado: false, usuarioId: ana, fecha: DateTime(2026, 9, 2, 9));
+    final fiada = await ventaRepo.registrarVenta(
+        monto: 2000,
+        esFiado: true,
+        clienteId: pedro,
+        usuarioId: ana,
+        fecha: DateTime(2026, 9, 2, 11));
+    final corregido = await gastoRepo.registrarGasto(
+        monto: 1000,
+        descripcion: 'Hielo',
+        usuarioId: ana,
+        fecha: DateTime(2026, 9, 2, 10));
+    await correcciones.anularVenta(anulada, por: usuarioAna);
+    await correcciones.corregirGasto(corregido,
+        monto: 1200, descripcion: 'Hielo', por: usuarioAna);
+
+    final movimientos = await repo.movimientosDelDia(dia);
+
+    final venta = movimientos.singleWhere((m) => m.id == anulada &&
+        m.tipo == TipoMovimientoHistorial.venta);
+    expect(venta.anulado, isTrue);
+    expect(venta.ultimaCorreccion!.accion, AccionCorreccion.anulado);
+    final deFiado = movimientos.singleWhere((m) => m.id == fiada &&
+        m.tipo == TipoMovimientoHistorial.venta);
+    expect(deFiado.clienteId, pedro);
+    expect(deFiado.ultimaCorreccion, isNull);
+    final gasto =
+        movimientos.singleWhere((m) => m.tipo == TipoMovimientoHistorial.gasto);
+    expect(gasto.id, corregido);
+    expect(gasto.monto, 1200);
+    expect(gasto.anulado, isFalse);
+    expect(gasto.ultimaCorreccion!.antes, r'$1.000 · Hielo');
   });
 }

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../data/database.dart';
 import '../util/fecha_util.dart';
+import 'correccion_repository.dart';
 
 class ClienteConSaldo {
   const ClienteConSaldo({
@@ -20,17 +21,33 @@ enum TipoMovimientoFiado { venta, abono }
 class MovimientoFiado {
   const MovimientoFiado({
     required this.tipo,
+    required this.id,
     required this.monto,
     required this.fecha,
+    required this.usuarioId,
     this.medioPago = MedioPago.efectivo,
+    this.anulado = false,
+    this.ultimaCorreccion,
   });
 
   final TipoMovimientoFiado tipo;
+
+  /// Id en su tabla (`ventas` o `pagos_fiado`).
+  final int id;
   final int monto;
   final DateTime fecha;
 
+  /// Quién lo registró.
+  final int usuarioId;
+
   /// Solo aplica a abonos.
   final MedioPago medioPago;
+
+  /// Anulado: se muestra tachado y no cuenta en el saldo.
+  final bool anulado;
+
+  /// Anulación o corrección más reciente, si la hay.
+  final Correccion? ultimaCorreccion;
 }
 
 class FiadoRepository {
@@ -136,22 +153,37 @@ class FiadoRepository {
     return query.get();
   }
 
+  /// Ventas fiadas y abonos del cliente, incluidos los anulados (para
+  /// mostrarlos tachados).
   Future<List<MovimientoFiado>> movimientosCliente(int clienteId) async {
-    final ventas = await ventasFiadasCliente(clienteId);
-    final pagos = await pagosCliente(clienteId);
+    final ventas = await ventasFiadasCliente(clienteId, incluirAnulados: true);
+    final pagos = await pagosCliente(clienteId, incluirAnulados: true);
+    final correcciones = CorreccionRepository(_db);
+    final correccionesVentas = await correcciones.ultimasCorrecciones(
+        TipoMovimiento.venta, ventas.map((v) => v.id));
+    final correccionesPagos = await correcciones.ultimasCorrecciones(
+        TipoMovimiento.abono, pagos.map((p) => p.id));
     return [
       for (final v in ventas)
         MovimientoFiado(
           tipo: TipoMovimientoFiado.venta,
+          id: v.id,
           monto: v.monto,
           fecha: v.fecha,
+          usuarioId: v.usuarioId,
+          anulado: v.anulado,
+          ultimaCorreccion: correccionesVentas[v.id],
         ),
       for (final p in pagos)
         MovimientoFiado(
           tipo: TipoMovimientoFiado.abono,
+          id: p.id,
           monto: p.monto,
           fecha: p.fecha,
+          usuarioId: p.usuarioId,
           medioPago: p.medioPago,
+          anulado: p.anulado,
+          ultimaCorreccion: correccionesPagos[p.id],
         ),
     ]..sort((a, b) => b.fecha.compareTo(a.fecha));
   }
