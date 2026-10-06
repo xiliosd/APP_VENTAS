@@ -5,6 +5,10 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'medio_pago.dart';
+
+export 'medio_pago.dart';
+
 part 'database.g.dart';
 
 @DataClassName('Usuario')
@@ -40,6 +44,8 @@ class Ventas extends Table {
   BoolColumn get esFiado => boolean().withDefault(const Constant(false))();
   IntColumn get clienteId => integer().nullable().references(Clientes, #id)();
   IntColumn get usuarioId => integer().references(Usuarios, #id)();
+  TextColumn get medioPago => textEnum<MedioPago>()
+      .withDefault(const Constant('efectivo'))();
 }
 
 @DataClassName('PagoFiado')
@@ -49,6 +55,8 @@ class PagosFiado extends Table {
   IntColumn get monto => integer()();
   DateTimeColumn get fecha => dateTime()();
   IntColumn get usuarioId => integer().references(Usuarios, #id)();
+  TextColumn get medioPago => textEnum<MedioPago>()
+      .withDefault(const Constant('efectivo'))();
 }
 
 @DataClassName('Gasto')
@@ -60,8 +68,26 @@ class Gastos extends Table {
   IntColumn get usuarioId => integer().references(Usuarios, #id)();
 }
 
+/// Configuración de la tienda: una sola fila (id 1).
+@DataClassName('ConfiguracionTiendaFila')
+class ConfiguracionTienda extends Table {
+  IntColumn get id => integer()();
+  BlobColumn get imagenQr => blob().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 @DriftDatabase(
-  tables: [Usuarios, Productos, Clientes, Ventas, PagosFiado, Gastos],
+  tables: [
+    Usuarios,
+    Productos,
+    Clientes,
+    Ventas,
+    PagosFiado,
+    Gastos,
+    ConfiguracionTienda,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   // Only an explicitly-injected executor (as used in tests, e.g.
@@ -73,7 +99,19 @@ class AppDatabase extends _$AppDatabase {
       : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) => m.createAll(),
+        onUpgrade: (m, desde, hasta) async {
+          if (desde < 2) {
+            await m.addColumn(ventas, ventas.medioPago);
+            await m.addColumn(pagosFiado, pagosFiado.medioPago);
+            await m.createTable(configuracionTienda);
+          }
+        },
+      );
 
   static QueryExecutor _openConnection() {
     return LazyDatabase(() async {

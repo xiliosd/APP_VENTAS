@@ -6,6 +6,7 @@ import 'package:app_ventas/respaldo/restaurador.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/esquema_v1.dart';
 import '../support/respaldo_prueba.dart';
 
 void main() {
@@ -78,5 +79,21 @@ void main() {
     expect(resultado, ResultadoRestauracion.invalido);
     expect((await local.select(local.usuarios).get()).single.nombre, 'Viejo');
     await local.close();
+  });
+  test('restaura un respaldo hecho con la versión 1 de la app', () async {
+    final copiaV1 = File('${(await carpeta.createTemp('v1')).path}/r.sqlite');
+    crearBaseV1(copiaV1.path);
+    final nube = NubeRespaldoFalsa(conSesion: true);
+    await nube.subir(copiaV1);
+    final local = AppDatabase(NativeDatabase(archivoLocal));
+
+    final resultado = await restaurador.restaurar(nube, local);
+
+    expect(resultado, ResultadoRestauracion.restaurado);
+    final reabierta = AppDatabase(NativeDatabase(archivoLocal));
+    final ventas = await reabierta.select(reabierta.ventas).get();
+    expect(ventas.single.monto, 5000);
+    expect(ventas.single.medioPago, MedioPago.efectivo);
+    await reabierta.close();
   });
 }
