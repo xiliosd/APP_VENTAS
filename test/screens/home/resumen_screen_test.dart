@@ -1,6 +1,7 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/screens/home/resumen_screen.dart';
+import 'package:app_ventas/screens/reportes/reportes_screen.dart';
 import 'package:app_ventas/ui/monto.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/drift.dart' show Value;
@@ -9,6 +10,8 @@ import 'package:app_ventas/ui/colores_app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../support/montaje.dart';
 
 void main() {
   late AppDatabase db;
@@ -170,5 +173,31 @@ void main() {
         enTarjeta('tarjeta_ventas',
             r'Recibido: efectivo $5.000 · transferencias $3.000'),
         findsOneWidget);
+  });
+
+  Future<void> montarConSesion(WidgetTester tester, String rol) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final container = await containerConSesion(db, nombre: 'Caro', rol: rol);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(appDePrueba(container,
+        inicio: const Scaffold(body: ResumenScreen())));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('el administrador ve Ver reportes y lo abre', (tester) async {
+    await montarConSesion(tester, 'admin');
+
+    await tester.tap(find.byKey(const Key('boton_ver_reportes')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReportesScreen), findsOneWidget);
+  });
+
+  testWidgets('el vendedor no ve Ver reportes', (tester) async {
+    await montarConSesion(tester, 'vendedor');
+
+    expect(find.byKey(const Key('boton_ver_reportes')), findsNothing);
   });
 }

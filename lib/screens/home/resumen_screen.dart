@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/resumen_providers.dart';
+import '../../providers/sesion_provider.dart';
 import '../../repositories/resumen_repository.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/boton_principal.dart';
@@ -14,6 +15,7 @@ import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
 import '../../widgets/selector_fecha.dart';
 import '../gasto/registrar_gasto_screen.dart';
+import '../reportes/reportes_screen.dart';
 import '../venta/registrar_venta_screen.dart';
 
 class ResumenScreen extends ConsumerStatefulWidget {
@@ -33,6 +35,7 @@ class _ResumenScreenState extends ConsumerState<ResumenScreen> {
   Widget build(BuildContext context) {
     final resumenAsync = ref.watch(resumenDelDiaProvider(_dia));
     final porVendedorAsync = ref.watch(resumenPorVendedorProvider(_dia));
+    final esAdmin = ref.watch(sesionProvider).esAdmin;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -79,6 +82,18 @@ class _ResumenScreenState extends ConsumerState<ResumenScreen> {
             ),
           ],
         ),
+        if (esAdmin) ...[
+          const SizedBox(height: 12),
+          BotonPrincipal(
+            key: const Key('boton_ver_reportes'),
+            texto: 'Ver reportes',
+            icono: Icons.bar_chart_rounded,
+            variante: VarianteBoton.contorno,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ReportesScreen()),
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
         const Text('Por vendedor',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
