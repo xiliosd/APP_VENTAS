@@ -14,6 +14,7 @@ class TarjetaMonto extends StatelessWidget {
     this.onTap,
     this.fondo,
     this.tamano = 18,
+    this.colorBorde,
   });
 
   final String etiqueta;
@@ -23,6 +24,9 @@ class TarjetaMonto extends StatelessWidget {
   final VoidCallback? onTap;
   final Color? fondo;
   final double tamano;
+
+  /// Color del borde (por defecto el gris de [ColoresApp.borde]).
+  final Color? colorBorde;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +38,10 @@ class TarjetaMonto extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: fondo == null
-            ? const BorderSide(color: ColoresApp.borde)
+            ? BorderSide(
+                color: colorBorde ?? ColoresApp.borde,
+                width: colorBorde == null ? 1 : 1.5,
+              )
             : BorderSide.none,
       ),
       child: InkWell(

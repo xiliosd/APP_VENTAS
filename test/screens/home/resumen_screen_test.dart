@@ -5,6 +5,7 @@ import 'package:app_ventas/ui/monto.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
+import 'package:app_ventas/ui/colores_app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -124,5 +125,21 @@ void main() {
     await montar(tester);
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Gastos lleva borde rojo claro y Ganancia borde verde claro',
+      (tester) async {
+    await montar(tester);
+
+    Color borde(String clave) {
+      final material = tester.widget<Material>(find
+          .descendant(
+              of: find.byKey(Key(clave)), matching: find.byType(Material))
+          .first);
+      return (material.shape! as RoundedRectangleBorder).side.color;
+    }
+
+    expect(borde('tarjeta_gastos'), ColoresApp.saleSuave);
+    expect(borde('tarjeta_ganancia'), ColoresApp.entraSuave);
   });
 }

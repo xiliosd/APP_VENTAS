@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../providers/sesion_provider.dart';
 import '../../ui/avatar_inicial.dart';
+import '../../ui/colores_app.dart';
+import '../../ui/tipografia.dart';
 import '../configuracion/ajustes_screen.dart';
 import '../fiado/lista_fiado_screen.dart';
 import '../historial/historial_screen.dart';
@@ -39,11 +41,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ];
     if (_tabActual >= tabs.length) _tabActual = 0;
 
+    final esInicio = _tabActual == 0;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_tabActual == 0
-            ? 'Hola, ${usuario.nombre}'
-            : tabs[_tabActual].titulo),
+        // Header de marca solo en Inicio; las demás pestañas, barra blanca.
+        backgroundColor: esInicio ? ColoresApp.primario : null,
+        foregroundColor: esInicio ? Colors.white : null,
+        titleTextStyle:
+            esInicio ? estiloTitulo(tamano: 20, color: Colors.white) : null,
+        title: esInicio
+            ? Row(
+                children: [
+                  const _InsigniaMarca(),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      'Hola, ${usuario.nombre}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              )
+            : Text(tabs[_tabActual].titulo),
         actions: [_MenuCuenta(usuario: usuario), const SizedBox(width: 8)],
       ),
       body: tabs[_tabActual].pantalla,
@@ -100,6 +119,27 @@ class _MenuCuenta extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Isotipo sobre una insignia blanca, para el header azul del Inicio.
+class _InsigniaMarca extends StatelessWidget {
+  const _InsigniaMarca();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('insignia_marca'),
+      width: 36,
+      height: 36,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Image.asset('assets/marca/isotipo.png',
+          semanticLabel: 'VeciTienda'),
     );
   }
 }

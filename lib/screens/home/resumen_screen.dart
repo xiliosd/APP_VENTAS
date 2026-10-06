@@ -150,6 +150,7 @@ class _Tarjetas extends StatelessWidget {
                 etiqueta: 'Gastos',
                 valor: resumen.totalGastado,
                 tono: TonoMonto.sale,
+                colorBorde: ColoresApp.saleSuave,
               ),
             ),
             const SizedBox(width: 12),
@@ -159,6 +160,8 @@ class _Tarjetas extends StatelessWidget {
                 etiqueta: 'Ganancia',
                 valor: ganancia,
                 tono: ganancia >= 0 ? TonoMonto.entra : TonoMonto.sale,
+                colorBorde:
+                    ganancia >= 0 ? ColoresApp.entraSuave : ColoresApp.saleSuave,
               ),
             ),
           ],
