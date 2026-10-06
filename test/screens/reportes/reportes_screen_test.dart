@@ -36,14 +36,15 @@ void main() {
             clienteId: Value(fiado ? pedro : null),
           ));
 
-  Future<void> montar(WidgetTester tester) async {
+  Future<void> montar(WidgetTester tester,
+      {DateTime Function()? reloj}) async {
     // Pantalla alta: el ListView construye todas las secciones.
     tester.view.physicalSize = const Size(800, 3000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(ProviderScope(
       overrides: [databaseProvider.overrideWithValue(db)],
-      child: MaterialApp(theme: temaApp(), home: ReportesScreen(hoy: hoy)),
+      child: MaterialApp(theme: temaApp(), home: ReportesScreen(reloj: reloj ?? () => hoy)),
     ));
     await tester.pumpAndSettle();
   }
@@ -147,6 +148,19 @@ void main() {
     expect(find.text('Sin ventas en este periodo'), findsOneWidget);
 
     await vender(7000, DateTime(2026, 10, 7, 9));
+    await tester.pumpAndSettle();
+
+    expect(en('reporte_ventas', r'$7.000'), findsOneWidget);
+  });
+
+  testWidgets('pasada la medianoche, una venta nueva cuenta en el día nuevo',
+      (tester) async {
+    var ahora = DateTime(2026, 10, 6, 23, 50); // martes
+    await montar(tester, reloj: () => ahora);
+    expect(find.text('Sin ventas en este periodo'), findsOneWidget);
+
+    ahora = DateTime(2026, 10, 7, 0, 10); // miércoles
+    await vender(7000, ahora);
     await tester.pumpAndSettle();
 
     expect(en('reporte_ventas', r'$7.000'), findsOneWidget);

@@ -17,17 +17,19 @@ import 'barras_por_dia.dart';
 /// Reporte por semana o por mes: cómo le fue, caja y banco, fiado y ventas
 /// por día, comparado con el periodo anterior.
 class ReportesScreen extends ConsumerStatefulWidget {
-  const ReportesScreen({super.key, this.hoy});
+  const ReportesScreen({super.key, this.reloj});
 
-  /// Día que cuenta como hoy; solo para pruebas (por defecto, hoy).
-  final DateTime? hoy;
+  /// Hora actual; solo para pruebas (por defecto, `DateTime.now`).
+  final DateTime Function()? reloj;
 
   @override
   ConsumerState<ReportesScreen> createState() => _ReportesScreenState();
 }
 
 class _ReportesScreenState extends ConsumerState<ReportesScreen> {
-  late final DateTime _hoy = inicioDelDia(widget.hoy ?? DateTime.now());
+  /// Se lee en cada redibujo: si la pantalla queda abierta pasada la
+  /// medianoche, el periodo actual cuenta también el día nuevo.
+  DateTime get _hoy => inicioDelDia((widget.reloj ?? DateTime.now)());
   late Periodo _periodo = Periodo.actual(TipoPeriodo.semana, _hoy);
 
   @override
