@@ -60,13 +60,56 @@ void main() {
     expect(await ConfiguracionRepository(db).imagenQr(), isNull);
   });
 
-  testWidgets('Quitar QR lo borra', (tester) async {
+  testWidgets('Quitar QR pide confirmación y lo borra', (tester) async {
     await ConfiguracionRepository(db).guardarImagenQr(pngDePrueba);
     await montar(tester, SelectorImagenFalso());
     await tester.tap(find.byKey(const Key('boton_quitar_qr')));
     await tester.pumpAndSettle();
+    expect(find.text('¿Quitar tu QR?'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('confirmar_quitar_qr')));
+    await tester.pumpAndSettle();
     expect(await ConfiguracionRepository(db).imagenQr(), isNull);
     expect(find.text('Aún no has cargado tu QR'), findsOneWidget);
+  });
+
+  testWidgets('cancelar Quitar QR no lo borra', (tester) async {
+    await ConfiguracionRepository(db).guardarImagenQr(pngDePrueba);
+    await montar(tester, SelectorImagenFalso());
+    await tester.tap(find.byKey(const Key('boton_quitar_qr')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(find.text('¿Quitar tu QR?'), findsNothing);
+    expect(await ConfiguracionRepository(db).imagenQr(), pngDePrueba);
+    expect(find.byKey(const Key('vista_qr')), findsOneWidget);
+  });
+
+  testWidgets('al abrir guarda una imagen que quedó pendiente',
+      (tester) async {
+    await montar(tester, SelectorImagenFalso(perdida: pngDePrueba));
+    expect(await ConfiguracionRepository(db).imagenQr(), pngDePrueba);
+    expect(find.text('QR guardado'), findsOneWidget);
+    expect(find.byKey(const Key('vista_qr')), findsOneWidget);
+  });
+
+  testWidgets('una imagen pendiente que no se puede leer no se guarda',
+      (tester) async {
+    final container = await containerConSesion(db, overrides: [
+      selectorImagenProvider.overrideWithValue(
+          SelectorImagenFalso(perdida: Uint8List.fromList([1, 2, 3])))
+    ]);
+    addTearDown(container.dispose);
+    await tester.runAsync(() async {
+      await tester.pumpWidget(
+          appDePrueba(container, inicio: const ConfigurarQrScreen()));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo cargar la imagen, prueba con otra'),
+        findsOneWidget);
+    expect(await ConfiguracionRepository(db).imagenQr(), isNull);
   });
 
   testWidgets('Ajustes tiene la entrada Cobro por QR', (tester) async {
