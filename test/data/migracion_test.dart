@@ -7,6 +7,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/esquema_v1.dart';
+import '../support/esquema_v2.dart';
 
 void main() {
   late Directory carpeta;
@@ -48,6 +49,52 @@ void main() {
         MedioPago.transferencia);
     expect((await db.select(db.configuracionTienda).getSingle()).imagenQr,
         [1, 2]);
-    expect(db.schemaVersion, 2);
+    expect(db.schemaVersion, 3);
+  });
+
+  test('una base v2 abre en v3 sin nada anulado y sin correcciones', () async {
+    final archivo = File('${carpeta.path}/v2.sqlite');
+    crearBaseV2(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    expect((await db.select(db.ventas).getSingle()).anulado, isFalse);
+    expect((await db.select(db.pagosFiado).getSingle()).anulado, isFalse);
+    expect((await db.select(db.gastos).getSingle()).anulado, isFalse);
+    expect(await db.select(db.correcciones).get(), isEmpty);
+  });
+
+  test('una base v1 abre en v3 sin nada anulado', () async {
+    final archivo = File('${carpeta.path}/v1b.sqlite');
+    crearBaseV1(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    expect((await db.select(db.ventas).getSingle()).anulado, isFalse);
+    expect(await db.select(db.correcciones).get(), isEmpty);
+  });
+
+  test('una base nueva guarda correcciones con sus enums', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final usuario = await db.into(db.usuarios).insert(
+        UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'));
+
+    await db.into(db.correcciones).insert(CorreccionesCompanion.insert(
+          tipoMovimiento: TipoMovimiento.abono,
+          movimientoId: 7,
+          accion: AccionCorreccion.anulado,
+          usuarioId: usuario,
+          fecha: DateTime(2026, 10, 6, 15),
+          antes: r'$2.000 · Efectivo',
+        ));
+
+    final fila = await db.select(db.correcciones).getSingle();
+    expect(fila.tipoMovimiento, TipoMovimiento.abono);
+    expect(fila.movimientoId, 7);
+    expect(fila.accion, AccionCorreccion.anulado);
+    expect(fila.antes, r'$2.000 · Efectivo');
   });
 }

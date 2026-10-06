@@ -5,8 +5,10 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'correccion.dart';
 import 'medio_pago.dart';
 
+export 'correccion.dart';
 export 'medio_pago.dart';
 
 part 'database.g.dart';
@@ -46,6 +48,7 @@ class Ventas extends Table {
   IntColumn get usuarioId => integer().references(Usuarios, #id)();
   TextColumn get medioPago => textEnum<MedioPago>()
       .withDefault(const Constant('efectivo'))();
+  BoolColumn get anulado => boolean().withDefault(const Constant(false))();
 }
 
 @DataClassName('PagoFiado')
@@ -57,6 +60,7 @@ class PagosFiado extends Table {
   IntColumn get usuarioId => integer().references(Usuarios, #id)();
   TextColumn get medioPago => textEnum<MedioPago>()
       .withDefault(const Constant('efectivo'))();
+  BoolColumn get anulado => boolean().withDefault(const Constant(false))();
 }
 
 @DataClassName('Gasto')
@@ -66,6 +70,7 @@ class Gastos extends Table {
   TextColumn get descripcion => text().nullable()();
   DateTimeColumn get fecha => dateTime()();
   IntColumn get usuarioId => integer().references(Usuarios, #id)();
+  BoolColumn get anulado => boolean().withDefault(const Constant(false))();
 }
 
 /// Configuración de la tienda: una sola fila (id 1).
@@ -78,6 +83,23 @@ class ConfiguracionTienda extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Rastro de cada anulación o corrección de un movimiento.
+@DataClassName('Correccion')
+class Correcciones extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get tipoMovimiento => textEnum<TipoMovimiento>()();
+
+  /// Id en `ventas`, `pagos_fiado` o `gastos` según [tipoMovimiento]; sin
+  /// llave foránea porque apunta a tres tablas.
+  IntColumn get movimientoId => integer()();
+  TextColumn get accion => textEnum<AccionCorreccion>()();
+  IntColumn get usuarioId => integer().references(Usuarios, #id)();
+  DateTimeColumn get fecha => dateTime()();
+
+  /// Cómo estaba el movimiento justo antes del cambio, ya formateado.
+  TextColumn get antes => text()();
+}
+
 @DriftDatabase(
   tables: [
     Usuarios,
@@ -87,6 +109,7 @@ class ConfiguracionTienda extends Table {
     PagosFiado,
     Gastos,
     ConfiguracionTienda,
+    Correcciones,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -99,7 +122,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -109,6 +132,12 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(ventas, ventas.medioPago);
             await m.addColumn(pagosFiado, pagosFiado.medioPago);
             await m.createTable(configuracionTienda);
+          }
+          if (desde < 3) {
+            await m.addColumn(ventas, ventas.anulado);
+            await m.addColumn(pagosFiado, pagosFiado.anulado);
+            await m.addColumn(gastos, gastos.anulado);
+            await m.createTable(correcciones);
           }
         },
       );

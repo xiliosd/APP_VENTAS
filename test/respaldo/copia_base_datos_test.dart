@@ -20,7 +20,7 @@ void main() {
     final copia = await CopiaBaseDatos.crearCopia(db, carpeta);
     await db.close();
 
-    expect(CopiaBaseDatos.esCopiaValida(copia, versionMaxima: 2), isTrue);
+    expect(CopiaBaseDatos.esCopiaValida(copia, versionMaxima: 3), isTrue);
     final abierta = AppDatabase(NativeDatabase(copia));
     expect((await abierta.select(abierta.usuarios).get()).single.nombre, 'Ana');
     await abierta.close();
