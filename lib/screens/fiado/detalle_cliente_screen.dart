@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/medio_pago.dart';
+
 import '../../providers/fiado_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
@@ -8,11 +10,14 @@ import '../../repositories/fiado_repository.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/etiqueta_qr.dart';
 import '../../ui/hoja_inferior.dart';
 import '../../ui/monto.dart';
+import '../../ui/selector_segmentado.dart';
 import '../../ui/teclado_monto.dart';
 import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
+import '../qr/cobro_qr_screen.dart';
 
 class DetalleClienteScreen extends ConsumerWidget {
   const DetalleClienteScreen({super.key, required this.clienteConSaldo});
@@ -109,8 +114,16 @@ class _FilaMovimiento extends StatelessWidget {
           size: 20,
         ),
       ),
-      title: Monto(movimiento.monto,
-          tamano: 16, tono: esAbono ? TonoMonto.entra : TonoMonto.fiado),
+      title: Row(
+        children: [
+          Monto(movimiento.monto,
+              tamano: 16, tono: esAbono ? TonoMonto.entra : TonoMonto.fiado),
+          if (esAbono && movimiento.medioPago == MedioPago.transferencia) ...[
+            const SizedBox(width: 8),
+            const EtiquetaQr(),
+          ],
+        ],
+      ),
       subtitle: Text(formatoFechaHora(movimiento.fecha)),
       trailing: Text(esAbono ? 'Abono' : 'Venta fiada'),
     );
@@ -128,6 +141,7 @@ class _HojaAbono extends ConsumerStatefulWidget {
 
 class _HojaAbonoState extends ConsumerState<_HojaAbono> {
   int _monto = 0;
+  MedioPago _medio = MedioPago.efectivo;
   String? _error;
 
   /// True mientras se valida y guarda; evita registrar dos veces el abono.
@@ -152,11 +166,16 @@ class _HojaAbonoState extends ConsumerState<_HojaAbono> {
           'El abono no puede ser mayor que la deuda (${formatoMoneda(saldo)})');
       return;
     }
+    if (_medio == MedioPago.transferencia) {
+      final recibido = await abrirCobroQr(context, monto: _monto);
+      if (!recibido || !mounted) return;
+    }
     final sesion = ref.read(sesionProvider).usuarioActivo!;
     await fiadoRepo.registrarPago(
       clienteId: widget.clienteId,
       monto: _monto,
       usuarioId: sesion.id,
+      medioPago: _medio,
     );
     ref.invalidate(clientesConDeudaProvider);
     ref.invalidate(saldoClienteProvider(widget.clienteId));
@@ -170,6 +189,16 @@ class _HojaAbonoState extends ConsumerState<_HojaAbono> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        SelectorSegmentado<MedioPago>(
+          key: const Key('selector_medio_abono'),
+          opciones: const {
+            MedioPago.efectivo: 'Efectivo',
+            MedioPago.transferencia: 'Transferencia',
+          },
+          valor: _medio,
+          onCambio: (medio) => setState(() => _medio = medio),
+        ),
+        const SizedBox(height: 12),
         Center(child: Monto(_monto, tamano: 36, tono: TonoMonto.entra)),
         if (_error != null)
           Padding(

@@ -159,6 +159,76 @@ void main() {
 
     expect(await FiadoRepository(db).pagosCliente(clienteId), hasLength(1));
   });
+
+  testWidgets('un abono por transferencia pasa por el QR y queda marcado',
+      (tester) async {
+    await montarDetalle(tester);
+    await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Transferencia'));
+    await teclear(tester, ['2', '0', '0', '0']);
+    await tester.ensureVisible(find.byKey(const Key('boton_confirmar_abono')));
+    await tester.tap(find.byKey(const Key('boton_confirmar_abono')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('boton_qr_recibido')), findsOneWidget);
+    expect(await db.select(db.pagosFiado).get(), isEmpty);
+
+    await tester.tap(find.byKey(const Key('boton_qr_recibido')));
+    await tester.pumpAndSettle();
+
+    final pago = (await db.select(db.pagosFiado).get()).single;
+    expect(pago.monto, 2000);
+    expect(pago.medioPago, MedioPago.transferencia);
+    expect(find.byKey(const Key('etiqueta_qr')), findsOneWidget);
+  });
+
+  testWidgets('cancelar el QR del abono no registra nada', (tester) async {
+    await montarDetalle(tester);
+    await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Transferencia'));
+    await teclear(tester, ['1', '0', '0', '0']);
+    await tester.ensureVisible(find.byKey(const Key('boton_confirmar_abono')));
+    await tester.tap(find.byKey(const Key('boton_confirmar_abono')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('boton_qr_cancelar')));
+    await tester.pumpAndSettle();
+
+    expect(await db.select(db.pagosFiado).get(), isEmpty);
+  });
+
+  testWidgets('un abono por QR mayor que la deuda da error sin abrir el QR',
+      (tester) async {
+    await montarDetalle(tester);
+    await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Transferencia'));
+    await teclear(tester, ['9', '0', '0', '0']);
+    await tester.ensureVisible(find.byKey(const Key('boton_confirmar_abono')));
+    await tester.tap(find.byKey(const Key('boton_confirmar_abono')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(r'El abono no puede ser mayor que la deuda ($5.000)'),
+        findsOneWidget);
+    expect(find.byKey(const Key('boton_qr_recibido')), findsNothing);
+    expect(await db.select(db.pagosFiado).get(), isEmpty);
+  });
+
+  testWidgets('un abono en efectivo no lleva la etiqueta QR', (tester) async {
+    await montarDetalle(tester);
+    await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pumpAndSettle();
+    await teclear(tester, ['1', '0', '0', '0']);
+    await tester.ensureVisible(find.byKey(const Key('boton_confirmar_abono')));
+    await tester.tap(find.byKey(const Key('boton_confirmar_abono')));
+    await tester.pumpAndSettle();
+
+    expect((await db.select(db.pagosFiado).get()).single.medioPago,
+        MedioPago.efectivo);
+    expect(find.byKey(const Key('etiqueta_qr')), findsNothing);
+  });
 }
 
 /// Espera a [_espera] antes de leer el saldo, para simular la latencia de la
