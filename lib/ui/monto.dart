@@ -14,11 +14,15 @@ class Monto extends StatelessWidget {
     super.key,
     this.tamano = 18,
     this.tono = TonoMonto.neutro,
+    this.tachado = false,
   });
 
   final int valor;
   final double tamano;
   final TonoMonto tono;
+
+  /// Anulado: tachado y en gris, sin importar el tono.
+  final bool tachado;
 
   static Color colorDe(TonoMonto tono) => switch (tono) {
         TonoMonto.neutro => ColoresApp.texto,
@@ -39,7 +43,8 @@ class Monto extends StatelessWidget {
         style: TextStyle(
           fontSize: tamano,
           fontWeight: FontWeight.w800,
-          color: colorDe(tono),
+          color: tachado ? ColoresApp.textoSecundario : colorDe(tono),
+          decoration: tachado ? TextDecoration.lineThrough : null,
           fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),

@@ -155,4 +155,11 @@ void main() {
     expect(etiquetaRol('admin'), 'Administrador');
     expect(etiquetaRol('vendedor'), 'Vendedor');
   });
+
+  testWidgets('Monto tachado se ve con línea y en gris', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: Monto(5000, tachado: true)));
+    final texto = tester.widget<Text>(find.text(r'$5.000'));
+    expect(texto.style!.decoration, TextDecoration.lineThrough);
+    expect(texto.style!.color, ColoresApp.textoSecundario);
+  });
 }
