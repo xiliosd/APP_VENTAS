@@ -6,6 +6,7 @@ import '../repositories/fiado_repository.dart';
 import '../repositories/gasto_repository.dart';
 import '../repositories/historial_repository.dart';
 import '../repositories/producto_repository.dart';
+import '../repositories/reporte_repository.dart';
 import '../repositories/resumen_repository.dart';
 import '../repositories/usuario_repository.dart';
 import '../repositories/venta_repository.dart';
@@ -54,4 +55,11 @@ final historialRepositoryProvider = Provider(
 
 final correccionRepositoryProvider = Provider(
   (ref) => CorreccionRepository(ref.watch(databaseProvider)),
+);
+
+final reporteRepositoryProvider = Provider(
+  (ref) => ReporteRepository(
+    ref.watch(databaseProvider),
+    ref.watch(fiadoRepositoryProvider),
+  ),
 );
