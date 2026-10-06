@@ -70,8 +70,8 @@ Una anulación también guarda `antes` (los valores con que quedó anulado el mo
 ## Reglas
 
 - **Permiso:** función pura `puedeCorregir({required Usuario usuario, required int duenoId,
-  required DateTime fechaMovimiento, required DateTime ahora})` en `lib/util/` (o junto al
-  repositorio): `true` si `usuario.rol == 'admin'`, o si `duenoId == usuario.id` y
+  required DateTime fechaMovimiento, required DateTime ahora})` en
+  `lib/util/permisos.dart`: `true` si `usuario.rol == 'admin'`, o si `duenoId == usuario.id` y
   `fechaMovimiento` cae en el mismo día local que `ahora`. La pantalla la usa para mostrar u
   ocultar los botones; el repositorio la vuelve a comprobar y lanza `PermisoDenegado` si no
   se cumple.
@@ -107,8 +107,9 @@ Una anulación también guarda `antes` (los valores con que quedó anulado el mo
   `listaClientesConDeuda`, `_saldosAl`. `ResumenRepository` hereda el filtro.
 - **Consultas que sí traen lo anulado**, solo para mostrar listas: el Historial
   (`HistorialRepository.movimientosDelDia`) y el detalle del cliente
-  (`FiadoRepository.movimientosCliente`) usan variantes con `incluirAnulados: true` (o
-  consultas propias) y adjuntan la última corrección de cada movimiento.
+  (`FiadoRepository.movimientosCliente`) pasan `incluirAnulados: true` a
+  `ventasDelDia`, `gastosDelDia`, `ventasFiadasCliente` y `pagosCliente` (parámetro nuevo,
+  `false` por defecto) y adjuntan la última corrección de cada movimiento.
 - **`MovimientoHistorial` y `MovimientoFiado`** ganan `id`, `anulado` y `ultimaCorreccion`
   (`Correccion?`), más lo necesario para editar (`clienteId` en ventas).
 - Los totales del Historial (tarjetas Ventas/Gastos) se calculan solo con los no anulados.
@@ -125,7 +126,8 @@ Se abre con `mostrarHojaInferior` al tocar un movimiento. Reutilizada desde Hist
   detalle.
 - **Modo corregir:** campo de monto (como "Otro monto"), `SelectorSegmentado` de
   Contado/Fiado y de Efectivo/Transferencia (como en Registrar venta), buscador de cliente
-  (reutilizando el de Registrar venta, extraído a un widget compartido si hace falta) y campo
+  (el `_SelectorCliente` de Registrar venta se extrae a `lib/widgets/selector_cliente.dart` y
+  se usa en ambas pantallas) y campo
   de descripción para gastos. Botón **Guardar** habilitado solo si algo cambió. Al guardar:
   aviso "Venta corregida" / "Abono corregido" / "Gasto corregido".
 - **Anular:** `AlertDialog` "¿Anular esta venta de $5.000? Ya no contará en los totales." con
