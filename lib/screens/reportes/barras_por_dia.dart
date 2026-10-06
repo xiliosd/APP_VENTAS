@@ -1,0 +1,113 @@
+import 'package:flutter/material.dart';
+
+import '../../ui/colores_app.dart';
+import '../../util/formato_moneda.dart';
+
+const _diasCortos = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const _diasLargos = [
+  'lunes',
+  'martes',
+  'miércoles',
+  'jueves',
+  'viernes',
+  'sábado',
+  'domingo',
+];
+
+/// "Lun 5".
+String etiquetaDia(DateTime dia) =>
+    '${_diasCortos[dia.weekday - 1]} ${dia.day}';
+
+/// Ventas de cada día como barras horizontales, con el mejor día resaltado.
+class BarrasPorDia extends StatelessWidget {
+  const BarrasPorDia({super.key, required this.ventasPorDia, this.mejorDia});
+
+  final Map<DateTime, int> ventasPorDia;
+  final DateTime? mejorDia;
+
+  @override
+  Widget build(BuildContext context) {
+    final maximo = ventasPorDia.values.fold<int>(0, (m, v) => v > m ? v : m);
+    final mejor = mejorDia;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (mejor != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Mejor día: ${_diasLargos[mejor.weekday - 1]} ${mejor.day} · '
+              '${formatoMoneda(ventasPorDia[mejor] ?? 0)}',
+              key: const Key('texto_mejor_dia'),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        for (final entrada in ventasPorDia.entries)
+          BarraDia(
+            key: Key('barra_${entrada.key.day}'),
+            etiqueta: etiquetaDia(entrada.key),
+            valor: entrada.value,
+            fraccion: maximo == 0 ? 0.0 : entrada.value / maximo,
+            resaltada: entrada.key == mejor,
+          ),
+      ],
+    );
+  }
+}
+
+/// Una fila: etiqueta del día, barra proporcional y monto.
+class BarraDia extends StatelessWidget {
+  const BarraDia({
+    super.key,
+    required this.etiqueta,
+    required this.valor,
+    required this.fraccion,
+    required this.resaltada,
+  });
+
+  final String etiqueta;
+  final int valor;
+
+  /// De 0 a 1, respecto al día de más venta.
+  final double fraccion;
+  final bool resaltada;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          SizedBox(width: 56, child: Text(etiqueta)),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                // Un día sin ventas deja una marca mínima, no un hueco.
+                widthFactor: fraccion == 0 ? 0.01 : fraccion,
+                child: Container(
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: resaltada ? ColoresApp.entra : ColoresApp.entraSuave,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 84,
+            child: Text(
+              formatoMoneda(valor),
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

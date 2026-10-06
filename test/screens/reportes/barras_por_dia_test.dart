@@ -1,0 +1,53 @@
+import 'package:app_ventas/screens/reportes/barras_por_dia.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  Future<void> montar(WidgetTester tester, Map<DateTime, int> ventas,
+      {DateTime? mejorDia}) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: BarrasPorDia(ventasPorDia: ventas, mejorDia: mejorDia),
+      ),
+    ));
+  }
+
+  test('etiquetaDia usa el día de la semana abreviado', () {
+    expect(etiquetaDia(DateTime(2026, 10, 5)), 'Lun 5');
+    expect(etiquetaDia(DateTime(2026, 10, 7)), 'Mié 7');
+    expect(etiquetaDia(DateTime(2026, 10, 10)), 'Sáb 10');
+    expect(etiquetaDia(DateTime(2026, 10, 11)), 'Dom 11');
+  });
+
+  testWidgets('una fila por día y el mejor día resaltado', (tester) async {
+    await montar(tester, {
+      DateTime(2026, 10, 5): 2000,
+      DateTime(2026, 10, 6): 5000,
+      DateTime(2026, 10, 7): 0,
+    }, mejorDia: DateTime(2026, 10, 6));
+
+    expect(find.byType(BarraDia), findsNWidgets(3));
+    expect(find.text('Lun 5'), findsOneWidget);
+    expect(find.text(r'$5.000'), findsOneWidget);
+    expect(find.text(r'Mejor día: martes 6 · $5.000'), findsOneWidget);
+    final mejor = tester.widget<BarraDia>(find.byKey(const Key('barra_6')));
+    expect(mejor.resaltada, isTrue);
+    expect(mejor.fraccion, 1.0);
+    final otra = tester.widget<BarraDia>(find.byKey(const Key('barra_5')));
+    expect(otra.resaltada, isFalse);
+    expect(otra.fraccion, 0.4);
+  });
+
+  testWidgets('todo en 0 no divide por cero ni muestra mejor día',
+      (tester) async {
+    await montar(tester, {
+      DateTime(2026, 10, 5): 0,
+      DateTime(2026, 10, 6): 0,
+    });
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('texto_mejor_dia')), findsNothing);
+    expect(tester.widget<BarraDia>(find.byKey(const Key('barra_5'))).fraccion,
+        0.0);
+  });
+}
