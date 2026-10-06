@@ -40,12 +40,15 @@ class FiadoRepository {
 
   Future<int> saldoCliente(int clienteId) async {
     final ventas = await (_db.select(_db.ventas)
-          ..where((v) => v.clienteId.equals(clienteId) & v.esFiado.equals(true)))
+          ..where((v) =>
+              v.clienteId.equals(clienteId) &
+              v.esFiado.equals(true) &
+              v.anulado.equals(false)))
         .get();
     final totalVentas = ventas.fold<int>(0, (suma, v) => suma + v.monto);
 
     final pagos = await (_db.select(_db.pagosFiado)
-          ..where((p) => p.clienteId.equals(clienteId)))
+          ..where((p) => p.clienteId.equals(clienteId) & p.anulado.equals(false)))
         .get();
     final totalPagos = pagos.fold<int>(0, (suma, p) => suma + p.monto);
 
@@ -62,7 +65,9 @@ class FiadoRepository {
 
       final ventasFiadas = await (_db.select(_db.ventas)
             ..where((v) =>
-                v.clienteId.equals(cliente.id) & v.esFiado.equals(true))
+                v.clienteId.equals(cliente.id) &
+                v.esFiado.equals(true) &
+                v.anulado.equals(false))
             ..orderBy([(v) => OrderingTerm.asc(v.fecha)]))
           .get();
 
@@ -101,25 +106,34 @@ class FiadoRepository {
     final query = _db.select(_db.pagosFiado)
       ..where((p) =>
           p.fecha.isBiggerOrEqualValue(inicioDelDia(dia)) &
-          p.fecha.isSmallerOrEqualValue(finDelDia(dia)));
+          p.fecha.isSmallerOrEqualValue(finDelDia(dia)) &
+          p.anulado.equals(false));
     if (usuarioId != null) {
       query.where((p) => p.usuarioId.equals(usuarioId));
     }
     return query.get();
   }
 
-  Future<List<Venta>> ventasFiadasCliente(int clienteId) {
-    return (_db.select(_db.ventas)
-          ..where((v) => v.clienteId.equals(clienteId) & v.esFiado.equals(true))
-          ..orderBy([(v) => OrderingTerm.desc(v.fecha)]))
-        .get();
+  Future<List<Venta>> ventasFiadasCliente(
+    int clienteId, {
+    bool incluirAnulados = false,
+  }) {
+    final query = _db.select(_db.ventas)
+      ..where((v) => v.clienteId.equals(clienteId) & v.esFiado.equals(true))
+      ..orderBy([(v) => OrderingTerm.desc(v.fecha)]);
+    if (!incluirAnulados) query.where((v) => v.anulado.equals(false));
+    return query.get();
   }
 
-  Future<List<PagoFiado>> pagosCliente(int clienteId) {
-    return (_db.select(_db.pagosFiado)
-          ..where((p) => p.clienteId.equals(clienteId))
-          ..orderBy([(p) => OrderingTerm.desc(p.fecha)]))
-        .get();
+  Future<List<PagoFiado>> pagosCliente(
+    int clienteId, {
+    bool incluirAnulados = false,
+  }) {
+    final query = _db.select(_db.pagosFiado)
+      ..where((p) => p.clienteId.equals(clienteId))
+      ..orderBy([(p) => OrderingTerm.desc(p.fecha)]);
+    if (!incluirAnulados) query.where((p) => p.anulado.equals(false));
+    return query.get();
   }
 
   Future<List<MovimientoFiado>> movimientosCliente(int clienteId) async {
@@ -150,10 +164,12 @@ class FiadoRepository {
           ..where((v) =>
               v.esFiado.equals(true) &
               v.clienteId.isNotNull() &
+              v.anulado.equals(false) &
               v.fecha.isSmallerOrEqualValue(corte)))
         .get();
     final pagos = await (_db.select(_db.pagosFiado)
-          ..where((p) => p.fecha.isSmallerOrEqualValue(corte)))
+          ..where((p) =>
+              p.anulado.equals(false) & p.fecha.isSmallerOrEqualValue(corte)))
         .get();
 
     final saldos = <int, int>{};

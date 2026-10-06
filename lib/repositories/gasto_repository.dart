@@ -24,7 +24,13 @@ class GastoRepository {
         );
   }
 
-  Future<List<Gasto>> gastosDelDia(DateTime dia, {int? usuarioId}) {
+  /// Gastos de [dia]. Lo anulado solo viene con [incluirAnulados], para
+  /// mostrarlo en el Historial; nunca debe sumarse.
+  Future<List<Gasto>> gastosDelDia(
+    DateTime dia, {
+    int? usuarioId,
+    bool incluirAnulados = false,
+  }) {
     final inicio = inicioDelDia(dia);
     final fin = finDelDia(dia);
     final query = _db.select(_db.gastos)
@@ -33,6 +39,9 @@ class GastoRepository {
           g.fecha.isSmallerOrEqualValue(fin));
     if (usuarioId != null) {
       query.where((g) => g.usuarioId.equals(usuarioId));
+    }
+    if (!incluirAnulados) {
+      query.where((g) => g.anulado.equals(false));
     }
     return query.get();
   }

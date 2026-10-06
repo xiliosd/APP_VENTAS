@@ -30,7 +30,13 @@ class VentaRepository {
         );
   }
 
-  Future<List<Venta>> ventasDelDia(DateTime dia, {int? usuarioId}) {
+  /// Ventas de [dia]. Lo anulado solo viene con [incluirAnulados], para
+  /// mostrarlo en el Historial; nunca debe sumarse.
+  Future<List<Venta>> ventasDelDia(
+    DateTime dia, {
+    int? usuarioId,
+    bool incluirAnulados = false,
+  }) {
     final inicio = inicioDelDia(dia);
     final fin = finDelDia(dia);
     final query = _db.select(_db.ventas)
@@ -39,6 +45,9 @@ class VentaRepository {
           v.fecha.isSmallerOrEqualValue(fin));
     if (usuarioId != null) {
       query.where((v) => v.usuarioId.equals(usuarioId));
+    }
+    if (!incluirAnulados) {
+      query.where((v) => v.anulado.equals(false));
     }
     return query.get();
   }
