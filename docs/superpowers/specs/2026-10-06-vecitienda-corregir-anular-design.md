@@ -17,7 +17,7 @@ cambió y cómo estaba antes.
 - **Alcance:** ventas, abonos de fiado y gastos.
 - **Permisos:** el administrador corrige o anula cualquier movimiento de cualquier fecha; el
   vendedor solo los suyos y del día de hoy.
-- **Rastro:** lo anulado queda visible tachado ("Anulada por X · hora") y no suma en ningún
+- **Rastro:** lo anulado queda visible tachado ("Anulada por X · 15:40") y no suma en ningún
   total; lo corregido muestra "Corregida por X · antes: …". No hay historial de versiones en
   pantalla, pero cada cambio queda guardado.
 - **Enfoque de datos (B):** una marca `anulado` en cada tabla de movimientos y una tabla aparte
@@ -133,13 +133,13 @@ Se abre con `mostrarHojaInferior` al tocar un movimiento. Reutilizada desde Hist
 - **Anular:** `AlertDialog` "¿Anular esta venta de $5.000? Ya no contará en los totales." con
   [Cancelar] y [Anular] en rojo (mismo patrón que "Quitar QR"). Al confirmar: aviso "Venta
   anulada" / "Abono anulado" / "Gasto anulado".
-- **Error al guardar:** aviso "No se pudo guardar, intenta de nuevo"; no cambia nada.
+- **Error al guardar:** texto rojo dentro de la hoja "No se pudo guardar, intenta de nuevo" (como el error del abono; un aviso abajo quedaría tapado por la hoja); no cambia nada.
 
 ### Historial
 
 - Tocar una venta o un gasto abre la hoja. Los abonos siguen sin aparecer en el Historial
   (se corrigen desde Fiado).
-- **Anulado:** monto tachado y en gris; subtítulo "Anulada por Ana · 3:40 p. m." (o
+- **Anulado:** monto tachado y en gris; subtítulo "Anulada por Ana · 15:40" (hora con `formatoHora`) (o
   "Anulado" para gastos).
 - **Corregido:** fila normal con una línea gris extra "Corregida por Ana · antes: $50.000 ·
   Efectivo".
