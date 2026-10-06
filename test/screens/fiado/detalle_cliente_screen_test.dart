@@ -7,6 +7,7 @@ import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/repositories/fiado_repository.dart';
 import 'package:app_ventas/screens/fiado/detalle_cliente_screen.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
+import 'package:app_ventas/ui/monto.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -228,6 +229,51 @@ void main() {
     expect((await db.select(db.pagosFiado).get()).single.medioPago,
         MedioPago.efectivo);
     expect(find.byKey(const Key('etiqueta_qr')), findsNothing);
+  });
+
+  testWidgets('anular la venta fiada la tacha y deja el saldo en 0',
+      (tester) async {
+    final clienteId = await montarDetalle(tester);
+    final ventaId = (await db.select(db.ventas).getSingle()).id;
+
+    await tester.tap(find.byKey(Key('movimiento_fiado_venta_$ventaId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_anular')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmar_anular')));
+    await tester.pumpAndSettle();
+
+    expect(await FiadoRepository(db).saldoCliente(clienteId), 0);
+    expect(saldo(r'$0'), findsOneWidget);
+    final monto = tester.widget<Monto>(find.descendant(
+        of: find.byKey(Key('movimiento_fiado_venta_$ventaId')),
+        matching: find.byType(Monto)));
+    expect(monto.tachado, isTrue);
+    expect(find.textContaining('Anulada por Ana · '), findsOneWidget);
+    expect(find.text('Venta anulada'), findsOneWidget);
+  });
+
+  testWidgets('corregir un abono cambia el saldo y muestra el valor anterior',
+      (tester) async {
+    final clienteId = await montarDetalle(tester);
+    final usuarioId = (await db.select(db.usuarios).getSingle()).id;
+    final pagoId = await FiadoRepository(db).registrarPago(
+        clienteId: clienteId, monto: 2000, usuarioId: usuarioId);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(Key('movimiento_fiado_abono_$pagoId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_corregir')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('tecla_monto_borrar')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.pumpAndSettle();
+
+    expect(await FiadoRepository(db).saldoCliente(clienteId), 4800);
+    expect(saldo(r'$4.800'), findsOneWidget);
+    expect(find.text(r'Corregido por Ana · antes: $2.000 · Efectivo'),
+        findsOneWidget);
   });
 }
 

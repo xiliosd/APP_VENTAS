@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/medio_pago.dart';
-
+import '../../data/database.dart';
 import '../../providers/fiado_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
+import '../../providers/usuarios_providers.dart';
 import '../../repositories/fiado_repository.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
@@ -17,6 +17,8 @@ import '../../ui/selector_segmentado.dart';
 import '../../ui/teclado_monto.dart';
 import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
+import '../correccion/hoja_movimiento.dart';
+import '../correccion/texto_correccion.dart';
 import '../qr/cobro_qr_screen.dart';
 
 class DetalleClienteScreen extends ConsumerWidget {
@@ -44,6 +46,9 @@ class DetalleClienteScreen extends ConsumerWidget {
     final saldo = ref.watch(saldoClienteProvider(cliente.id)).valueOrNull ??
         clienteConSaldo.saldo;
     final movimientosAsync = ref.watch(movimientosClienteProvider(cliente.id));
+    final usuarios =
+        ref.watch(listaUsuariosProvider).valueOrNull ?? const <Usuario>[];
+    final nombres = {for (final u in usuarios) u.id: u.nombre};
 
     return Scaffold(
       appBar: AppBar(title: Text(cliente.nombre)),
@@ -82,7 +87,17 @@ class DetalleClienteScreen extends ConsumerWidget {
             data: (movimientos) => Card(
               child: Column(
                 children: [
-                  for (final m in movimientos) _FilaMovimiento(movimiento: m),
+                  for (final m in movimientos)
+                    _FilaMovimiento(
+                      movimiento: m,
+                      nombres: nombres,
+                      onTap: () => abrirHojaMovimiento(
+                        context,
+                        MovimientoEditable.desdeFiado(m,
+                            clienteId: cliente.id,
+                            nombreCliente: cliente.nombre),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -96,15 +111,26 @@ class DetalleClienteScreen extends ConsumerWidget {
 }
 
 class _FilaMovimiento extends StatelessWidget {
-  const _FilaMovimiento({required this.movimiento});
+  const _FilaMovimiento({
+    required this.movimiento,
+    required this.nombres,
+    required this.onTap,
+  });
 
   final MovimientoFiado movimiento;
+
+  /// Nombre de cada usuario por id.
+  final Map<int, String> nombres;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final esAbono = movimiento.tipo == TipoMovimientoFiado.abono;
     final color = esAbono ? ColoresApp.entra : ColoresApp.fiado;
+    final correccion = movimiento.ultimaCorreccion;
     return ListTile(
+      key: Key('movimiento_fiado_${movimiento.tipo.name}_${movimiento.id}'),
+      onTap: onTap,
       leading: CircleAvatar(
         radius: 18,
         backgroundColor: color.withValues(alpha: 0.12),
@@ -117,14 +143,27 @@ class _FilaMovimiento extends StatelessWidget {
       title: Row(
         children: [
           Monto(movimiento.monto,
-              tamano: 16, tono: esAbono ? TonoMonto.entra : TonoMonto.fiado),
+              tamano: 16,
+              tono: esAbono ? TonoMonto.entra : TonoMonto.fiado,
+              tachado: movimiento.anulado),
           if (esAbono && movimiento.medioPago == MedioPago.transferencia) ...[
             const SizedBox(width: 8),
             const EtiquetaQr(),
           ],
         ],
       ),
-      subtitle: Text(formatoFechaHora(movimiento.fecha)),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(formatoFechaHora(movimiento.fecha)),
+          if (correccion != null)
+            Text(
+              textoCorreccion(correccion, nombres[correccion.usuarioId] ?? ''),
+              style: const TextStyle(
+                  fontSize: 12, color: ColoresApp.textoSecundario),
+            ),
+        ],
+      ),
       trailing: Text(esAbono ? 'Abono' : 'Venta fiada'),
     );
   }
