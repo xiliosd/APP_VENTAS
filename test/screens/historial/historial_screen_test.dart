@@ -109,4 +109,18 @@ void main() {
     expect(enLista(r'$7.000'), findsOneWidget);
     expect(enLista(r'$5.000'), findsNothing);
   });
+
+  testWidgets('una venta por transferencia lleva la etiqueta QR',
+      (tester) async {
+    await ventas.registrarVenta(
+        monto: 4000,
+        esFiado: false,
+        usuarioId: ana,
+        medioPago: MedioPago.transferencia);
+    await ventas.registrarVenta(monto: 1000, esFiado: false, usuarioId: ana);
+
+    await montar(tester);
+
+    expect(find.byKey(const Key('etiqueta_qr')), findsOneWidget);
+  });
 }

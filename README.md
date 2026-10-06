@@ -110,7 +110,10 @@ La Fase 2 se divide en subproyectos, cada uno con su spec y plan en `docs/superp
 - **Marca VeciTienda** (hecho): nombre, isotipo e íconos Android
   (`tool/generar_iconos.py` los regenera desde `docs/marca/`), paleta azul
   cobalto + verde esmeralda con contraste AA, títulos en Nunito.
-- **2D — Cobro digital por QR (Bre-B / Nequi / Daviplata)** (pendiente).
+- **2D — Cobro por QR** (hecho): el admin carga en Ajustes → "Cobro por QR" la
+  imagen del QR de su Nequi, Daviplata o banco; las ventas de contado y los
+  abonos pueden cobrarse por transferencia (se guardan al tocar "Recibido") y el
+  Inicio separa lo recibido en efectivo y por transferencias.
 
 Fuera de alcance por ahora: editar o anular ventas, abonos o gastos ya
 registrados; eliminar usuarios o cambiar su rol; rangos de fechas

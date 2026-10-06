@@ -10,6 +10,7 @@ import '../../ui/tipografia.dart';
 import '../../ui/monto.dart';
 import '../../ui/tarjeta_monto.dart';
 import '../../util/fecha_util.dart';
+import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
 import '../../widgets/selector_fecha.dart';
 import '../gasto/registrar_gasto_screen.dart';
@@ -137,6 +138,14 @@ class _Tarjetas extends StatelessWidget {
               Text(
                 '${plural(resumen.cantidadVentas, 'venta', 'ventas')} · '
                 '${plural(resumen.cantidadFiadas, 'fiada', 'fiadas')}',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Recibido: efectivo ${formatoMoneda(resumen.recibidoEfectivo)}'
+                ' · transferencias '
+                '${formatoMoneda(resumen.recibidoTransferencia)}',
+                key: const Key('texto_recibido'),
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ],

@@ -152,4 +152,23 @@ void main() {
     expect(etiqueta.style!.fontVariations,
         contains(const FontVariation('wght', 800)));
   });
+
+  testWidgets('la tarjeta de ventas muestra lo recibido por medio de pago',
+      (tester) async {
+    await vender(5000);
+    await db.into(db.ventas).insert(VentasCompanion.insert(
+          monto: 3000,
+          fecha: DateTime.now(),
+          usuarioId: ana,
+          medioPago: const Value(MedioPago.transferencia),
+        ));
+    await vender(9000, fiado: true);
+
+    await montar(tester);
+
+    expect(
+        enTarjeta('tarjeta_ventas',
+            r'Recibido: efectivo $5.000 · transferencias $3.000'),
+        findsOneWidget);
+  });
 }

@@ -6,6 +6,7 @@ import '../../providers/historial_providers.dart';
 import '../../providers/usuarios_providers.dart';
 import '../../repositories/historial_repository.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/etiqueta_qr.dart';
 import '../../ui/estado_vacio.dart';
 import '../../ui/monto.dart';
 import '../../ui/tarjeta_monto.dart';
@@ -159,8 +160,17 @@ class _MovimientoTile extends StatelessWidget {
           size: 20,
         ),
       ),
-      title: Monto(movimiento.monto,
-          tamano: 16, tono: esGasto ? TonoMonto.sale : TonoMonto.neutro),
+      title: Row(
+        children: [
+          Monto(movimiento.monto,
+              tamano: 16, tono: esGasto ? TonoMonto.sale : TonoMonto.neutro),
+          if (!esGasto &&
+              movimiento.medioPago == MedioPago.transferencia) ...[
+            const SizedBox(width: 8),
+            const EtiquetaQr(),
+          ],
+        ],
+      ),
       subtitle: Text('$detalle · $nombreUsuario'),
       trailing: Text(formatoHora(movimiento.fecha),
           style: const TextStyle(color: ColoresApp.textoSecundario)),

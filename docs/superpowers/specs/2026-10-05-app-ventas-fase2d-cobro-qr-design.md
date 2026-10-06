@@ -1,7 +1,7 @@
 # Fase 2D — Cobro por QR
 
 **Fecha:** 2026-10-05
-**Estado:** Borrador para revisión
+**Estado:** Implementado
 **Base:** master con Fase 1, 2A, 2E, 2B+2C y marca VeciTienda integradas.
 
 ## Objetivo
