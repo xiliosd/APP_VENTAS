@@ -303,7 +303,8 @@ class _BarraCobro extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Flexible(
+                  Expanded(
+                    flex: 2,
                     child: Text(
                       n == 1 ? '1 artículo' : '$n artículos',
                       key: const Key('texto_articulos'),
@@ -311,31 +312,28 @@ class _BarraCobro extends StatelessWidget {
                       style: const TextStyle(color: ColoresApp.textoSecundario),
                     ),
                   ),
-                  // Los botones también ceden espacio con letra grande.
-                  Flexible(
-                    child: TextButton(
-                      key: const Key('boton_ver_ticket'),
-                      onPressed: ticket.estaVacio ? null : onVerTicket,
-                      child: const Text(
-                        'Ver ticket',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Flexible(
-                    child: TextButton(
-                      key: const Key('boton_vaciar'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: ColoresApp.sale,
-                      ),
-                      onPressed: ticket.estaVacio ? null : onVaciar,
-                      child: const Text(
-                        'Vaciar',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  // Los botones van lado a lado si caben; con letra muy
+                  // grande se apilan en vez de cortarse o desbordarse.
+                  Expanded(
+                    flex: 3,
+                    child: OverflowBar(
+                      alignment: MainAxisAlignment.end,
+                      overflowAlignment: OverflowBarAlignment.end,
+                      children: [
+                        TextButton(
+                          key: const Key('boton_ver_ticket'),
+                          onPressed: ticket.estaVacio ? null : onVerTicket,
+                          child: const Text('Ver ticket'),
+                        ),
+                        TextButton(
+                          key: const Key('boton_vaciar'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: ColoresApp.sale,
+                          ),
+                          onPressed: ticket.estaVacio ? null : onVaciar,
+                          child: const Text('Vaciar'),
+                        ),
+                      ],
                     ),
                   ),
                 ],

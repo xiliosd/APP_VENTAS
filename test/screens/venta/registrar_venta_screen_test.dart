@@ -3,6 +3,7 @@ import 'package:app_ventas/screens/venta/registrar_venta_screen.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -243,5 +244,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('en un celular de 360 dp "Ver ticket" se lee completo',
+      (tester) async {
+    await abrirVenta(tester);
+    tester.view.physicalSize = const Size(720, 1560);
+    tester.view.devicePixelRatio = 2;
+    await tester.pumpAndSettle();
+
+    final texto =
+        tester.renderObject<RenderParagraph>(find.text('Ver ticket'));
+    expect(texto.didExceedMaxLines, isFalse);
   });
 }
