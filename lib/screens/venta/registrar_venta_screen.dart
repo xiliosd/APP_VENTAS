@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
-import '../../providers/clientes_providers.dart';
 import '../../providers/productos_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
@@ -17,6 +16,7 @@ import '../../ui/selector_segmentado.dart';
 import '../../ui/teclado_monto.dart';
 import '../../util/formato_moneda.dart';
 import '../../widgets/monto_rapido_grid.dart';
+import '../../widgets/selector_cliente.dart';
 import '../qr/cobro_qr_screen.dart';
 
 class RegistrarVentaScreen extends ConsumerStatefulWidget {
@@ -107,7 +107,12 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
           ),
           if (ticket.esFiado) ...[
             const SizedBox(height: 12),
-            const _SelectorCliente(),
+            SelectorCliente(
+              elegido: ticket.cliente,
+              onElegir: notifier.elegirCliente,
+              onEscribir: notifier.escribirCliente,
+              exigir: !ticket.estaVacio,
+            ),
           ],
           if (!ticket.esFiado) ...[
             const SizedBox(height: 12),
@@ -182,98 +187,6 @@ class _Seccion extends StatelessWidget {
           color: ColoresApp.textoSecundario,
         ),
       ),
-    );
-  }
-}
-
-class _SelectorCliente extends ConsumerStatefulWidget {
-  const _SelectorCliente();
-
-  @override
-  ConsumerState<_SelectorCliente> createState() => _SelectorClienteState();
-}
-
-class _SelectorClienteState extends ConsumerState<_SelectorCliente> {
-  final _controller = TextEditingController();
-  String _busqueda = '';
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ticket = ref.watch(ticketProvider);
-    final notifier = ref.read(ticketProvider.notifier);
-    final elegido = ticket.cliente;
-    if (elegido != null) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: InputChip(
-          key: const Key('cliente_elegido'),
-          avatar: const Icon(Icons.person_rounded, size: 18),
-          label: Text(elegido.nombre),
-          onDeleted: () => notifier.elegirCliente(null),
-        ),
-      );
-    }
-
-    final clientes =
-        ref.watch(listaClientesProvider).valueOrNull ?? const <Cliente>[];
-    final texto = _busqueda.trim();
-    final buscado = texto.toLowerCase();
-    final sugeridos = clientes
-        .where((c) => c.nombre.toLowerCase().contains(buscado))
-        .take(6)
-        .toList();
-    final existeExacto = clientes.any(
-      (c) => c.nombre.trim().toLowerCase() == buscado,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          key: const Key('campo_cliente'),
-          controller: _controller,
-          decoration: InputDecoration(
-            labelText: '¿A quién le fías?',
-            prefixIcon: const Icon(Icons.search_rounded),
-            errorText: ticket.estaVacio || texto.isNotEmpty
-                ? null
-                : 'Escribe o elige el cliente',
-          ),
-          onChanged: (valor) {
-            setState(() => _busqueda = valor);
-            notifier.escribirCliente(valor);
-          },
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final c in sugeridos)
-              ActionChip(
-                key: Key('cliente_sugerido_${c.id}'),
-                label: Text(c.nombre),
-                onPressed: () => notifier.elegirCliente(
-                  ClienteTicket(id: c.id, nombre: c.nombre),
-                ),
-              ),
-            if (texto.isNotEmpty && !existeExacto)
-              ActionChip(
-                key: const Key('boton_cliente_nuevo'),
-                avatar: const Icon(Icons.person_add_alt_rounded, size: 18),
-                label: Text('Nuevo: $texto'),
-                onPressed: () =>
-                    notifier.elegirCliente(ClienteTicket(nombre: texto)),
-              ),
-          ],
-        ),
-      ],
     );
   }
 }
