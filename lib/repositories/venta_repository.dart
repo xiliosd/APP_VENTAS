@@ -15,6 +15,7 @@ class VentaRepository {
     int? clienteId,
     required int usuarioId,
     DateTime? fecha,
+    MedioPago medioPago = MedioPago.efectivo,
   }) {
     return _db.into(_db.ventas).insert(
           VentasCompanion.insert(
@@ -24,6 +25,7 @@ class VentaRepository {
             esFiado: Value(esFiado),
             clienteId: Value(clienteId),
             usuarioId: usuarioId,
+            medioPago: Value(medioPago),
           ),
         );
   }

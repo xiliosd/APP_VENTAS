@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/repositories/configuracion_repository.dart';
 import 'package:app_ventas/respaldo/copia_base_datos.dart';
 import 'package:app_ventas/respaldo/restaurador.dart';
 import 'package:drift/native.dart';
@@ -94,6 +96,24 @@ void main() {
     final ventas = await reabierta.select(reabierta.ventas).get();
     expect(ventas.single.monto, 5000);
     expect(ventas.single.medioPago, MedioPago.efectivo);
+    await reabierta.close();
+  });
+
+  test('el respaldo restaurado conserva la imagen del QR', () async {
+    final origen = AppDatabase(NativeDatabase.memory());
+    await ConfiguracionRepository(origen)
+        .guardarImagenQr(Uint8List.fromList([4, 5, 6]));
+    final copia = await CopiaBaseDatos.crearCopia(
+        origen, await carpeta.createTemp('origenqr'));
+    await origen.close();
+    final nube = NubeRespaldoFalsa(conSesion: true);
+    await nube.subir(copia);
+    final local = AppDatabase(NativeDatabase(archivoLocal));
+
+    await restaurador.restaurar(nube, local);
+
+    final reabierta = AppDatabase(NativeDatabase(archivoLocal));
+    expect(await ConfiguracionRepository(reabierta).imagenQr(), [4, 5, 6]);
     await reabierta.close();
   });
 }

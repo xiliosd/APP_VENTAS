@@ -11,6 +11,8 @@ class ResumenDia {
     required this.cantidadVentas,
     required this.cantidadFiadas,
     required this.clientesConDeuda,
+    this.recibidoEfectivo = 0,
+    this.recibidoTransferencia = 0,
   });
 
   final int totalVendido;
@@ -19,6 +21,12 @@ class ResumenDia {
   final int cantidadVentas;
   final int cantidadFiadas;
   final int clientesConDeuda;
+
+  /// Ventas de contado y abonos del día recibidos en efectivo.
+  final int recibidoEfectivo;
+
+  /// Ventas de contado y abonos del día recibidos por transferencia.
+  final int recibidoTransferencia;
 }
 
 class ResumenRepository {
@@ -38,6 +46,16 @@ class ResumenRepository {
     final ventas = await _ventaRepository.ventasDelDia(dia, usuarioId: usuarioId);
     final gastos = await _gastoRepository.gastosDelDia(dia, usuarioId: usuarioId);
 
+    final pagos =
+        await _fiadoRepository.pagosDelDia(dia, usuarioId: usuarioId);
+    int recibido(MedioPago medio) =>
+        ventas
+            .where((v) => !v.esFiado && v.medioPago == medio)
+            .fold<int>(0, (suma, v) => suma + v.monto) +
+        pagos
+            .where((p) => p.medioPago == medio)
+            .fold<int>(0, (suma, p) => suma + p.monto);
+
     final totalVendido = ventas.fold<int>(0, (suma, v) => suma + v.monto);
     final totalGastado = gastos.fold<int>(0, (suma, g) => suma + g.monto);
     // Deuda de toda la tienda al cierre del día, no solo lo fiado ese día.
@@ -51,6 +69,8 @@ class ResumenRepository {
       cantidadVentas: ventas.length,
       cantidadFiadas: ventas.where((v) => v.esFiado).length,
       clientesConDeuda: await _fiadoRepository.clientesConDeudaAl(dia),
+      recibidoEfectivo: recibido(MedioPago.efectivo),
+      recibidoTransferencia: recibido(MedioPago.transferencia),
     );
   }
 

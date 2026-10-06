@@ -80,4 +80,17 @@ void main() {
     expect(movimientos.single.monto, 500);
     expect(movimientos.single.descripcion, isNull);
   });
+
+  test('las ventas del historial llevan su medio de pago', () async {
+    await ventaRepo.registrarVenta(
+        monto: 4000,
+        esFiado: false,
+        usuarioId: ana,
+        fecha: dia,
+        medioPago: MedioPago.transferencia);
+
+    final movimientos = await repo.movimientosDelDia(dia);
+
+    expect(movimientos.single.medioPago, MedioPago.transferencia);
+  });
 }

@@ -22,11 +22,15 @@ class MovimientoFiado {
     required this.tipo,
     required this.monto,
     required this.fecha,
+    this.medioPago = MedioPago.efectivo,
   });
 
   final TipoMovimientoFiado tipo;
   final int monto;
   final DateTime fecha;
+
+  /// Solo aplica a abonos.
+  final MedioPago medioPago;
 }
 
 class FiadoRepository {
@@ -80,6 +84,7 @@ class FiadoRepository {
     required int monto,
     required int usuarioId,
     DateTime? fecha,
+    MedioPago medioPago = MedioPago.efectivo,
   }) {
     return _db.into(_db.pagosFiado).insert(
           PagosFiadoCompanion.insert(
@@ -87,8 +92,20 @@ class FiadoRepository {
             monto: monto,
             fecha: fecha ?? DateTime.now(),
             usuarioId: usuarioId,
+            medioPago: Value(medioPago),
           ),
         );
+  }
+
+  Future<List<PagoFiado>> pagosDelDia(DateTime dia, {int? usuarioId}) {
+    final query = _db.select(_db.pagosFiado)
+      ..where((p) =>
+          p.fecha.isBiggerOrEqualValue(inicioDelDia(dia)) &
+          p.fecha.isSmallerOrEqualValue(finDelDia(dia)));
+    if (usuarioId != null) {
+      query.where((p) => p.usuarioId.equals(usuarioId));
+    }
+    return query.get();
   }
 
   Future<List<Venta>> ventasFiadasCliente(int clienteId) {
@@ -120,6 +137,7 @@ class FiadoRepository {
           tipo: TipoMovimientoFiado.abono,
           monto: p.monto,
           fecha: p.fecha,
+          medioPago: p.medioPago,
         ),
     ]..sort((a, b) => b.fecha.compareTo(a.fecha));
   }

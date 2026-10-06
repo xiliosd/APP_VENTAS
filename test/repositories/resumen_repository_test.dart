@@ -125,4 +125,42 @@ void main() {
     expect(resumen.cantidadFiadas, 1);
     expect(resumen.clientesConDeuda, 1);
   });
+
+  test('recibido separa efectivo y transferencia, sin fiado y con abonos',
+      () async {
+    final fiadoRepo = FiadoRepository(db);
+    final cliente = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
+    await ventaRepo.registrarVenta(
+        monto: 5000, esFiado: false, usuarioId: vendedor1, fecha: dia);
+    await ventaRepo.registrarVenta(
+        monto: 3000,
+        esFiado: false,
+        usuarioId: vendedor2,
+        fecha: dia,
+        medioPago: MedioPago.transferencia);
+    await ventaRepo.registrarVenta(
+        monto: 9000,
+        esFiado: true,
+        clienteId: cliente,
+        usuarioId: vendedor1,
+        fecha: dia);
+    await fiadoRepo.registrarPago(
+        clienteId: cliente,
+        monto: 2000,
+        usuarioId: vendedor1,
+        fecha: dia,
+        medioPago: MedioPago.transferencia);
+    await fiadoRepo.registrarPago(
+        clienteId: cliente, monto: 1000, usuarioId: vendedor2, fecha: dia);
+
+    final todo = await repo.resumenDelDia(dia);
+    expect(todo.recibidoEfectivo, 6000);
+    expect(todo.recibidoTransferencia, 5000);
+
+    final soloAna = await repo.resumenDelDia(dia, usuarioId: vendedor1);
+    expect(soloAna.recibidoEfectivo, 5000);
+    expect(soloAna.recibidoTransferencia, 2000);
+  });
 }

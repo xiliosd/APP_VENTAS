@@ -1,3 +1,4 @@
+import '../data/medio_pago.dart';
 import 'gasto_repository.dart';
 import 'venta_repository.dart';
 
@@ -11,6 +12,7 @@ class MovimientoHistorial {
     required this.usuarioId,
     this.esFiado = false,
     this.descripcion,
+    this.medioPago = MedioPago.efectivo,
   });
 
   final TipoMovimientoHistorial tipo;
@@ -23,6 +25,9 @@ class MovimientoHistorial {
 
   /// Solo aplica a gastos; null para ventas o gastos sin descripción.
   final String? descripcion;
+
+  /// Solo aplica a ventas.
+  final MedioPago medioPago;
 }
 
 class HistorialRepository {
@@ -47,6 +52,7 @@ class HistorialRepository {
           fecha: v.fecha,
           usuarioId: v.usuarioId,
           esFiado: v.esFiado,
+          medioPago: v.medioPago,
         ),
       for (final g in gastos)
         MovimientoHistorial(

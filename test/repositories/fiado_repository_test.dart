@@ -218,4 +218,32 @@ void main() {
 
     expect(await repo.clientesConDeudaAl(DateTime(2026, 9, 1)), 1);
   });
+
+  test('registrarPago guarda el medio y pagosDelDia filtra por día y usuario',
+      () async {
+    final dia = DateTime(2026, 10, 5, 10);
+    await repo.registrarPago(
+        clienteId: clienteId, monto: 1000, usuarioId: usuarioId, fecha: dia);
+    await repo.registrarPago(
+        clienteId: clienteId,
+        monto: 2000,
+        usuarioId: usuarioId,
+        fecha: dia,
+        medioPago: MedioPago.transferencia);
+    await repo.registrarPago(
+        clienteId: clienteId,
+        monto: 500,
+        usuarioId: usuarioId,
+        fecha: dia.subtract(const Duration(days: 1)));
+
+    final pagos = await repo.pagosDelDia(dia);
+    expect(pagos.map((p) => p.monto), unorderedEquals([1000, 2000]));
+    expect(pagos.firstWhere((p) => p.monto == 2000).medioPago,
+        MedioPago.transferencia);
+    expect(await repo.pagosDelDia(dia, usuarioId: usuarioId + 99), isEmpty);
+
+    final movimientos = await repo.movimientosCliente(clienteId);
+    expect(movimientos.firstWhere((m) => m.monto == 2000).medioPago,
+        MedioPago.transferencia);
+  });
 }

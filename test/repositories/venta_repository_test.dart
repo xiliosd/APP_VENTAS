@@ -83,4 +83,22 @@ void main() {
     final ventas = await db.select(db.ventas).get();
     expect(ventas.map((v) => v.id), [id2]);
   });
+
+  test('registrarVenta guarda el medio de pago (efectivo por defecto)',
+      () async {
+    final usuarioId = await db.into(db.usuarios).insert(
+        UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'));
+    final a = await repo.registrarVenta(
+        monto: 1000, esFiado: false, usuarioId: usuarioId);
+    final b = await repo.registrarVenta(
+        monto: 2000,
+        esFiado: false,
+        usuarioId: usuarioId,
+        medioPago: MedioPago.transferencia);
+
+    final ventas = await db.select(db.ventas).get();
+    expect(ventas.firstWhere((v) => v.id == a).medioPago, MedioPago.efectivo);
+    expect(ventas.firstWhere((v) => v.id == b).medioPago,
+        MedioPago.transferencia);
+  });
 }
