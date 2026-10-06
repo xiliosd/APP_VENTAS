@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
+import '../../providers/clientes_providers.dart';
 import '../../providers/historial_providers.dart';
 import '../../providers/usuarios_providers.dart';
 import '../../repositories/historial_repository.dart';
@@ -12,6 +13,8 @@ import '../../ui/monto.dart';
 import '../../ui/tarjeta_monto.dart';
 import '../../util/fecha_util.dart';
 import '../../widgets/selector_fecha.dart';
+import '../correccion/hoja_movimiento.dart';
+import '../correccion/texto_correccion.dart';
 
 class HistorialScreen extends ConsumerStatefulWidget {
   const HistorialScreen({super.key});
@@ -29,6 +32,11 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
     final usuarios =
         ref.watch(listaUsuariosProvider).valueOrNull ?? const <Usuario>[];
     final nombres = {for (final u in usuarios) u.id: u.nombre};
+    final clientes = {
+      for (final c
+          in ref.watch(listaClientesProvider).valueOrNull ?? const <Cliente>[])
+        c.id: c.nombre,
+    };
     final movimientosAsync =
         ref.watch(historialProvider((dia: _dia, usuarioId: _usuarioId)));
 
@@ -74,10 +82,12 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
             child: movimientosAsync.when(
               data: (movimientos) {
                 final totalVentas = movimientos
-                    .where((m) => m.tipo == TipoMovimientoHistorial.venta)
+                    .where((m) =>
+                        !m.anulado && m.tipo == TipoMovimientoHistorial.venta)
                     .fold<int>(0, (suma, m) => suma + m.monto);
                 final totalGastos = movimientos
-                    .where((m) => m.tipo == TipoMovimientoHistorial.gasto)
+                    .where((m) =>
+                        !m.anulado && m.tipo == TipoMovimientoHistorial.gasto)
                     .fold<int>(0, (suma, m) => suma + m.monto);
                 return ListView(
                   padding: const EdgeInsets.all(16),
@@ -117,7 +127,12 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
                             for (final m in movimientos)
                               _MovimientoTile(
                                 movimiento: m,
-                                nombreUsuario: nombres[m.usuarioId] ?? '',
+                                nombres: nombres,
+                                onTap: () => abrirHojaMovimiento(
+                                  context,
+                                  MovimientoEditable.desdeHistorial(m,
+                                      nombreCliente: clientes[m.clienteId]),
+                                ),
                               ),
                           ],
                         ),
@@ -136,10 +151,17 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
 }
 
 class _MovimientoTile extends StatelessWidget {
-  const _MovimientoTile({required this.movimiento, required this.nombreUsuario});
+  const _MovimientoTile({
+    required this.movimiento,
+    required this.nombres,
+    required this.onTap,
+  });
 
   final MovimientoHistorial movimiento;
-  final String nombreUsuario;
+
+  /// Nombre de cada usuario por id.
+  final Map<int, String> nombres;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -149,8 +171,11 @@ class _MovimientoTile extends StatelessWidget {
     final detalle = esGasto
         ? (descripcion.isEmpty ? 'Gasto' : descripcion)
         : (movimiento.esFiado ? 'Fiado' : 'Contado');
+    final correccion = movimiento.ultimaCorreccion;
 
     return ListTile(
+      key: Key('movimiento_${movimiento.tipo.name}_${movimiento.id}'),
+      onTap: onTap,
       leading: CircleAvatar(
         radius: 18,
         backgroundColor: color.withValues(alpha: 0.12),
@@ -163,7 +188,9 @@ class _MovimientoTile extends StatelessWidget {
       title: Row(
         children: [
           Monto(movimiento.monto,
-              tamano: 16, tono: esGasto ? TonoMonto.sale : TonoMonto.neutro),
+              tamano: 16,
+              tono: esGasto ? TonoMonto.sale : TonoMonto.neutro,
+              tachado: movimiento.anulado),
           if (!esGasto &&
               movimiento.medioPago == MedioPago.transferencia) ...[
             const SizedBox(width: 8),
@@ -171,7 +198,18 @@ class _MovimientoTile extends StatelessWidget {
           ],
         ],
       ),
-      subtitle: Text('$detalle · $nombreUsuario'),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$detalle · ${nombres[movimiento.usuarioId] ?? ''}'),
+          if (correccion != null)
+            Text(
+              textoCorreccion(correccion, nombres[correccion.usuarioId] ?? ''),
+              style: const TextStyle(
+                  fontSize: 12, color: ColoresApp.textoSecundario),
+            ),
+        ],
+      ),
       trailing: Text(formatoHora(movimiento.fecha),
           style: const TextStyle(color: ColoresApp.textoSecundario)),
     );

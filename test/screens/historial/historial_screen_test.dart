@@ -1,12 +1,16 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/repositories/correccion_repository.dart';
 import 'package:app_ventas/repositories/gasto_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
 import 'package:app_ventas/screens/historial/historial_screen.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_ventas/ui/monto.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../support/montaje.dart';
 
 void main() {
   late AppDatabase db;
@@ -122,5 +126,71 @@ void main() {
     await montar(tester);
 
     expect(find.byKey(const Key('etiqueta_qr')), findsOneWidget);
+  });
+
+  Future<Usuario> usuario(int id) =>
+      (db.select(db.usuarios)..where((u) => u.id.equals(id))).getSingle();
+
+  testWidgets(
+      'una venta anulada se ve tachada, dice quién la anuló y no suma',
+      (tester) async {
+    final anulada =
+        await ventas.registrarVenta(monto: 5000, esFiado: false, usuarioId: ana);
+    await ventas.registrarVenta(monto: 3000, esFiado: false, usuarioId: ana);
+    await CorreccionRepository(db).anularVenta(anulada, por: await usuario(ana));
+    await montar(tester);
+
+    expect(enTotal('total_ventas', r'$3.000'), findsOneWidget);
+    final monto = tester.widget<Monto>(find.descendant(
+        of: find.byKey(Key('movimiento_venta_$anulada')),
+        matching: find.byType(Monto)));
+    expect(monto.tachado, isTrue);
+    expect(find.textContaining('Anulada por Ana · '), findsOneWidget);
+  });
+
+  testWidgets('un gasto corregido muestra el valor anterior', (tester) async {
+    final id = await gastos.registrarGasto(
+        monto: 1000, descripcion: 'Hielo', usuarioId: ana);
+    await CorreccionRepository(db).corregirGasto(id,
+        monto: 1200, descripcion: 'Hielo', por: await usuario(ana));
+    await montar(tester);
+
+    expect(enTotal('total_gastos', r'$1.200'), findsOneWidget);
+    expect(find.text(r'Corregido por Ana · antes: $1.000 · Hielo'),
+        findsOneWidget);
+  });
+
+  testWidgets('sin sesión, tocar un movimiento muestra solo su detalle',
+      (tester) async {
+    final id =
+        await ventas.registrarVenta(monto: 5000, esFiado: false, usuarioId: ana);
+    await montar(tester);
+
+    await tester.tap(find.byKey(Key('movimiento_venta_$id')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('detalle_movimiento')), findsOneWidget);
+    expect(find.byKey(const Key('boton_corregir')), findsNothing);
+  });
+
+  testWidgets('anular desde el Historial descuenta la venta del total',
+      (tester) async {
+    final container = await containerConSesion(db, nombre: 'Caro');
+    addTearDown(container.dispose);
+    final id =
+        await ventas.registrarVenta(monto: 5000, esFiado: false, usuarioId: ana);
+    await tester.pumpWidget(
+        appDePrueba(container, inicio: const HistorialScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(Key('movimiento_venta_$id')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_anular')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmar_anular')));
+    await tester.pumpAndSettle();
+
+    expect(enTotal('total_ventas', r'$0'), findsOneWidget);
+    expect(find.text('Venta anulada'), findsOneWidget);
   });
 }
