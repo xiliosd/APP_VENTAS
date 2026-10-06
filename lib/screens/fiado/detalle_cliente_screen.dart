@@ -65,10 +65,16 @@ class DetalleClienteScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Debe',
-                    style: TextStyle(fontSize: 13, color: ColoresApp.fiado)),
+                Text(
+                    saldo > 0
+                        ? 'Debe'
+                        : saldo == 0
+                            ? 'Al día'
+                            : 'Saldo a favor',
+                    style:
+                        const TextStyle(fontSize: 13, color: ColoresApp.fiado)),
                 const SizedBox(height: 4),
-                Monto(saldo, tamano: 32, tono: TonoMonto.fiado),
+                Monto(saldo.abs(), tamano: 32, tono: TonoMonto.fiado),
               ],
             ),
           ),

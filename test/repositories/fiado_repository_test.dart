@@ -286,4 +286,31 @@ void main() {
     expect(venta.ultimaCorreccion!.antes, r'$5.000 · Fiado · Don Pedro');
     expect(await repo.saldoCliente(clienteId), 6000);
   });
+
+
+  test('clientesAlDia trae a quien ya no debe y tuvo movimientos', () async {
+    await venderFiado(5000, DateTime(2026, 9, 1));
+    await repo.registrarPago(
+        clienteId: clienteId,
+        monto: 5000,
+        usuarioId: usuarioId,
+        fecha: DateTime(2026, 9, 2));
+    await db.into(db.clientes).insert(ClientesCompanion.insert(nombre: 'Nuevo'));
+    final rosa = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'Rosa'));
+    await db.into(db.ventas).insert(VentasCompanion.insert(
+          monto: 1000,
+          fecha: DateTime(2026, 9, 3),
+          esFiado: const Value(true),
+          clienteId: Value(rosa),
+          usuarioId: usuarioId,
+        ));
+
+    final alDia = await repo.clientesAlDia();
+
+    expect(alDia.map((c) => c.cliente.id), [clienteId]);
+    expect(alDia.single.saldo, 0);
+    expect(alDia.single.fechaDeudaMasAntigua, isNull);
+  });
 }

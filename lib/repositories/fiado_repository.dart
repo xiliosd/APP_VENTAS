@@ -8,12 +8,14 @@ class ClienteConSaldo {
   const ClienteConSaldo({
     required this.cliente,
     required this.saldo,
-    required this.fechaDeudaMasAntigua,
+    this.fechaDeudaMasAntigua,
   });
 
   final Cliente cliente;
   final int saldo;
-  final DateTime fechaDeudaMasAntigua;
+
+  /// Fecha de la venta fiada vigente más antigua; null si el cliente no debe.
+  final DateTime? fechaDeudaMasAntigua;
 }
 
 enum TipoMovimientoFiado { venta, abono }
@@ -95,9 +97,31 @@ class FiadoRepository {
       ));
     }
 
+    // Aquí todos deben, así que todos tienen fecha de deuda.
     resultado.sort(
-      (a, b) => a.fechaDeudaMasAntigua.compareTo(b.fechaDeudaMasAntigua),
+      (a, b) => a.fechaDeudaMasAntigua!.compareTo(b.fechaDeudaMasAntigua!),
     );
+    return resultado;
+  }
+
+  /// Clientes que no deben nada (o tienen saldo a favor) pero sí tienen
+  /// ventas fiadas o abonos, aunque estén anulados, para poder abrir su
+  /// detalle y corregir esos movimientos. Ordenados por nombre.
+  Future<List<ClienteConSaldo>> clientesAlDia() async {
+    final clientes = await _db.select(_db.clientes).get();
+    final resultado = <ClienteConSaldo>[];
+    for (final cliente in clientes) {
+      final saldo = await saldoCliente(cliente.id);
+      if (saldo > 0) continue;
+      final tieneMovimientos =
+          (await ventasFiadasCliente(cliente.id, incluirAnulados: true))
+                  .isNotEmpty ||
+              (await pagosCliente(cliente.id, incluirAnulados: true)).isNotEmpty;
+      if (!tieneMovimientos) continue;
+      resultado.add(ClienteConSaldo(cliente: cliente, saldo: saldo));
+    }
+    resultado.sort((a, b) =>
+        a.cliente.nombre.toLowerCase().compareTo(b.cliente.nombre.toLowerCase()));
     return resultado;
   }
 

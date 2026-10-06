@@ -275,6 +275,19 @@ void main() {
     expect(find.text(r'Corregido por Ana · antes: $2.000 · Efectivo'),
         findsOneWidget);
   });
+
+  testWidgets('con saldo a favor no dice "Debe" sino "Saldo a favor"',
+      (tester) async {
+    final clienteId = await montarDetalle(tester);
+    final usuarioId = (await db.select(db.usuarios).getSingle()).id;
+    await FiadoRepository(db).registrarPago(
+        clienteId: clienteId, monto: 8000, usuarioId: usuarioId);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Debe'), findsNothing);
+    expect(saldo('Saldo a favor'), findsOneWidget);
+    expect(saldo(r'$3.000'), findsOneWidget);
+  });
 }
 
 /// Espera a [_espera] antes de leer el saldo, para simular la latencia de la
