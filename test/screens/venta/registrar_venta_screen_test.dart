@@ -1,4 +1,5 @@
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/repositories/configuracion_repository.dart';
 import 'package:app_ventas/screens/venta/registrar_venta_screen.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:drift/native.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/imagen_prueba.dart';
 import '../../support/montaje.dart';
 
 void main() {
@@ -256,5 +258,81 @@ void main() {
     final texto =
         tester.renderObject<RenderParagraph>(find.text('Ver ticket'));
     expect(texto.didExceedMaxLines, isFalse);
+  });
+
+  testWidgets('Transferencia: el QR se muestra y Recibido guarda la venta',
+      (tester) async {
+    await ConfiguracionRepository(db).guardarImagenQr(pngDePrueba);
+    await abrirVenta(tester);
+    await tester.tap(find.byKey(const Key('monto_rapido_5000')));
+    await tester.tap(find.text('Transferencia'));
+    await tester.pump();
+    expect(find.text(r'Cobrar $5.000 por QR'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('imagen_qr')), findsOneWidget);
+    expect(await db.select(db.ventas).get(), isEmpty);
+
+    await tester.tap(find.byKey(const Key('boton_qr_recibido')));
+    await tester.pumpAndSettle();
+
+    final venta = (await db.select(db.ventas).get()).single;
+    expect(venta.monto, 5000);
+    expect(venta.medioPago, MedioPago.transferencia);
+    expect(find.text(r'Venta registrada · $5.000'), findsOneWidget);
+  });
+
+  testWidgets('Cancelar en el QR no guarda y deja el ticket igual',
+      (tester) async {
+    await abrirVenta(tester);
+    await tester.tap(find.byKey(const Key('monto_rapido_5000')));
+    await tester.tap(find.text('Transferencia'));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('boton_qr_cancelar')));
+    await tester.pumpAndSettle();
+
+    expect(await db.select(db.ventas).get(), isEmpty);
+    expect(find.text(r'Cobrar $5.000 por QR'), findsOneWidget);
+  });
+
+  testWidgets('volver atrás desde el QR no guarda y deja el ticket igual',
+      (tester) async {
+    await abrirVenta(tester);
+    await tester.tap(find.byKey(const Key('monto_rapido_5000')));
+    await tester.tap(find.text('Transferencia'));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(await db.select(db.ventas).get(), isEmpty);
+    expect(find.text(r'Cobrar $5.000 por QR'), findsOneWidget);
+    expect(find.byKey(const Key('boton_cobrar')), findsOneWidget);
+  });
+
+  testWidgets('con Fiado no aparece el selector de medio de pago',
+      (tester) async {
+    await abrirVenta(tester);
+    expect(find.byKey(const Key('selector_medio_pago')), findsOneWidget);
+    await tester.tap(find.text('Fiado'));
+    await tester.pump();
+    expect(find.byKey(const Key('selector_medio_pago')), findsNothing);
+  });
+
+  testWidgets('Efectivo registra como siempre, en efectivo', (tester) async {
+    await abrirVenta(tester);
+    await tester.tap(find.byKey(const Key('monto_rapido_1000')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+
+    expect((await db.select(db.ventas).get()).single.medioPago,
+        MedioPago.efectivo);
   });
 }

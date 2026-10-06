@@ -44,6 +44,7 @@ class Ticket {
     this.esFiado = false,
     this.cliente,
     this.nombreEscrito = '',
+    this.medioPago = MedioPago.efectivo,
   });
 
   final List<LineaTicket> lineas;
@@ -53,6 +54,9 @@ class Ticket {
   /// Lo escrito en "¿A quién le fías?" sin tocar una sugerencia. Basta para
   /// fiar: al cobrar se busca (o crea) el cliente con ese nombre.
   final String nombreEscrito;
+
+  /// Solo aplica a ventas de contado.
+  final MedioPago medioPago;
 
   /// Cliente con el que se fía: el elegido o, si no hay, el nombre escrito.
   ClienteTicket? get clienteParaCobrar {
@@ -113,13 +117,27 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
       if (l.clave != clave) l,
   ]);
 
-  void vaciar() => _conLineas(const []);
+  /// Vacía el ticket y vuelve a efectivo.
+  void vaciar() => state = Ticket(
+    esFiado: state.esFiado,
+    cliente: state.cliente,
+    nombreEscrito: state.nombreEscrito,
+  );
+
+  void cambiarMedioPago(MedioPago medio) => state = Ticket(
+    lineas: state.lineas,
+    esFiado: state.esFiado,
+    cliente: state.cliente,
+    nombreEscrito: state.nombreEscrito,
+    medioPago: medio,
+  );
 
   void cambiarFiado(bool esFiado) => state = Ticket(
     lineas: state.lineas,
     esFiado: esFiado,
     cliente: esFiado ? state.cliente : null,
     nombreEscrito: esFiado ? state.nombreEscrito : '',
+    medioPago: state.medioPago,
   );
 
   void elegirCliente(ClienteTicket? cliente) => state = Ticket(
@@ -127,6 +145,7 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
     esFiado: state.esFiado,
     cliente: cliente,
     nombreEscrito: state.nombreEscrito,
+    medioPago: state.medioPago,
   );
 
   void escribirCliente(String nombre) => state = Ticket(
@@ -134,6 +153,7 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
     esFiado: state.esFiado,
     cliente: state.cliente,
     nombreEscrito: nombre,
+    medioPago: state.medioPago,
   );
 
   void _agregar(LineaTicket nueva) {
@@ -157,6 +177,7 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
     esFiado: state.esFiado,
     cliente: state.cliente,
     nombreEscrito: state.nombreEscrito,
+    medioPago: state.medioPago,
   );
 }
 

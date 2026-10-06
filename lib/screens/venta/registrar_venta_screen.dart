@@ -17,6 +17,7 @@ import '../../ui/selector_segmentado.dart';
 import '../../ui/teclado_monto.dart';
 import '../../util/formato_moneda.dart';
 import '../../widgets/monto_rapido_grid.dart';
+import '../qr/cobro_qr_screen.dart';
 
 class RegistrarVentaScreen extends ConsumerStatefulWidget {
   const RegistrarVentaScreen({super.key});
@@ -50,6 +51,12 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     setState(() => _cobrando = true);
     try {
       final ticket = ref.read(ticketProvider);
+      final porQr =
+          !ticket.esFiado && ticket.medioPago == MedioPago.transferencia;
+      if (porQr) {
+        final recibido = await abrirCobroQr(context, monto: ticket.total);
+        if (!recibido || !mounted) return;
+      }
       final sesion = ref.read(sesionProvider).usuarioActivo!;
       int? clienteId;
       if (ticket.esFiado) {
@@ -67,6 +74,7 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
         esFiado: ticket.esFiado,
         clienteId: clienteId,
         usuarioId: sesion.id,
+        medioPago: porQr ? MedioPago.transferencia : MedioPago.efectivo,
       );
       if (!mounted) return;
       avisar(
@@ -100,6 +108,18 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
           if (ticket.esFiado) ...[
             const SizedBox(height: 12),
             const _SelectorCliente(),
+          ],
+          if (!ticket.esFiado) ...[
+            const SizedBox(height: 12),
+            SelectorSegmentado<MedioPago>(
+              key: const Key('selector_medio_pago'),
+              opciones: const {
+                MedioPago.efectivo: 'Efectivo',
+                MedioPago.transferencia: 'Transferencia',
+              },
+              valor: ticket.medioPago,
+              onCambio: notifier.cambiarMedioPago,
+            ),
           ],
           const _Seccion('PRODUCTOS'),
           productosAsync.when(
@@ -278,7 +298,9 @@ class _BarraCobro extends StatelessWidget {
     final total = formatoMoneda(ticket.total);
     final cliente = ticket.clienteParaCobrar;
     final texto = !ticket.esFiado
-        ? 'Cobrar $total'
+        ? (ticket.medioPago == MedioPago.transferencia
+              ? 'Cobrar $total por QR'
+              : 'Cobrar $total')
         : cliente == null
         ? 'Fiar $total'
         : 'Fiar $total a ${cliente.nombre}';

@@ -105,4 +105,15 @@ void main() {
     notifier().escribirCliente('   ');
     expect(ticket().puedeCobrar, isFalse);
   });
+
+  test('el medio de pago empieza en efectivo, cambia y vuelve al vaciar', () {
+    expect(ticket().medioPago, MedioPago.efectivo);
+    notifier().agregarMonto(1000);
+    notifier().cambiarMedioPago(MedioPago.transferencia);
+    notifier().sumar('m1000');
+    expect(ticket().medioPago, MedioPago.transferencia);
+
+    notifier().vaciar();
+    expect(ticket().medioPago, MedioPago.efectivo);
+  });
 }
