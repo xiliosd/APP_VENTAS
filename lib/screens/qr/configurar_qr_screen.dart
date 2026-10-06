@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -21,11 +22,22 @@ class ConfigurarQrScreen extends ConsumerStatefulWidget {
 class _ConfigurarQrScreenState extends ConsumerState<ConfigurarQrScreen> {
   bool _ocupado = false;
 
-  Future<void> _cargar() async {
+  @override
+  void initState() {
+    super.initState();
+    // Si Android cerró la app mientras se elegía el QR, se retoma aquí.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _guardar(ref.read(selectorImagenProvider).recuperarPerdida);
+    });
+  }
+
+  Future<void> _cargar() => _guardar(ref.read(selectorImagenProvider).elegir);
+
+  Future<void> _guardar(Future<Uint8List?> Function() obtener) async {
     if (_ocupado) return;
     setState(() => _ocupado = true);
     try {
-      final bytes = await ref.read(selectorImagenProvider).elegir();
+      final bytes = await obtener();
       if (bytes == null) return;
       // Si no es una imagen que el celular pueda mostrar, no se guarda.
       (await ui.instantiateImageCodec(bytes)).dispose();
@@ -41,6 +53,27 @@ class _ConfigurarQrScreenState extends ConsumerState<ConfigurarQrScreen> {
   }
 
   Future<void> _quitar() async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (contexto) => AlertDialog(
+        title: const Text('¿Quitar tu QR?'),
+        content: const Text(
+            'Ya no podrás cobrar por transferencia hasta que cargues otro.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(contexto, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            key: const Key('confirmar_quitar_qr'),
+            style: TextButton.styleFrom(foregroundColor: ColoresApp.sale),
+            onPressed: () => Navigator.pop(contexto, true),
+            child: const Text('Quitar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true || !mounted) return;
     await ref.read(configuracionRepositoryProvider).quitarImagenQr();
     if (mounted) avisar(context, 'QR quitado');
   }
