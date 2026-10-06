@@ -142,4 +142,14 @@ void main() {
     expect(borde('tarjeta_gastos'), ColoresApp.saleSuave);
     expect(borde('tarjeta_ganancia'), ColoresApp.entraSuave);
   });
+
+  testWidgets('la etiqueta de la tarjeta principal va en Nunito',
+      (tester) async {
+    await montar(tester);
+
+    final etiqueta = tester.widget<Text>(find.text('Ventas del día'));
+    expect(etiqueta.style!.fontFamily, 'Nunito');
+    expect(etiqueta.style!.fontVariations,
+        contains(const FontVariation('wght', 800)));
+  });
 }

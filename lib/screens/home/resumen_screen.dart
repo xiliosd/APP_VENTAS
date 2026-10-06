@@ -6,6 +6,7 @@ import '../../repositories/resumen_repository.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/tipografia.dart';
 import '../../ui/monto.dart';
 import '../../ui/tarjeta_monto.dart';
 import '../../util/fecha_util.dart';
@@ -128,8 +129,8 @@ class _Tarjetas extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Ventas del día',
-                  style: TextStyle(color: Colors.white70, fontSize: 13)),
+              Text('Ventas del día',
+                  style: estiloTitulo(tamano: 14, color: Colors.white70)),
               const SizedBox(height: 4),
               Monto(resumen.totalVendido, tamano: 32, tono: TonoMonto.claro),
               const SizedBox(height: 4),

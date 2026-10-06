@@ -63,7 +63,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               )
             : Text(tabs[_tabActual].titulo),
-        actions: [_MenuCuenta(usuario: usuario), const SizedBox(width: 8)],
+        actions: [
+          _MenuCuenta(usuario: usuario, enBarraAzul: esInicio),
+          const SizedBox(width: 8),
+        ],
       ),
       body: tabs[_tabActual].pantalla,
       bottomNavigationBar: NavigationBar(
@@ -92,16 +95,22 @@ class _Pestana {
 }
 
 class _MenuCuenta extends ConsumerWidget {
-  const _MenuCuenta({required this.usuario});
+  const _MenuCuenta({required this.usuario, this.enBarraAzul = false});
 
   final Usuario usuario;
+  final bool enBarraAzul;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return PopupMenuButton<String>(
       key: const Key('menu_cuenta'),
       tooltip: 'Cuenta',
-      icon: AvatarInicial(id: usuario.id, nombre: usuario.nombre, radio: 16),
+      icon: AvatarInicial(
+        id: usuario.id,
+        nombre: usuario.nombre,
+        radio: 16,
+        colorAnillo: enBarraAzul ? Colors.white : null,
+      ),
       onSelected: (_) => ref.read(sesionProvider.notifier).cerrarSesion(),
       itemBuilder: (_) => [
         PopupMenuItem<String>(

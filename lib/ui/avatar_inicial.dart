@@ -18,16 +18,20 @@ class AvatarInicial extends StatelessWidget {
     required this.id,
     required this.nombre,
     this.radio = 20,
+    this.colorAnillo,
   });
 
   final int id;
   final String nombre;
   final double radio;
 
+  /// Borde de 2 px para que el círculo se distinga sobre fondos de color.
+  final Color? colorAnillo;
+
   @override
   Widget build(BuildContext context) {
     final limpio = nombre.trim();
-    return CircleAvatar(
+    final avatar = CircleAvatar(
       radius: radio,
       backgroundColor: _paleta[id % _paleta.length],
       child: Text(
@@ -38,6 +42,15 @@ class AvatarInicial extends StatelessWidget {
           fontSize: radio * 0.9,
         ),
       ),
+    );
+    if (colorAnillo == null) return avatar;
+    return Container(
+      key: const Key('anillo_avatar'),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: colorAnillo!, width: 2),
+      ),
+      child: avatar,
     );
   }
 }

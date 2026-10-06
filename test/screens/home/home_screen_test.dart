@@ -130,4 +130,20 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('en la barra azul el avatar de la cuenta lleva anillo blanco',
+      (tester) async {
+    await montar(tester);
+    Finder anillo() => find.descendant(
+        of: find.byKey(const Key('menu_cuenta')),
+        matching: find.byKey(const Key('anillo_avatar')));
+
+    final caja = tester.widget<Container>(anillo());
+    final borde = (caja.decoration! as BoxDecoration).border! as Border;
+    expect(borde.top.color, Colors.white);
+
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+    expect(anillo(), findsNothing);
+  });
 }
