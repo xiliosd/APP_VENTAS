@@ -1,7 +1,7 @@
 # Fase 3B — Reportes por semana y por mes
 
 **Fecha:** 2026-10-06
-**Estado:** Diseño aprobado, pendiente de plan
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con Fase 1, 2A–2E, marca VeciTienda, pulido 2D y Fase 3A integradas.
 
 ## Objetivo
