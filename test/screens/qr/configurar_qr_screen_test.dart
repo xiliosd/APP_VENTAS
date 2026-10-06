@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
 import 'package:app_ventas/screens/configuracion/ajustes_screen.dart';
@@ -73,5 +75,21 @@ void main() {
     await tester.tap(find.byKey(const Key('menu_cobro_qr')));
     await tester.pumpAndSettle();
     expect(find.byType(ConfigurarQrScreen), findsOneWidget);
+  });
+
+  testWidgets('una imagen que no se puede leer avisa y no se guarda',
+      (tester) async {
+    await montar(
+        tester, SelectorImagenFalso(bytes: Uint8List.fromList([1, 2, 3])));
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('boton_cargar_qr')));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo cargar la imagen, prueba con otra'),
+        findsOneWidget);
+    expect(find.text('QR guardado'), findsNothing);
+    expect(await ConfiguracionRepository(db).imagenQr(), isNull);
   });
 }

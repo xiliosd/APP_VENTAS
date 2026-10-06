@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,6 +27,8 @@ class _ConfigurarQrScreenState extends ConsumerState<ConfigurarQrScreen> {
     try {
       final bytes = await ref.read(selectorImagenProvider).elegir();
       if (bytes == null) return;
+      // Si no es una imagen que el celular pueda mostrar, no se guarda.
+      (await ui.instantiateImageCodec(bytes)).dispose();
       await ref.read(configuracionRepositoryProvider).guardarImagenQr(bytes);
       if (mounted) avisar(context, 'QR guardado');
     } catch (_) {
