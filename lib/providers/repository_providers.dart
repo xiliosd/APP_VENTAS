@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../repositories/cliente_repository.dart';
+import '../repositories/correccion_repository.dart';
 import '../repositories/fiado_repository.dart';
 import '../repositories/gasto_repository.dart';
 import '../repositories/historial_repository.dart';
@@ -48,4 +49,8 @@ final historialRepositoryProvider = Provider(
     ref.watch(ventaRepositoryProvider),
     ref.watch(gastoRepositoryProvider),
   ),
+);
+
+final correccionRepositoryProvider = Provider(
+  (ref) => CorreccionRepository(ref.watch(databaseProvider)),
 );
