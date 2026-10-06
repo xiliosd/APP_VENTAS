@@ -11,6 +11,7 @@ Future<ProviderContainer> containerConSesion(
   AppDatabase db, {
   String nombre = 'Ana',
   String rol = 'admin',
+  List<Override> overrides = const [],
 }) async {
   final id = await db.into(db.usuarios).insert(
         UsuariosCompanion.insert(nombre: nombre, rol: rol, pinHash: 'x'),
@@ -18,7 +19,7 @@ Future<ProviderContainer> containerConSesion(
   final usuario =
       await (db.select(db.usuarios)..where((u) => u.id.equals(id))).getSingle();
   final container = ProviderContainer(
-    overrides: [databaseProvider.overrideWithValue(db)],
+    overrides: [databaseProvider.overrideWithValue(db), ...overrides],
   );
   container.read(sesionProvider.notifier).state =
       SesionState(usuarioActivo: usuario);

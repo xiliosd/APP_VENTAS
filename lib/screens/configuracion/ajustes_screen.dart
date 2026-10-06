@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/sesion_provider.dart';
 import '../../ui/colores_app.dart';
+import '../qr/configurar_qr_screen.dart';
 import '../respaldo/respaldo_screen.dart';
 import 'productos_screen.dart';
 import 'usuarios_screen.dart';
@@ -38,6 +39,18 @@ class AjustesScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const UsuariosScreen()),
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                key: const Key('menu_cobro_qr'),
+                leading: const Icon(Icons.qr_code_2_rounded),
+                title: const Text('Cobro por QR'),
+                subtitle: const Text('Tu QR de Nequi, Daviplata o banco'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => const ConfigurarQrScreen()),
                 ),
               ),
               const Divider(height: 1),
