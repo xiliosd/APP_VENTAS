@@ -71,6 +71,25 @@ class MovimientoInventario {
   final bool anulada;
 }
 
+/// Una línea del pedido sugerido a un proveedor.
+class LineaSugerida {
+  const LineaSugerida({
+    required this.producto,
+    required this.existencias,
+    required this.sugerido,
+    this.precio,
+  });
+
+  final Producto producto;
+  final int existencias;
+
+  /// (pedirHasta ?? 2 × mínimo) − existencias, nunca menos de 1.
+  final int sugerido;
+
+  /// Precio de compra con ese proveedor; null si no lo tiene.
+  final int? precio;
+}
+
 /// Existencias, conteos y entradas de mercancía. Las existencias no se
 /// guardan: salen del último conteo, más lo recibido y menos lo vendido
 /// después de él.
@@ -529,5 +548,49 @@ class InventarioRepository {
         ),
     ]..sort((a, b) => b.fecha.compareTo(a.fecha));
     return movimientos.take(limite).toList();
+  }
+
+  // ---- Pedido sugerido ----
+
+  /// Cambia "pedir hasta" (null lo borra); debe ser ≥ 0 y ≥ mínimo.
+  Future<void> cambiarPedirHasta(int productoId, int? pedirHasta) async {
+    if (pedirHasta != null) {
+      final producto = await (_db.select(
+        _db.productos,
+      )..where((p) => p.id.equals(productoId))).getSingle();
+      if (pedirHasta < 0 || pedirHasta < producto.minimo) {
+        throw ArgumentError('Debe ser mayor o igual que el mínimo');
+      }
+    }
+    await (_db.update(_db.productos)..where((p) => p.id.equals(productoId)))
+        .write(ProductosCompanion(pedirHasta: Value(pedirHasta)));
+  }
+
+  /// Pedido sugerido para el grupo de "Por pedir" de [proveedorId] (null =
+  /// "Sin proveedor"), en el mismo orden.
+  Future<List<LineaSugerida>> sugerenciaPedido(int? proveedorId) async {
+    final grupo = (await porPedir())
+        .where((g) => g.proveedor?.id == proveedorId)
+        .firstOrNull;
+    if (grupo == null) return const [];
+    final precios = proveedorId == null
+        ? const <int, int>{}
+        : {
+            for (final v in await (_db.select(
+              _db.productosProveedores,
+            )..where((v) => v.proveedorId.equals(proveedorId))).get())
+              v.productoId: v.precioCompra,
+          };
+    return [
+      for (final p in grupo.productos)
+        LineaSugerida(
+          producto: p.producto,
+          existencias: p.existencias,
+          sugerido:
+              ((p.producto.pedirHasta ?? 2 * p.producto.minimo) - p.existencias)
+                  .clamp(1, 1 << 30),
+          precio: precios[p.producto.id],
+        ),
+    ];
   }
 }

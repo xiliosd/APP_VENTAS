@@ -49,3 +49,11 @@ final detalleEntradaProvider = FutureProvider.autoDispose
       ref.watch(_cambiosInventarioProvider);
       return ref.watch(inventarioRepositoryProvider).detalleEntrada(entradaId);
     });
+
+final sugerenciaPedidoProvider = FutureProvider.autoDispose
+    .family<List<LineaSugerida>, int?>((ref, proveedorId) {
+      ref.watch(_cambiosInventarioProvider);
+      return ref
+          .watch(inventarioRepositoryProvider)
+          .sugerenciaPedido(proveedorId);
+    });
