@@ -222,12 +222,22 @@ class _Contenido extends StatelessWidget {
             style: gris,
           )
         else ...[
+          if (r.hayCostos)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Ganancia en productos: ${formatoMoneda(r.gananciaProductos)}',
+                key: const Key('texto_ganancia_productos'),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
           for (final (i, p) in r.ranking.indexed)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Text(
                 '${i + 1}. ${p.nombre} · ${p.unidades} u · '
-                '${formatoMoneda(p.dinero)}',
+                '${formatoMoneda(p.dinero)}'
+                '${p.ganancia == null ? '' : ' · gana ${formatoMoneda(p.ganancia!)}'}',
                 key: Key('ranking_$i'),
               ),
             ),
@@ -237,6 +247,16 @@ class _Contenido extends StatelessWidget {
               child: Text(
                 'Otros montos · ${formatoMoneda(r.otrosMontos)}',
                 key: const Key('texto_otros_montos'),
+                style: gris,
+              ),
+            ),
+          if (r.vendidoSinCosto > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '${formatoMoneda(r.vendidoSinCosto)} vendidos sin costo '
+                'registrado',
+                key: const Key('texto_sin_costo'),
                 style: gris,
               ),
             ),

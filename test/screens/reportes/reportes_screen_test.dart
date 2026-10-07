@@ -1,5 +1,7 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/repositories/producto_repository.dart';
+import 'package:app_ventas/repositories/proveedor_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
 import 'package:app_ventas/screens/reportes/barras_por_dia.dart';
 import 'package:app_ventas/screens/reportes/reportes_screen.dart';
@@ -209,5 +211,38 @@ void main() {
         find.text('Aún no hay ventas con detalle de productos en este periodo'),
         findsOneWidget);
     expect(find.text(r'Hora pico: 10 a. m. · $4.000'), findsOneWidget);
+  });
+
+  testWidgets('muestra la ganancia en productos y lo vendido sin costo',
+      (tester) async {
+    final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
+    final arepa = await ProductoRepository(db).guardarProducto(
+      nombre: 'Arepa',
+      precio: 3500,
+      proveedores: [
+        ProveedorDeProducto(
+            proveedorId: postobon, precioCompra: 2500, preferido: true),
+      ],
+    );
+    await VentaRepository(db).registrarVenta(
+      monto: 12000,
+      esFiado: false,
+      usuarioId: ana,
+      fecha: DateTime(2026, 10, 6, 9),
+      lineas: [
+        LineaNueva(
+            productoId: arepa,
+            descripcion: 'Arepa',
+            precioUnitario: 3500,
+            cantidad: 2),
+        const LineaNueva(
+            descripcion: r'$5.000', precioUnitario: 5000, cantidad: 1),
+      ],
+    );
+    await montar(tester);
+
+    expect(find.text(r'Ganancia en productos: $2.000'), findsOneWidget);
+    expect(find.text(r'1. Arepa · 2 u · $7.000 · gana $2.000'), findsOneWidget);
+    expect(find.text(r'$5.000 vendidos sin costo registrado'), findsOneWidget);
   });
 }
