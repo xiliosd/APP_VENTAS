@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/repository_providers.dart';
+import 'package:app_ventas/providers/sesion_provider.dart';
+import 'package:app_ventas/repositories/inventario_repository.dart';
 import 'package:app_ventas/repositories/producto_repository.dart';
 import 'package:app_ventas/repositories/proveedor_repository.dart';
 import 'package:app_ventas/screens/configuracion/producto_screen.dart';
@@ -282,6 +284,79 @@ void main() {
     carga.complete();
     await tester.pumpAndSettle();
     expect(find.byKey(Key('fila_proveedor_$postobon')), findsOneWidget);
+  });
+
+  testWidgets('activar el control pide cuántas hay y el mínimo',
+      (tester) async {
+    await montar(tester);
+
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('campo_nombre_producto')), 'Arepa');
+    await tester.enterText(
+        find.byKey(const Key('campo_precio_producto')), '3.500');
+    await tester.ensureVisible(find.byKey(const Key('interruptor_existencias')));
+    await tester.tap(find.byKey(const Key('interruptor_existencias')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('campo_hay_ahora')), '20');
+    await tester.enterText(find.byKey(const Key('campo_minimo')), '5');
+    await guardar(tester);
+
+    final p = await db.select(db.productos).getSingle();
+    expect(p.controlaExistencias, isTrue);
+    expect(p.minimo, 5);
+    expect(await InventarioRepository(db).existencias(p.id), 20);
+  });
+
+  testWidgets('sin "Hay ahora" no deja activar el control', (tester) async {
+    await montar(tester);
+
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('campo_nombre_producto')), 'Arepa');
+    await tester.enterText(
+        find.byKey(const Key('campo_precio_producto')), '3.500');
+    await tester.ensureVisible(find.byKey(const Key('interruptor_existencias')));
+    await tester.tap(find.byKey(const Key('interruptor_existencias')));
+    await tester.pumpAndSettle();
+    await guardar(tester);
+
+    expect(find.text('Escribe cuántas hay'), findsOneWidget);
+    expect(await db.select(db.productos).get(), isEmpty);
+  });
+
+  testWidgets('con control muestra existencias, cambia el mínimo y desactiva',
+      (tester) async {
+    final id = await crearArepa();
+    final container = await containerConSesion(db, nombre: 'Beto');
+    final beto = container.read(sesionProvider).usuarioActivo!;
+    container.dispose();
+    await InventarioRepository(db)
+        .activarControl(id, cantidad: 12, minimo: 3, por: beto);
+    await montar(tester);
+
+    await tester.tap(find.byKey(Key('producto_item_$id')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('interruptor_existencias')));
+    expect(find.text('Hay 12 u'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('campo_minimo')), '4');
+    await guardar(tester);
+    expect((await db.select(db.productos).getSingle()).minimo, 4);
+
+    await tester.tap(find.byKey(Key('producto_item_$id')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('interruptor_existencias')));
+    await tester.tap(find.byKey(const Key('interruptor_existencias')));
+    await tester.pumpAndSettle();
+    expect(find.text('¿Dejar de controlar existencias?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirmar_dejar_de_controlar')));
+    await tester.pumpAndSettle();
+    await guardar(tester);
+
+    expect((await db.select(db.productos).getSingle()).controlaExistencias,
+        isFalse);
   });
 }
 

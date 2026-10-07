@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
+import '../../providers/inventario_providers.dart';
 import '../../providers/proveedores_providers.dart';
 import '../../providers/repository_providers.dart';
+import '../../providers/sesion_provider.dart';
 import '../../repositories/producto_repository.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
 import '../../util/formato_moneda.dart';
+import '../inventario/hoja_ajuste_conteo.dart';
 
 /// Un proveedor en edición dentro del formulario.
 class _Fila {
@@ -40,9 +43,19 @@ class ProductoScreen extends ConsumerStatefulWidget {
 
 class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   late final _nombre = TextEditingController(text: widget.producto?.nombre);
-  late final _precio =
-      TextEditingController(text: widget.producto?.precio.toString());
+  late final _precio = TextEditingController(
+    text: widget.producto?.precio.toString(),
+  );
   final List<_Fila> _filas = [];
+  late bool _controla = widget.producto?.controlaExistencias ?? false;
+  late final bool _controlabaAlAbrir =
+      widget.producto?.controlaExistencias ?? false;
+  final _hayAhora = TextEditingController();
+  late final _minimo = TextEditingController(
+    text: '${widget.producto?.minimo ?? 0}',
+  );
+  String? _errorHay;
+  String? _errorMinimo;
   String? _errorNombre;
   String? _errorPrecio;
   String? _error;
@@ -60,9 +73,12 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   }
 
   Future<void> _cargar(int id) async {
-    final vinculos = await ref.read(productoRepositoryProvider).proveedoresDe(id);
+    final vinculos = await ref
+        .read(productoRepositoryProvider)
+        .proveedoresDe(id);
     final proveedores = {
-      for (final p in await ref.read(proveedorRepositoryProvider).todos()) p.id: p,
+      for (final p in await ref.read(proveedorRepositoryProvider).todos())
+        p.id: p,
     };
     if (!mounted) return;
     setState(() {
@@ -84,6 +100,8 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   void dispose() {
     _nombre.dispose();
     _precio.dispose();
+    _hayAhora.dispose();
+    _minimo.dispose();
     super.dispose();
   }
 
@@ -92,7 +110,8 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
       context,
       titulo: 'Agregar proveedor',
       builder: (_) => _HojaAgregarProveedor(
-          excluir: {for (final f in _filas) f.proveedorId}),
+        excluir: {for (final f in _filas) f.proveedorId},
+      ),
     );
     if (elegido == null) return;
     setState(() {
@@ -102,30 +121,46 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   }
 
   void _marcarPreferido(_Fila fila) => setState(() {
-        for (final f in _filas) {
-          f.preferido = identical(f, fila);
-        }
-      });
+    for (final f in _filas) {
+      f.preferido = identical(f, fila);
+    }
+  });
 
   void _quitar(_Fila fila) => setState(() {
-        _filas.remove(fila);
-        if (fila.preferido && _filas.isNotEmpty) _filas.first.preferido = true;
-      });
+    _filas.remove(fila);
+    if (fila.preferido && _filas.isNotEmpty) _filas.first.preferido = true;
+  });
 
   Future<void> _guardar() async {
     if (_guardando) return;
     final nombre = _nombre.text.trim();
     final precio = parsearMonto(_precio.text);
+    final hay = int.tryParse(_hayAhora.text.trim());
+    final minimo = int.tryParse(_minimo.text.trim());
     setState(() {
       _errorNombre = nombre.isEmpty ? 'Escribe un nombre' : null;
-      _errorPrecio =
-          (precio == null || precio <= 0) ? 'Escribe un precio válido' : null;
+      _errorPrecio = (precio == null || precio <= 0)
+          ? 'Escribe un precio válido'
+          : null;
+      _errorHay = _controla && !_controlabaAlAbrir && (hay == null || hay < 0)
+          ? 'Escribe cuántas hay'
+          : null;
+      _errorMinimo = _controla && (minimo == null || minimo < 0)
+          ? 'Escribe un mínimo válido'
+          : null;
       _error = null;
     });
-    if (_errorNombre != null || _errorPrecio != null) return;
+    if (_errorNombre != null ||
+        _errorPrecio != null ||
+        _errorHay != null ||
+        _errorMinimo != null) {
+      return;
+    }
     setState(() => _guardando = true);
     try {
-      await ref.read(productoRepositoryProvider).guardarProducto(
+      final productoId = await ref
+          .read(productoRepositoryProvider)
+          .guardarProducto(
             id: widget.producto?.id,
             nombre: nombre,
             precio: precio!,
@@ -138,6 +173,19 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
                 ),
             ],
           );
+      final inventario = ref.read(inventarioRepositoryProvider);
+      if (_controla && !_controlabaAlAbrir) {
+        await inventario.activarControl(
+          productoId,
+          cantidad: hay!,
+          minimo: minimo!,
+          por: ref.read(sesionProvider).usuarioActivo!,
+        );
+      } else if (_controla) {
+        await inventario.cambiarMinimo(productoId, minimo!);
+      } else if (_controlabaAlAbrir) {
+        await inventario.desactivarControl(productoId);
+      }
       if (mounted) Navigator.of(context).pop(true);
     } on ArgumentError {
       if (mounted) {
@@ -146,6 +194,32 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
+  }
+
+  Future<void> _cambiarControl(bool valor) async {
+    if (!valor && _controlabaAlAbrir) {
+      final confirmado = await showDialog<bool>(
+        context: context,
+        builder: (contexto) => AlertDialog(
+          title: const Text('¿Dejar de controlar existencias?'),
+          content: const Text('El historial se conserva.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(contexto, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              key: const Key('confirmar_dejar_de_controlar'),
+              style: TextButton.styleFrom(foregroundColor: ColoresApp.sale),
+              onPressed: () => Navigator.pop(contexto, true),
+              child: const Text('Dejar de controlar'),
+            ),
+          ],
+        ),
+      );
+      if (confirmado != true) return;
+    }
+    if (mounted) setState(() => _controla = valor);
   }
 
   Widget _resumen() {
@@ -160,8 +234,10 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     }
     final costo = preferido.precioCompra;
     if (precio == null || precio <= 0) {
-      return Text('Costo ${formatoMoneda(costo)}',
-          key: const Key('texto_resumen_costo'));
+      return Text(
+        'Costo ${formatoMoneda(costo)}',
+        key: const Key('texto_resumen_costo'),
+      );
     }
     final ganancia = precio - costo;
     if (ganancia < 0) {
@@ -184,7 +260,8 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-            widget.producto == null ? 'Nuevo producto' : 'Editar producto'),
+          widget.producto == null ? 'Nuevo producto' : 'Editar producto',
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -194,7 +271,9 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
             controller: _nombre,
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
-                labelText: 'Nombre del producto', errorText: _errorNombre),
+              labelText: 'Nombre del producto',
+              errorText: _errorNombre,
+            ),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -203,11 +282,15 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
             keyboardType: TextInputType.number,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
-                labelText: 'Precio de venta', errorText: _errorPrecio),
+              labelText: 'Precio de venta',
+              errorText: _errorPrecio,
+            ),
           ),
           const SizedBox(height: 24),
-          const Text('Proveedores',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          const Text(
+            'Proveedores',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 8),
           for (final f in _filas)
             Row(
@@ -217,7 +300,8 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
                   child: Text(
                     f.nombre,
                     style: TextStyle(
-                        color: f.activo ? null : ColoresApp.textoSecundario),
+                      color: f.activo ? null : ColoresApp.textoSecundario,
+                    ),
                   ),
                 ),
                 Text(formatoMoneda(f.precioCompra)),
@@ -225,8 +309,11 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
                   key: Key('preferido_${f.proveedorId}'),
                   tooltip: 'Preferido',
                   icon: Icon(
-                      f.preferido ? Icons.star_rounded : Icons.star_border_rounded,
-                      color: f.preferido ? ColoresApp.fiado : null),
+                    f.preferido
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
+                    color: f.preferido ? ColoresApp.fiado : null,
+                  ),
                   onPressed: () => _marcarPreferido(f),
                 ),
                 IconButton(
@@ -245,11 +332,57 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
           ),
           const SizedBox(height: 12),
           _resumen(),
+          const SizedBox(height: 24),
+          const Text(
+            'Existencias',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          SwitchListTile(
+            key: const Key('interruptor_existencias'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Controlar existencias'),
+            value: _controla,
+            onChanged: _cargando ? null : _cambiarControl,
+          ),
+          if (_controla && _controlabaAlAbrir && widget.producto != null) ...[
+            Text(
+              'Hay ${ref.watch(existenciasProductoProvider(widget.producto!.id)).valueOrNull ?? 0} u',
+              key: const Key('texto_existencias_producto'),
+            ),
+            TextButton(
+              key: const Key('boton_ajustar_conteo_producto'),
+              onPressed: () =>
+                  mostrarHojaAjusteConteo(context, producto: widget.producto!),
+              child: const Text('Ajustar conteo'),
+            ),
+          ],
+          if (_controla && !_controlabaAlAbrir)
+            TextField(
+              key: const Key('campo_hay_ahora'),
+              controller: _hayAhora,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Hay ahora',
+                errorText: _errorHay,
+              ),
+            ),
+          if (_controla)
+            TextField(
+              key: const Key('campo_minimo'),
+              controller: _minimo,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Mínimo',
+                errorText: _errorMinimo,
+              ),
+            ),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text(_error!,
-                  style: const TextStyle(color: ColoresApp.sale)),
+              child: Text(
+                _error!,
+                style: const TextStyle(color: ColoresApp.sale),
+              ),
             ),
           const SizedBox(height: 24),
           BotonPrincipal(
@@ -310,13 +443,15 @@ class _HojaAgregarProveedorState extends ConsumerState<_HojaAgregarProveedor> {
         proveedor = (await repo.todos()).firstWhere((p) => p.id == id);
       }
       if (!mounted) return;
-      Navigator.of(context).pop(_Fila(
-        proveedorId: proveedor.id,
-        nombre: proveedor.nombre,
-        activo: true,
-        precioCompra: precio,
-        preferido: false,
-      ));
+      Navigator.of(context).pop(
+        _Fila(
+          proveedorId: proveedor.id,
+          nombre: proveedor.nombre,
+          activo: true,
+          precioCompra: precio,
+          preferido: false,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -324,10 +459,11 @@ class _HojaAgregarProveedorState extends ConsumerState<_HojaAgregarProveedor> {
 
   @override
   Widget build(BuildContext context) {
-    final disponibles = (ref.watch(proveedoresActivosProvider).valueOrNull ??
-            const <Proveedor>[])
-        .where((p) => !widget.excluir.contains(p.id))
-        .toList();
+    final disponibles =
+        (ref.watch(proveedoresActivosProvider).valueOrNull ??
+                const <Proveedor>[])
+            .where((p) => !widget.excluir.contains(p.id))
+            .toList();
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -364,7 +500,9 @@ class _HojaAgregarProveedorState extends ConsumerState<_HojaAgregarProveedor> {
           controller: _precio,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-              labelText: 'Precio de compra', errorText: _error),
+            labelText: 'Precio de compra',
+            errorText: _error,
+          ),
         ),
         const SizedBox(height: 16),
         BotonPrincipal(
