@@ -48,6 +48,10 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   String? _error;
   bool _guardando = false;
 
+  /// Al editar, true hasta que llegan los proveedores del producto: guardar o
+  /// agregar antes reemplazaría la lista con una incompleta.
+  late bool _cargando = widget.producto != null;
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +66,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     };
     if (!mounted) return;
     setState(() {
+      _cargando = false;
       _filas.addAll([
         for (final v in vinculos)
           _Fila(
@@ -234,7 +239,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
             ),
           TextButton.icon(
             key: const Key('boton_agregar_proveedor'),
-            onPressed: _agregarProveedor,
+            onPressed: _cargando ? null : _agregarProveedor,
             icon: const Icon(Icons.add_rounded),
             label: const Text('Agregar proveedor'),
           ),
@@ -250,7 +255,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
           BotonPrincipal(
             key: const Key('boton_guardar_producto'),
             texto: 'Guardar',
-            onPressed: _guardando ? null : _guardar,
+            onPressed: _guardando || _cargando ? null : _guardar,
           ),
         ],
       ),

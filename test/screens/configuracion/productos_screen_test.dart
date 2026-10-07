@@ -246,7 +246,58 @@ void main() {
     expect(find.byType(ProductoScreen), findsNothing);
     expect(find.byType(ProductosScreen), findsOneWidget);
   });
+  testWidgets(
+      'mientras cargan los proveedores no se puede guardar ni agregar',
+      (tester) async {
+    final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
+    final id = await ProductoRepository(db).guardarProducto(
+      nombre: 'Arepa',
+      precio: 3500,
+      proveedores: [
+        ProveedorDeProducto(
+            proveedorId: postobon, precioCompra: 2500, preferido: true),
+      ],
+    );
+    final carga = Completer<void>();
+    await montar(tester, overrides: [
+      productoRepositoryProvider
+          .overrideWith((ref) => _ProductoRepositoryCargaLenta(db, carga.future)),
+    ]);
+
+    await tester.tap(find.byKey(Key('producto_item_$id')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('boton_guardar_producto')));
+    await tester.tap(find.byKey(const Key('boton_guardar_producto')),
+        warnIfMissed: false);
+    await tester.pump();
+
+    expect(find.byType(ProductoScreen), findsOneWidget);
+    expect(
+        tester
+            .widget<TextButton>(find.byKey(const Key('boton_agregar_proveedor')))
+            .onPressed,
+        isNull);
+    expect(await ProductoRepository(db).costoDe(id), 2500);
+
+    carga.complete();
+    await tester.pumpAndSettle();
+    expect(find.byKey(Key('fila_proveedor_$postobon')), findsOneWidget);
+  });
 }
+
+/// Demora la carga de proveedores de un producto hasta [_espera].
+class _ProductoRepositoryCargaLenta extends ProductoRepository {
+  _ProductoRepositoryCargaLenta(super.db, this._espera);
+
+  final Future<void> _espera;
+
+  @override
+  Future<List<ProductoProveedor>> proveedoresDe(int productoId) async {
+    await _espera;
+    return super.proveedoresDe(productoId);
+  }
+}
+
 
 /// Espera a [_espera] antes de guardar, para simular la latencia de la base.
 class _ProductoRepositoryLento extends ProductoRepository {
