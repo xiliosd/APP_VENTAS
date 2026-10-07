@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
+import '../../providers/lineas_venta_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../providers/ticket_provider.dart';
@@ -160,7 +161,26 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
   bool _guardando = false;
   String? _error;
 
+  /// Cantidades editadas por id de línea (las demás quedan como estaban).
+  final Map<int, int> _cantidades = {};
+
   MovimientoEditable get _m => widget.movimiento;
+
+  /// Líneas de la venta (vacío para abonos, gastos o ventas sin detalle).
+  List<LineaVenta> get _lineas => _m.tipo == TipoMovimiento.venta
+      ? ref.read(lineasVentaProvider(_m.id)).valueOrNull ?? const []
+      : const [];
+
+  int _cantidad(LineaVenta linea) => _cantidades[linea.id] ?? linea.cantidad;
+
+  /// Total a guardar: la suma de las líneas o, sin líneas, el monto tecleado.
+  int get _total {
+    final lineas = _lineas;
+    if (lineas.isEmpty) return _monto;
+    return lineas.fold(0, (s, l) => s + l.precioUnitario * _cantidad(l));
+  }
+
+  bool get _quedanLineas => _lineas.any((l) => _cantidad(l) > 0);
 
   @override
   void dispose() {
@@ -175,7 +195,8 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
   }
 
   bool get _hayCambios {
-    if (_monto != _m.monto) return true;
+    if (_total != _m.monto) return true;
+    if (_lineas.any((l) => _cantidad(l) != l.cantidad)) return true;
     return switch (_m.tipo) {
       TipoMovimiento.venta => _esFiado != _m.esFiado ||
           (_esFiado
@@ -188,7 +209,8 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
   }
 
   bool get _valido =>
-      _monto > 0 &&
+      _total > 0 &&
+      (_lineas.isEmpty || _quedanLineas) &&
       (_m.tipo != TipoMovimiento.venta || !_esFiado || _clienteElegido != null);
 
   Future<void> _guardar() async {
@@ -211,10 +233,13 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
                     .obtenerOCrearCliente(cliente.nombre);
           }
           await repo.corregirVenta(_m.id,
-              monto: _monto,
+              monto: _total,
               esFiado: _esFiado,
               clienteId: clienteId,
               medioPago: _medio,
+              cantidades: _lineas.isEmpty
+                  ? null
+                  : {for (final l in _lineas) l.id: _cantidad(l)},
               por: por);
         case TipoMovimiento.abono:
           await repo.corregirPago(_m.id,
@@ -307,8 +332,12 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
         );
 
   @override
-  Widget build(BuildContext context) =>
-      _editando ? _formulario() : _vistaDetalle();
+  Widget build(BuildContext context) {
+    if (_m.tipo == TipoMovimiento.venta) {
+      ref.watch(lineasVentaProvider(_m.id));
+    }
+    return _editando ? _formulario() : _vistaDetalle();
+  }
 
   Widget _vistaDetalle() {
     final usuarios =
@@ -333,6 +362,12 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
         Monto(_m.monto, tamano: 32, tachado: _m.anulado),
         const SizedBox(height: 4),
         Text(_detalle, key: const Key('detalle_movimiento')),
+        for (final linea in _lineas)
+          Text(
+            '${linea.cantidad}× ${linea.descripcion} · '
+            '${formatoMoneda(linea.precioUnitario * linea.cantidad)}',
+            key: Key('linea_${linea.id}'),
+          ),
         Text(
           '${nombres[_m.usuarioId] ?? ''} · ${formatoFechaHora(_m.fecha)}',
           style: const TextStyle(color: ColoresApp.textoSecundario),
@@ -361,6 +396,39 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
             child: const Text('Anular'),
           ),
         ],
+      ],
+    );
+  }
+
+  Widget _filaLinea(LineaVenta linea) {
+    final cantidad = _cantidad(linea);
+    void cambiar(int nueva) => setState(() {
+          _cantidades[linea.id] = nueva;
+          _error = null;
+        });
+    return Row(
+      children: [
+        Expanded(child: Text(linea.descripcion)),
+        IconButton(
+          key: Key('restar_linea_${linea.id}'),
+          tooltip: 'Restar',
+          icon: const Icon(Icons.remove_rounded),
+          onPressed: () => cambiar(cantidad - 1),
+        ),
+        Text('$cantidad', key: Key('cantidad_linea_${linea.id}')),
+        IconButton(
+          key: Key('sumar_linea_${linea.id}'),
+          tooltip: 'Sumar',
+          icon: const Icon(Icons.add_rounded),
+          onPressed: () => cambiar(cantidad + 1),
+        ),
+        IconButton(
+          key: Key('quitar_linea_${linea.id}'),
+          tooltip: 'Quitar',
+          icon: const Icon(Icons.delete_outline_rounded),
+          color: ColoresApp.sale,
+          onPressed: () => cambiar(0),
+        ),
       ],
     );
   }
@@ -408,15 +476,38 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
             onChanged: (_) => setState(() {}),
           ),
         const SizedBox(height: 12),
-        Center(child: Monto(_monto, tamano: 36)),
-        ?error,
-        const SizedBox(height: 12),
-        TecladoMonto(
-          onTecla: (tecla) => setState(() {
-            _monto = aplicarTecla(_monto, tecla);
-            _error = null;
-          }),
-        ),
+        if (_lineas.isEmpty) ...[
+          Center(child: Monto(_monto, tamano: 36)),
+          ?error,
+          const SizedBox(height: 12),
+          TecladoMonto(
+            onTecla: (tecla) => setState(() {
+              _monto = aplicarTecla(_monto, tecla);
+              _error = null;
+            }),
+          ),
+        ] else ...[
+          for (final linea in _lineas)
+            if (_cantidad(linea) > 0) _filaLinea(linea),
+          const SizedBox(height: 8),
+          Center(
+            child: KeyedSubtree(
+              key: const Key('total_correccion'),
+              child: Monto(_total, tamano: 36),
+            ),
+          ),
+          if (!_quedanLineas)
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text(
+                'Para quitar todo, anula la venta',
+                key: Key('texto_sin_lineas'),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: ColoresApp.sale),
+              ),
+            ),
+          ?error,
+        ],
         const SizedBox(height: 12),
         BotonPrincipal(
           key: const Key('boton_guardar_correccion'),

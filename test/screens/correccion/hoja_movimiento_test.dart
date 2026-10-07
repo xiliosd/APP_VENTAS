@@ -6,6 +6,7 @@ import 'package:app_ventas/repositories/gasto_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
 import 'package:app_ventas/screens/correccion/hoja_movimiento.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
+import 'package:app_ventas/ui/teclado_monto.dart';
 import 'package:app_ventas/util/fecha_util.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -277,5 +278,115 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const Key('boton_corregir')), findsNothing);
     expect(find.byKey(const Key('boton_anular')), findsNothing);
+  });
+
+  /// Venta de Ana con 2 Arepa ($3.500) y 1 Cocacola ($1.200) = $8.200.
+  Future<(int, List<LineaVenta>)> ventaConLineas(Usuario ana) async {
+    final arepa = await db
+        .into(db.productos)
+        .insert(ProductosCompanion.insert(nombre: 'Arepa', precio: 3500));
+    final coca = await db
+        .into(db.productos)
+        .insert(ProductosCompanion.insert(nombre: 'Cocacola', precio: 1200));
+    final repo = VentaRepository(db);
+    final id = await repo.registrarVenta(
+      monto: 8200,
+      esFiado: false,
+      usuarioId: ana.id,
+      lineas: [
+        LineaNueva(
+            productoId: arepa,
+            descripcion: 'Arepa',
+            precioUnitario: 3500,
+            cantidad: 2),
+        LineaNueva(
+            productoId: coca,
+            descripcion: 'Cocacola',
+            precioUnitario: 1200,
+            cantidad: 1),
+      ],
+    );
+    return (id, await repo.lineasDeVenta(id));
+  }
+
+  MovimientoEditable ventaDe8200(int id, Usuario ana) => MovimientoEditable(
+        tipo: TipoMovimiento.venta,
+        id: id,
+        monto: 8200,
+        fecha: DateTime.now(),
+        usuarioId: ana.id,
+      );
+
+  testWidgets('el detalle muestra los productos de la venta', (tester) async {
+    final (container, ana) = await sesion();
+    final (id, _) = await ventaConLineas(ana);
+
+    await abrir(tester, container, ventaDe8200(id, ana));
+
+    expect(find.text(r'2× Arepa · $7.000'), findsOneWidget);
+    expect(find.text(r'1× Cocacola · $1.200'), findsOneWidget);
+  });
+
+  testWidgets('corregir cantidades recalcula el total y lo guarda',
+      (tester) async {
+    final (container, ana) = await sesion();
+    final (id, lineas) = await ventaConLineas(ana);
+    await abrir(tester, container, ventaDe8200(id, ana));
+
+    await tester.tap(find.byKey(const Key('boton_corregir')));
+    await tester.pumpAndSettle();
+    expect(find.byType(TecladoMonto), findsNothing);
+    await tester.tap(find.byKey(Key('sumar_linea_${lineas[0].id}')));
+    await tester.tap(find.byKey(Key('quitar_linea_${lineas[1].id}')));
+    await tester.pump();
+
+    expect(
+        find.descendant(
+            of: find.byKey(const Key('total_correccion')),
+            matching: find.text(r'$10.500')),
+        findsOneWidget);
+    await tester.ensureVisible(
+        find.byKey(const Key('boton_guardar_correccion')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.pumpAndSettle();
+
+    expect((await venta(id)).monto, 10500);
+    final quedan = await VentaRepository(db).lineasDeVenta(id);
+    expect(quedan.single.cantidad, 3);
+    expect(find.text('Venta corregida'), findsOneWidget);
+  });
+
+  testWidgets('quitar todas las líneas no deja guardar', (tester) async {
+    final (container, ana) = await sesion();
+    final (id, lineas) = await ventaConLineas(ana);
+    await abrir(tester, container, ventaDe8200(id, ana));
+
+    await tester.tap(find.byKey(const Key('boton_corregir')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('quitar_linea_${lineas[0].id}')));
+    await tester.tap(find.byKey(Key('quitar_linea_${lineas[1].id}')));
+    await tester.pump();
+
+    expect(find.text('Para quitar todo, anula la venta'), findsOneWidget);
+    expect(guardarHabilitado(tester), isFalse);
+  });
+
+  testWidgets('restar hasta 0 quita la línea', (tester) async {
+    final (container, ana) = await sesion();
+    final (id, lineas) = await ventaConLineas(ana);
+    await abrir(tester, container, ventaDe8200(id, ana));
+
+    await tester.tap(find.byKey(const Key('boton_corregir')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('restar_linea_${lineas[1].id}')));
+    await tester.pump();
+
+    expect(find.byKey(Key('cantidad_linea_${lineas[1].id}')), findsNothing);
+    expect(
+        find.descendant(
+            of: find.byKey(const Key('total_correccion')),
+            matching: find.text(r'$7.000')),
+        findsOneWidget);
   });
 }
