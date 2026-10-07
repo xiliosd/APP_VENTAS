@@ -15,7 +15,7 @@ Actualizada: 2026-10-07. Cada fase pasa por especificación (`docs/superpowers/s
 
 ## En curso
 
-- Siguiente: Fase 4C (pedidos por proveedor).
+- **Fase 4C — Pedido sugerido por proveedor** (spec `2026-10-07-vecitienda-pedido-sugerido-design.md`): solo sugerencia y recibir desde ella; el usuario decidió no enviar ni guardar pedidos.
 
 ## Siguiente
 
