@@ -388,6 +388,62 @@ void main() {
     expect(productos, hasLength(1));
     expect(productos.single.controlaExistencias, isTrue);
   });
+
+  testWidgets('pedir hasta se guarda, se borra y no puede ser menor al mínimo',
+      (tester) async {
+    await montar(tester);
+
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('campo_nombre_producto')), 'Arepa');
+    await tester.enterText(
+        find.byKey(const Key('campo_precio_producto')), '3.500');
+    await tester.ensureVisible(find.byKey(const Key('interruptor_existencias')));
+    await tester.tap(find.byKey(const Key('interruptor_existencias')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('campo_hay_ahora')), '2');
+    await tester.enterText(find.byKey(const Key('campo_minimo')), '5');
+    await tester.enterText(find.byKey(const Key('campo_pedir_hasta')), '3');
+    await guardar(tester);
+
+    expect(find.text('Debe ser mayor o igual que el mínimo'), findsOneWidget);
+    expect(await db.select(db.productos).get(), isEmpty);
+
+    await tester.enterText(find.byKey(const Key('campo_pedir_hasta')), '24');
+    await guardar(tester);
+    final producto = await db.select(db.productos).getSingle();
+    expect(producto.pedirHasta, 24);
+
+    await tester.tap(find.byKey(Key('producto_item_${producto.id}')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('campo_pedir_hasta')));
+    await tester.enterText(find.byKey(const Key('campo_pedir_hasta')), '');
+    await guardar(tester);
+    expect((await db.select(db.productos).getSingle()).pedirHasta, isNull);
+  });
+
+  testWidgets('subir el mínimo por encima de pedir hasta muestra el error',
+      (tester) async {
+    final id = await crearArepa();
+    final container = await containerConSesion(db, nombre: 'Beto');
+    final beto = container.read(sesionProvider).usuarioActivo!;
+    container.dispose();
+    final inv = InventarioRepository(db);
+    await inv.activarControl(id, cantidad: 10, minimo: 3, por: beto);
+    await inv.cambiarPedirHasta(id, 12);
+    await montar(tester);
+
+    await tester.tap(find.byKey(Key('producto_item_$id')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('campo_minimo')));
+    await tester.enterText(find.byKey(const Key('campo_minimo')), '15');
+    await guardar(tester);
+
+    expect(find.text('Debe ser mayor o igual que el mínimo'), findsOneWidget);
+    final p = await db.select(db.productos).getSingle();
+    expect((p.minimo, p.pedirHasta), (3, 12));
+  });
 }
 
 /// Demora la carga de proveedores de un producto hasta [_espera].

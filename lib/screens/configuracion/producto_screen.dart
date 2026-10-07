@@ -54,6 +54,10 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   late final _minimo = TextEditingController(
     text: '${widget.producto?.minimo ?? 0}',
   );
+  late final _pedirHasta = TextEditingController(
+    text: widget.producto?.pedirHasta?.toString() ?? '',
+  );
+  String? _errorPedirHasta;
   String? _errorHay;
   String? _errorMinimo;
   String? _errorNombre;
@@ -106,6 +110,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     _precio.dispose();
     _hayAhora.dispose();
     _minimo.dispose();
+    _pedirHasta.dispose();
     super.dispose();
   }
 
@@ -141,6 +146,10 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     final precio = parsearMonto(_precio.text);
     final hay = int.tryParse(_hayAhora.text.trim());
     final minimo = int.tryParse(_minimo.text.trim());
+    final textoPedirHasta = _pedirHasta.text.trim();
+    final pedirHasta = textoPedirHasta.isEmpty
+        ? null
+        : int.tryParse(textoPedirHasta);
     setState(() {
       _errorNombre = nombre.isEmpty ? 'Escribe un nombre' : null;
       _errorPrecio = (precio == null || precio <= 0)
@@ -152,12 +161,20 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
       _errorMinimo = _controla && (minimo == null || minimo < 0)
           ? 'Escribe un mínimo válido'
           : null;
+      _errorPedirHasta = !_controla || textoPedirHasta.isEmpty
+          ? null
+          : pedirHasta == null || pedirHasta < 0
+          ? 'Escribe un número válido'
+          : minimo != null && pedirHasta < minimo
+          ? 'Debe ser mayor o igual que el mínimo'
+          : null;
       _error = null;
     });
     if (_errorNombre != null ||
         _errorPrecio != null ||
         _errorHay != null ||
-        _errorMinimo != null) {
+        _errorMinimo != null ||
+        _errorPedirHasta != null) {
       return;
     }
     setState(() => _guardando = true);
@@ -190,6 +207,9 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
         await inventario.cambiarMinimo(productoId, minimo!);
       } else if (_controlabaAlAbrir) {
         await inventario.desactivarControl(productoId);
+      }
+      if (_controla) {
+        await inventario.cambiarPedirHasta(productoId, pedirHasta);
       }
       if (mounted) Navigator.of(context).pop(true);
     } on ArgumentError {
@@ -383,6 +403,16 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
               decoration: InputDecoration(
                 labelText: 'Mínimo',
                 errorText: _errorMinimo,
+              ),
+            ),
+          if (_controla)
+            TextField(
+              key: const Key('campo_pedir_hasta'),
+              controller: _pedirHasta,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Pedir hasta',
+                errorText: _errorPedirHasta,
               ),
             ),
           if (_error != null)
