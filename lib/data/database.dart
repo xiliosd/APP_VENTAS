@@ -6,9 +6,11 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'correccion.dart';
+import 'inventario.dart';
 import 'medio_pago.dart';
 
 export 'correccion.dart';
+export 'inventario.dart';
 export 'medio_pago.dart';
 
 part 'database.g.dart';
@@ -27,6 +29,13 @@ class Productos extends Table {
   TextColumn get nombre => text()();
   IntColumn get precio => integer()(); // COP, entero
   BoolColumn get activo => boolean().withDefault(const Constant(true))();
+
+  /// Lleva conteo de existencias (Fase 4B).
+  BoolColumn get controlaExistencias =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Con existencias en este número o menos, el producto pasa a "Por pedir".
+  IntColumn get minimo => integer().withDefault(const Constant(0))();
 }
 
 /// A quién se le compran los productos.
@@ -53,6 +62,45 @@ class ProductosProveedores extends Table {
   List<Set<Column>> get uniqueKeys => [
         {productoId, proveedorId},
       ];
+}
+
+/// Cuántas unidades de un producto se contaron y cuándo.
+@DataClassName('ConteoInventario')
+class ConteosInventario extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get productoId => integer().references(Productos, #id)();
+  IntColumn get cantidad => integer()();
+
+  /// Existencias según la app al contar; null en el conteo inicial.
+  IntColumn get anterior => integer().nullable()();
+  TextColumn get tipo => textEnum<TipoConteo>()();
+  TextColumn get nota => text().nullable()();
+  IntColumn get usuarioId => integer().references(Usuarios, #id)();
+  DateTimeColumn get fecha => dateTime()();
+}
+
+/// Mercancía recibida de un proveedor.
+@DataClassName('EntradaMercancia')
+class EntradasMercancia extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get proveedorId => integer().references(Proveedores, #id)();
+  IntColumn get usuarioId => integer().references(Usuarios, #id)();
+  DateTimeColumn get fecha => dateTime()();
+  IntColumn get total => integer()();
+  TextColumn get nota => text().nullable()();
+  BoolColumn get anulada => boolean().withDefault(const Constant(false))();
+  IntColumn get anuladaPorId =>
+      integer().nullable().references(Usuarios, #id)();
+}
+
+/// Un producto de una entrada de mercancía.
+@DataClassName('LineaEntrada')
+class LineasEntrada extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get entradaId => integer().references(EntradasMercancia, #id)();
+  IntColumn get productoId => integer().references(Productos, #id)();
+  IntColumn get cantidad => integer()();
+  IntColumn get precioCompra => integer()();
 }
 
 @DataClassName('Cliente')
@@ -153,6 +201,9 @@ class Correcciones extends Table {
     Productos,
     Proveedores,
     ProductosProveedores,
+    ConteosInventario,
+    EntradasMercancia,
+    LineasEntrada,
     Clientes,
     Ventas,
     LineasVenta,
@@ -172,7 +223,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -203,6 +254,13 @@ class AppDatabase extends _$AppDatabase {
               await m.addColumn(
                   configuracionTienda, configuracionTienda.nombreTienda);
             }
+          }
+          if (desde < 6) {
+            await m.addColumn(productos, productos.controlaExistencias);
+            await m.addColumn(productos, productos.minimo);
+            await m.createTable(conteosInventario);
+            await m.createTable(entradasMercancia);
+            await m.createTable(lineasEntrada);
           }
         },
       );

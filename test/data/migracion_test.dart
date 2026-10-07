@@ -10,6 +10,7 @@ import '../support/esquema_v1.dart';
 import '../support/esquema_v2.dart';
 import '../support/esquema_v3.dart';
 import '../support/esquema_v4.dart';
+import '../support/esquema_v5.dart';
 
 void main() {
   late Directory carpeta;
@@ -51,7 +52,7 @@ void main() {
         MedioPago.transferencia);
     expect((await db.select(db.configuracionTienda).getSingle()).imagenQr,
         [1, 2]);
-    expect(db.schemaVersion, 5);
+    expect(db.schemaVersion, 6);
   });
 
   test('una base v2 abre en v3 sin nada anulado y sin correcciones', () async {
@@ -200,4 +201,50 @@ void main() {
         throwsA(anything));
     expect((await db.select(db.proveedores).getSingle()).activo, isTrue);
   });
+
+  test('una base v5 abre en v6 con productos sin control de existencias',
+      () async {
+    final archivo = File('${carpeta.path}/v5.sqlite');
+    crearBaseV5(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    final producto = await db.select(db.productos).getSingle();
+    expect(producto.controlaExistencias, isFalse);
+    expect(producto.minimo, 0);
+    expect(await db.select(db.conteosInventario).get(), isEmpty);
+    expect(await db.select(db.entradasMercancia).get(), isEmpty);
+    expect(await db.select(db.lineasEntrada).get(), isEmpty);
+  });
+
+  for (final (version, crear) in [
+    (1, crearBaseV1),
+    (2, crearBaseV2),
+    (3, crearBaseV3),
+    (4, crearBaseV4),
+  ]) {
+    test('una base v$version abre en v6 y acepta conteos', () async {
+      final archivo = File('${carpeta.path}/inv$version.sqlite');
+      crear(archivo.path);
+
+      final db = AppDatabase(NativeDatabase(archivo));
+      addTearDown(db.close);
+
+      final producto = await db
+          .into(db.productos)
+          .insert(ProductosCompanion.insert(nombre: 'Pan', precio: 500));
+      final usuario = (await db.select(db.usuarios).get()).first.id;
+      await db.into(db.conteosInventario).insert(
+          ConteosInventarioCompanion.insert(
+            productoId: producto,
+            cantidad: 10,
+            tipo: TipoConteo.inicial,
+            usuarioId: usuario,
+            fecha: DateTime(2026, 10, 7),
+          ));
+      expect((await db.select(db.conteosInventario).getSingle()).tipo,
+          TipoConteo.inicial);
+    });
+  }
 }
