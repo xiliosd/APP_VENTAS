@@ -29,10 +29,33 @@ class _Linea {
   }
 }
 
+/// Un producto con el que arranca Recibir mercancía (p. ej. desde el pedido
+/// sugerido).
+class LineaInicial {
+  const LineaInicial({
+    required this.producto,
+    required this.cantidad,
+    this.precio,
+  });
+
+  final Producto producto;
+  final int cantidad;
+  final int? precio;
+}
+
 /// Registra la mercancía que trajo un proveedor. Al guardar se cierra
 /// devolviendo el total.
 class RecibirMercanciaScreen extends ConsumerStatefulWidget {
-  const RecibirMercanciaScreen({super.key});
+  const RecibirMercanciaScreen({
+    super.key,
+    this.proveedorInicial,
+    this.lineasIniciales = const [],
+  });
+
+  final Proveedor? proveedorInicial;
+
+  /// Sus precios cuentan como escritos: cambiar de proveedor no los reemplaza.
+  final List<LineaInicial> lineasIniciales;
 
   @override
   ConsumerState<RecibirMercanciaScreen> createState() =>
@@ -46,6 +69,19 @@ class _RecibirMercanciaScreenState
   final _nota = TextEditingController();
   bool _guardando = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _proveedor = widget.proveedorInicial;
+    for (final l in widget.lineasIniciales) {
+      _lineas.add(
+        _Linea(l.producto, l.precio?.toString() ?? '')
+          ..cantidad = l.cantidad
+          ..editado = true,
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -255,9 +291,11 @@ class _RecibirMercanciaScreenState
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 12),
-              child: Text(_error!,
-                  key: const Key('error_recibir'),
-                  style: const TextStyle(color: ColoresApp.sale)),
+              child: Text(
+                _error!,
+                key: const Key('error_recibir'),
+                style: const TextStyle(color: ColoresApp.sale),
+              ),
             ),
           const SizedBox(height: 24),
           BotonPrincipal(

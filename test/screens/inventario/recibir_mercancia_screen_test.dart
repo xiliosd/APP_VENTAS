@@ -209,4 +209,41 @@ void main() {
     expect(find.byType(RecibirMercanciaScreen), findsOneWidget);
     expect(await db.select(db.entradasMercancia).get(), isEmpty);
   });
+
+  testWidgets('arranca con el proveedor y las líneas que recibe', (tester) async {
+    final (postobon, alpina, arepa) = await dosProveedores();
+    final proveedor = await (db.select(db.proveedores)
+          ..where((p) => p.id.equals(postobon)))
+        .getSingle();
+    final producto = await (db.select(db.productos)
+          ..where((p) => p.id.equals(arepa)))
+        .getSingle();
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final container = await containerConSesion(db);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(appDePrueba(container,
+        inicio: RecibirMercanciaScreen(
+          proveedorInicial: proveedor,
+          lineasIniciales: [
+            LineaInicial(producto: producto, cantidad: 6, precio: 2500),
+          ],
+        )));
+    await tester.pumpAndSettle();
+
+    expect(
+        tester
+            .widget<ChoiceChip>(
+                find.byKey(Key('opcion_proveedor_recibir_$postobon')))
+            .selected,
+        isTrue);
+    expect(find.text('6'), findsOneWidget);
+    expect(precio(tester, arepa), '2500');
+    expect(find.text(r'Total $15.000'), findsOneWidget);
+
+    await tester.tap(find.byKey(Key('opcion_proveedor_recibir_$alpina')));
+    await tester.pumpAndSettle();
+    expect(precio(tester, arepa), '2500');
+  });
 }
