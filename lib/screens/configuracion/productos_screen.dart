@@ -5,13 +5,10 @@ import '../../data/database.dart';
 import '../../providers/productos_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../ui/avisos.dart';
-import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/estado_vacio.dart';
-import '../../ui/hoja_inferior.dart';
-import '../../ui/monto.dart';
 import '../../util/formato_moneda.dart';
-import 'editar_producto_dialog.dart';
+import 'producto_screen.dart';
 
 class ProductosScreen extends ConsumerStatefulWidget {
   const ProductosScreen({super.key});
@@ -21,19 +18,9 @@ class ProductosScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductosScreenState extends ConsumerState<ProductosScreen> {
-  Future<void> _agregar() async {
-    final guardado = await mostrarHojaInferior<bool>(
-      context,
-      titulo: 'Nuevo producto',
-      builder: (_) => const _FormularioProducto(),
-    );
-    if (guardado == true && mounted) avisar(context, 'Producto guardado');
-  }
-
-  Future<void> _editar(Producto producto) async {
-    final guardado = await showDialog<bool>(
-      context: context,
-      builder: (_) => EditarProductoDialog(producto: producto),
+  Future<void> _abrir({Producto? producto}) async {
+    final guardado = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ProductoScreen(producto: producto)),
     );
     if (guardado == true && mounted) avisar(context, 'Producto guardado');
   }
@@ -43,11 +30,13 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
     final productosAsync = ref.watch(productosActivosProvider);
     final inactivos =
         ref.watch(productosInactivosProvider).valueOrNull ?? const <Producto>[];
+    final costos =
+        ref.watch(costosProductosProvider).valueOrNull ?? const <int, int>{};
     return Scaffold(
       appBar: AppBar(title: const Text('Productos')),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('boton_agregar_producto'),
-        onPressed: _agregar,
+        onPressed: () => _abrir(),
         icon: const Icon(Icons.add_rounded),
         label: const Text('Agregar'),
       ),
@@ -73,8 +62,11 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                           title: Text(p.nombre,
                               style:
                                   const TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Monto(p.precio, tamano: 15),
-                          onTap: () => _editar(p),
+                          subtitle: Text(costos[p.id] == null
+                              ? '${formatoMoneda(p.precio)} · sin costo'
+                              : '${formatoMoneda(p.precio)} · gana '
+                                  '${formatoMoneda(p.precio - costos[p.id]!)}'),
+                          onTap: () => _abrir(producto: p),
                           trailing: IconButton(
                             key: Key('boton_desactivar_${p.id}'),
                             tooltip: 'Desactivar',
@@ -126,81 +118,6 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, st) => Center(child: Text('Error: $e')),
       ),
-    );
-  }
-}
-
-class _FormularioProducto extends ConsumerStatefulWidget {
-  const _FormularioProducto();
-
-  @override
-  ConsumerState<_FormularioProducto> createState() =>
-      _FormularioProductoState();
-}
-
-class _FormularioProductoState extends ConsumerState<_FormularioProducto> {
-  final _nombreController = TextEditingController();
-  final _precioController = TextEditingController();
-  String? _errorNombre;
-  String? _errorPrecio;
-  bool _guardando = false;
-
-  @override
-  void dispose() {
-    _nombreController.dispose();
-    _precioController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _guardar() async {
-    if (_guardando) return;
-    final nombre = _nombreController.text.trim();
-    final precio = parsearMonto(_precioController.text);
-    setState(() {
-      _errorNombre = nombre.isEmpty ? 'Escribe un nombre' : null;
-      _errorPrecio =
-          (precio == null || precio <= 0) ? 'Escribe un precio válido' : null;
-    });
-    if (_errorNombre != null || _errorPrecio != null) return;
-
-    setState(() => _guardando = true);
-    try {
-      await ref
-          .read(productoRepositoryProvider)
-          .crearProducto(nombre: nombre, precio: precio!);
-      if (mounted) Navigator.of(context).pop(true);
-    } finally {
-      if (mounted) setState(() => _guardando = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        TextField(
-          key: const Key('campo_nombre_producto'),
-          controller: _nombreController,
-          autofocus: true,
-          decoration: InputDecoration(
-              labelText: 'Nombre del producto', errorText: _errorNombre),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          key: const Key('campo_precio_producto'),
-          controller: _precioController,
-          keyboardType: TextInputType.number,
-          decoration:
-              InputDecoration(labelText: 'Precio', errorText: _errorPrecio),
-        ),
-        const SizedBox(height: 16),
-        BotonPrincipal(
-          key: const Key('boton_crear_producto'),
-          texto: 'Guardar producto',
-          onPressed: _guardando ? null : _guardar,
-        ),
-      ],
     );
   }
 }
