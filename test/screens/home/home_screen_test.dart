@@ -1,5 +1,6 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
+import 'package:app_ventas/repositories/configuracion_repository.dart';
 import 'package:app_ventas/screens/home/home_screen.dart';
 import 'package:drift/native.dart';
 import 'package:app_ventas/ui/colores_app.dart';
@@ -12,7 +13,10 @@ import '../../support/montaje.dart';
 void main() {
   late AppDatabase db;
 
-  setUp(() => db = AppDatabase(NativeDatabase.memory()));
+  setUp(() async {
+    db = AppDatabase(NativeDatabase.memory());
+    await ConfiguracionRepository(db).guardarNombreTienda('La Esquina');
+  });
   tearDown(() => db.close());
 
   Future<ProviderContainer> montar(WidgetTester tester,
@@ -70,6 +74,8 @@ void main() {
     expect(find.byKey(const Key('menu_usuarios')), findsOneWidget);
     expect(find.byKey(const Key('menu_respaldo')), findsOneWidget);
 
+    await tester.ensureVisible(find.byKey(const Key('ajustes_cerrar_sesion')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('ajustes_cerrar_sesion')));
     await tester.pumpAndSettle();
     expect(container.read(sesionProvider).haySesion, isFalse);

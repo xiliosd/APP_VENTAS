@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
+import '../../providers/configuracion_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/tipografia.dart';
+import '../../widgets/nombre_tienda.dart';
 import '../configuracion/ajustes_screen.dart';
+import '../configuracion/hoja_nombre_tienda.dart';
 import '../fiado/lista_fiado_screen.dart';
 import '../historial/historial_screen.dart';
 import 'resumen_screen.dart';
@@ -20,12 +23,25 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _tabActual = 0;
+  bool _pidioNombre = false;
 
   @override
   Widget build(BuildContext context) {
     final sesion = ref.watch(sesionProvider);
     if (!sesion.haySesion) return const SizedBox.shrink();
     final usuario = sesion.usuarioActivo!;
+
+    // Un administrador sin nombre de tienda debe ponerlo una vez.
+    final nombreTienda = ref.watch(nombreTiendaProvider);
+    if (!_pidioNombre &&
+        sesion.esAdmin &&
+        nombreTienda.hasValue &&
+        nombreTienda.value == null) {
+      _pidioNombre = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) mostrarHojaNombreTienda(context, obligatoria: true);
+      });
+    }
 
     final tabs = <_Pestana>[
       _Pestana('Inicio', Icons.space_dashboard_outlined,
@@ -55,9 +71,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const _InsigniaMarca(),
                   const SizedBox(width: 10),
                   Flexible(
-                    child: Text(
-                      'Hola, ${usuario.nombre}',
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hola, ${usuario.nombre}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const NombreTienda(
+                          estilo: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white70),
+                        ),
+                      ],
                     ),
                   ),
                 ],

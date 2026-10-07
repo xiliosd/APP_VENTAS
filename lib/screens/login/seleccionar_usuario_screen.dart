@@ -6,6 +6,7 @@ import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/marca_app.dart';
 import '../../ui/tipografia.dart';
+import '../../widgets/nombre_tienda.dart';
 import 'ingresar_pin_screen.dart';
 
 class SeleccionarUsuarioScreen extends ConsumerWidget {
@@ -22,6 +23,13 @@ class SeleccionarUsuarioScreen extends ConsumerWidget {
             children: [
               const MarcaApp(),
               const SizedBox(height: 32),
+              const NombreTienda(
+                estilo: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: ColoresApp.primario),
+              ),
+              const SizedBox(height: 4),
               Text('¿Quién eres?', style: estiloTitulo()),
               const SizedBox(height: 4),
               const Text('Toca tu nombre para entrar',

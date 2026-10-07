@@ -6,6 +6,7 @@ import '../../providers/sesion_provider.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
 import '../../widgets/teclado_numerico.dart';
+import '../../widgets/nombre_tienda.dart';
 
 class IngresarPinScreen extends ConsumerStatefulWidget {
   const IngresarPinScreen({super.key, required this.usuario});
@@ -65,6 +66,12 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
               child: IntrinsicHeight(
                 child: Column(
                   children: [
+                    const NombreTienda(
+                      estilo: TextStyle(
+                          color: ColoresApp.textoSecundario,
+                          fontWeight: FontWeight.w600),
+                      espacioAbajo: 12,
+                    ),
                     AvatarInicial(
                       id: usuario.id,
                       nombre: usuario.nombre,
