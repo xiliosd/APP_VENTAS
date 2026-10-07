@@ -11,6 +11,7 @@ import '../support/esquema_v2.dart';
 import '../support/esquema_v3.dart';
 import '../support/esquema_v4.dart';
 import '../support/esquema_v5.dart';
+import '../support/esquema_v6.dart';
 
 void main() {
   late Directory carpeta;
@@ -52,7 +53,7 @@ void main() {
         MedioPago.transferencia);
     expect((await db.select(db.configuracionTienda).getSingle()).imagenQr,
         [1, 2]);
-    expect(db.schemaVersion, 6);
+    expect(db.schemaVersion, 7);
   });
 
   test('una base v2 abre en v3 sin nada anulado y sin correcciones', () async {
@@ -247,4 +248,33 @@ void main() {
           TipoConteo.inicial);
     });
   }
+
+  test('una base v6 abre en v7 con pedir hasta vacío', () async {
+    final archivo = File('${carpeta.path}/v6.sqlite');
+    crearBaseV6(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    final producto = await db.select(db.productos).getSingle();
+    expect(producto.controlaExistencias, isTrue);
+    expect(producto.minimo, 5);
+    expect(producto.pedirHasta, isNull);
+  });
+
+  test('una base v1 abre en v7 y guarda pedir hasta', () async {
+    final archivo = File('${carpeta.path}/v1c.sqlite');
+    crearBaseV1(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    final id = await db.into(db.productos).insert(ProductosCompanion.insert(
+        nombre: 'Pan', precio: 500, pedirHasta: const Value(24)));
+    expect(
+        (await (db.select(db.productos)..where((p) => p.id.equals(id)))
+                .getSingle())
+            .pedirHasta,
+        24);
+  });
 }

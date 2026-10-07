@@ -36,6 +36,9 @@ class Productos extends Table {
 
   /// Con existencias en este número o menos, el producto pasa a "Por pedir".
   IntColumn get minimo => integer().withDefault(const Constant(0))();
+
+  /// Cuántas quiere tener después de pedir; sugiere la cantidad del pedido.
+  IntColumn get pedirHasta => integer().nullable()();
 }
 
 /// A quién se le compran los productos.
@@ -223,7 +226,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -261,6 +264,9 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(conteosInventario);
             await m.createTable(entradasMercancia);
             await m.createTable(lineasEntrada);
+          }
+          if (desde < 7) {
+            await m.addColumn(productos, productos.pedirHasta);
           }
         },
       );
