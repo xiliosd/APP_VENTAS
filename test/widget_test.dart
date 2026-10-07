@@ -25,12 +25,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Configura tu tienda'), findsOneWidget);
 
+    await tester.enterText(
+        find.byKey(const Key('campo_nombre_tienda')), 'La Esquina');
     await tester.enterText(find.byKey(const Key('campo_nombre_admin')), 'Ana');
     await tester.enterText(find.byKey(const Key('campo_pin_admin')), '1234');
     await tester.tap(find.byKey(const Key('boton_crear_admin')));
     await tester.pumpAndSettle();
 
     expect(find.text('Hola, Ana'), findsOneWidget);
+    expect(find.text('La Esquina'), findsOneWidget);
     expect(find.text('Configura tu tienda'), findsNothing);
+    expect(find.text('¿Cómo se llama tu tienda?'), findsNothing);
   });
 }

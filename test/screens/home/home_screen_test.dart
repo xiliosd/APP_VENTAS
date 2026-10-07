@@ -74,7 +74,9 @@ void main() {
     expect(find.byKey(const Key('menu_usuarios')), findsOneWidget);
     expect(find.byKey(const Key('menu_respaldo')), findsOneWidget);
 
-    await tester.ensureVisible(find.byKey(const Key('ajustes_cerrar_sesion')));
+    // La lista de Ajustes es larga: se desplaza hasta "Cerrar sesión".
+    await tester.scrollUntilVisible(
+        find.byKey(const Key('ajustes_cerrar_sesion')), 200);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('ajustes_cerrar_sesion')));
     await tester.pumpAndSettle();

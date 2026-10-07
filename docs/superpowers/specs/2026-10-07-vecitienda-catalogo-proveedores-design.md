@@ -1,7 +1,7 @@
 # Fase 4A — Catálogo, proveedores y nombre de la tienda
 
 **Fecha:** 2026-10-07
-**Estado:** Diseño aprobado, pendiente de plan
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con Fases 1–3C (esquema v4, líneas de venta).
 
 ## Objetivo
