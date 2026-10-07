@@ -96,6 +96,12 @@ class CorreccionRepository {
         if (quedan == 0) {
           throw const CorreccionInvalida('Para quitar todo, anula la venta');
         }
+        // Sin cambios de cantidad, un monto distinto a la suma es un total
+        // tecleado que no puede aplicarse: el total sale de las líneas.
+        if (cantidades == null && monto != suma) {
+          throw const CorreccionInvalida(
+              'El total de una venta con productos sale de sus líneas');
+        }
         montoFinal = suma;
       }
       await (_db.update(_db.ventas)..where((v) => v.id.equals(id))).write(

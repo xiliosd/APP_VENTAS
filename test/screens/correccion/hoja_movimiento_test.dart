@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/providers/lineas_venta_providers.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/repositories/correccion_repository.dart';
 import 'package:app_ventas/repositories/fiado_repository.dart';
@@ -388,5 +391,20 @@ void main() {
             of: find.byKey(const Key('total_correccion')),
             matching: find.text(r'$7.000')),
         findsOneWidget);
+  });
+
+  testWidgets('sin cargar las líneas no se ofrece Corregir', (tester) async {
+    final container = await containerConSesion(db, overrides: [
+      lineasVentaProvider
+          .overrideWith((ref, id) => Completer<List<LineaVenta>>().future),
+    ]);
+    addTearDown(container.dispose);
+    final ana = container.read(sesionProvider).usuarioActivo!;
+    final (id, _) = await ventaConLineas(ana);
+
+    await abrir(tester, container, ventaDe8200(id, ana));
+
+    expect(find.byKey(const Key('boton_corregir')), findsNothing);
+    expect(find.byKey(const Key('boton_anular')), findsOneWidget);
   });
 }

@@ -118,4 +118,14 @@ void main() {
         .getSingle();
     expect(v.monto, 4500);
   });
+
+  test('un monto distinto a la suma sin cambios de cantidad se rechaza',
+      () async {
+    await expectLater(
+        repo.corregirVenta(ventaId, monto: 9999, esFiado: false, por: ana),
+        throwsA(isA<CorreccionInvalida>()));
+
+    expect((await venta()).monto, 8200);
+    expect(await db.select(db.correcciones).get(), isEmpty);
+  });
 }

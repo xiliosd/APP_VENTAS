@@ -182,6 +182,10 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
 
   bool get _quedanLineas => _lineas.any((l) => _cantidad(l) > 0);
 
+  bool get _lineasListas =>
+      _m.tipo != TipoMovimiento.venta ||
+      ref.read(lineasVentaProvider(_m.id)).hasValue;
+
   @override
   void dispose() {
     _descripcion.dispose();
@@ -383,11 +387,14 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
         ?error,
         if (puede) ...[
           const SizedBox(height: 16),
-          BotonPrincipal(
-            key: const Key('boton_corregir'),
-            texto: 'Corregir',
-            onPressed: () => setState(() => _editando = true),
-          ),
+          // Una venta se corrige solo con sus líneas ya cargadas: si no, se
+          // editaría el total a mano y se perdería al guardar.
+          if (_lineasListas)
+            BotonPrincipal(
+              key: const Key('boton_corregir'),
+              texto: 'Corregir',
+              onPressed: () => setState(() => _editando = true),
+            ),
           const SizedBox(height: 8),
           TextButton(
             key: const Key('boton_anular'),
