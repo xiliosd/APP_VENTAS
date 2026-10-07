@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/configuracion_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../providers/usuarios_providers.dart';
+import '../../repositories/configuracion_repository.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/marca_app.dart';
@@ -20,18 +22,26 @@ class CrearAdminInicialScreen extends ConsumerStatefulWidget {
 
 class _CrearAdminInicialScreenState
     extends ConsumerState<CrearAdminInicialScreen> {
+  final _tiendaController = TextEditingController();
   final _nombreController = TextEditingController();
   final _pinController = TextEditingController();
   String? _error;
 
   @override
   void dispose() {
+    _tiendaController.dispose();
     _nombreController.dispose();
     _pinController.dispose();
     super.dispose();
   }
 
   Future<void> _crear() async {
+    final tienda = _tiendaController.text;
+    final errorTienda = errorNombreTienda(tienda);
+    if (errorTienda != null) {
+      setState(() => _error = errorTienda);
+      return;
+    }
     final nombre = _nombreController.text.trim();
     final pin = _pinController.text.trim();
     if (nombre.isEmpty) {
@@ -43,6 +53,7 @@ class _CrearAdminInicialScreenState
       return;
     }
 
+    await ref.read(configuracionRepositoryProvider).guardarNombreTienda(tienda);
     final repo = ref.read(usuarioRepositoryProvider);
     final id = await repo.crearUsuario(nombre: nombre, rol: 'admin', pin: pin);
     ref.invalidate(listaUsuariosProvider);
@@ -69,6 +80,14 @@ class _CrearAdminInicialScreenState
               style: TextStyle(color: ColoresApp.textoSecundario),
             ),
             const SizedBox(height: 24),
+            TextField(
+              key: const Key('campo_nombre_tienda'),
+              controller: _tiendaController,
+              decoration:
+                  const InputDecoration(labelText: 'Nombre de la tienda'),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 16),
             TextField(
               key: const Key('campo_nombre_admin'),
               controller: _nombreController,

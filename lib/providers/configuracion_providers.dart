@@ -13,3 +13,8 @@ final configuracionRepositoryProvider = Provider(
 final imagenQrProvider = StreamProvider.autoDispose<Uint8List?>(
   (ref) => ref.watch(configuracionRepositoryProvider).observarImagenQr(),
 );
+
+/// Nombre de la tienda; null si aún no se configuró.
+final nombreTiendaProvider = StreamProvider<String?>(
+  (ref) => ref.watch(configuracionRepositoryProvider).observarNombreTienda(),
+);
