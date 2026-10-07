@@ -13,7 +13,8 @@ Actualizada: 2026-10-07. Cada fase pasa por especificación (`docs/superpowers/s
 
 ## En curso
 
-- Nada; siguiente: Fase 4.
+- **Fase 4A — Catálogo y proveedores** (spec `2026-10-07-vecitienda-catalogo-proveedores-design.md`).
+  Luego 4B (existencias y "Por pedir") y 4C (pedidos por proveedor).
 
 ## Siguiente
 
