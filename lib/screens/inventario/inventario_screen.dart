@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/database.dart';
 import '../../providers/inventario_providers.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
@@ -12,11 +13,14 @@ import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
 import 'detalle_entrada_screen.dart';
 import 'detalle_inventario_screen.dart';
+import 'pedido_sugerido_screen.dart';
 import 'recibir_mercancia_screen.dart';
 
+/// "5" o "−2" (signo menos tipográfico).
+String numeroConSigno(int n) => n < 0 ? '−${-n}' : '$n';
+
 /// "12 u" o "−2 u".
-String textoExistencias(int existencias) =>
-    '${existencias < 0 ? '−${-existencias}' : existencias} u';
+String textoExistencias(int existencias) => '${numeroConSigno(existencias)} u';
 
 enum _Vista { porPedir, todos }
 
@@ -35,6 +39,17 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
   Future<void> _recibir() async {
     final total = await Navigator.of(context).push<int>(
       MaterialPageRoute(builder: (_) => const RecibirMercanciaScreen()),
+    );
+    if (total != null && mounted) {
+      avisar(context, 'Mercancía recibida · ${formatoMoneda(total)}');
+    }
+  }
+
+  Future<void> _verPedido(Proveedor? proveedor) async {
+    final total = await Navigator.of(context).push<int>(
+      MaterialPageRoute(
+        builder: (_) => PedidoSugeridoScreen(proveedor: proveedor),
+      ),
     );
     if (total != null && mounted) {
       avisar(context, 'Mercancía recibida · ${formatoMoneda(total)}');
@@ -121,12 +136,23 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
           else
             for (final g in grupos) ...[
               Padding(
-                padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-                child: Text(
-                  '${g.proveedor?.nombre ?? 'Sin proveedor'} · '
-                  '${plural(g.productos.length, 'producto', 'productos')}',
-                  key: Key('grupo_por_pedir_${g.proveedor?.id ?? 'sin'}'),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+                padding: const EdgeInsets.fromLTRB(4, 8, 0, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${g.proveedor?.nombre ?? 'Sin proveedor'} · '
+                        '${plural(g.productos.length, 'producto', 'productos')}',
+                        key: Key('grupo_por_pedir_${g.proveedor?.id ?? 'sin'}'),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    TextButton(
+                      key: Key('ver_pedido_${g.proveedor?.id ?? 'sin'}'),
+                      onPressed: () => _verPedido(g.proveedor),
+                      child: const Text('Ver pedido sugerido'),
+                    ),
+                  ],
                 ),
               ),
               Card(
@@ -137,7 +163,7 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                         key: Key('por_pedir_${p.producto.id}'),
                         title: Text(p.producto.nombre),
                         subtitle: Text(
-                          'quedan ${textoExistencias(p.existencias).replaceAll(' u', '')} · '
+                          'quedan ${numeroConSigno(p.existencias)} · '
                           'mín. ${p.producto.minimo}',
                         ),
                         onTap: () => _abrir(

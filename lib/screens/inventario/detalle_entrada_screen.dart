@@ -39,8 +39,12 @@ class DetalleEntradaScreen extends ConsumerWidget {
     );
     if (confirmado != true) return;
     try {
-      await ref.read(inventarioRepositoryProvider).anularEntrada(entradaId,
-          por: ref.read(sesionProvider).usuarioActivo!);
+      await ref
+          .read(inventarioRepositoryProvider)
+          .anularEntrada(
+            entradaId,
+            por: ref.read(sesionProvider).usuarioActivo!,
+          );
       if (context.mounted) avisar(context, 'Entrada anulada');
     } on ArgumentError {
       // Otro toque o dispositivo ya la anuló: el dato está bien.
