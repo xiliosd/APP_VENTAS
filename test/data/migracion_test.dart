@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/esquema_v1.dart';
 import '../support/esquema_v2.dart';
+import '../support/esquema_v3.dart';
 
 void main() {
   late Directory carpeta;
@@ -49,7 +50,7 @@ void main() {
         MedioPago.transferencia);
     expect((await db.select(db.configuracionTienda).getSingle()).imagenQr,
         [1, 2]);
-    expect(db.schemaVersion, 3);
+    expect(db.schemaVersion, 4);
   });
 
   test('una base v2 abre en v3 sin nada anulado y sin correcciones', () async {
@@ -96,5 +97,37 @@ void main() {
     expect(fila.movimientoId, 7);
     expect(fila.accion, AccionCorreccion.anulado);
     expect(fila.antes, r'$2.000 · Efectivo');
+  });
+
+  test('una base v3 abre en v4 con lineas_venta vacía', () async {
+    final archivo = File('${carpeta.path}/v3.sqlite');
+    crearBaseV3(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    expect(await db.select(db.ventas).get(), hasLength(1));
+    expect(await db.select(db.lineasVenta).get(), isEmpty);
+  });
+
+  test('una base nueva guarda líneas de venta', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final usuario = await db.into(db.usuarios).insert(
+        UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'));
+    final venta = await db.into(db.ventas).insert(VentasCompanion.insert(
+        monto: 5000, fecha: DateTime(2026, 10, 7), usuarioId: usuario));
+
+    await db.into(db.lineasVenta).insert(LineasVentaCompanion.insert(
+          ventaId: venta,
+          descripcion: r'$5.000',
+          precioUnitario: 5000,
+          cantidad: 1,
+        ));
+
+    final linea = await db.select(db.lineasVenta).getSingle();
+    expect(linea.ventaId, venta);
+    expect(linea.productoId, isNull);
+    expect(linea.descripcion, r'$5.000');
   });
 }

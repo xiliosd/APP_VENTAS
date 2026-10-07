@@ -51,6 +51,20 @@ class Ventas extends Table {
   BoolColumn get anulado => boolean().withDefault(const Constant(false))();
 }
 
+/// Un producto (o monto suelto) de una venta, tal como estaba al vender.
+@DataClassName('LineaVenta')
+class LineasVenta extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get ventaId => integer().references(Ventas, #id)();
+
+  /// null = monto suelto ("+ Otro" o monto rápido).
+  IntColumn get productoId =>
+      integer().nullable().references(Productos, #id)();
+  TextColumn get descripcion => text()();
+  IntColumn get precioUnitario => integer()();
+  IntColumn get cantidad => integer()();
+}
+
 @DataClassName('PagoFiado')
 class PagosFiado extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -106,6 +120,7 @@ class Correcciones extends Table {
     Productos,
     Clientes,
     Ventas,
+    LineasVenta,
     PagosFiado,
     Gastos,
     ConfiguracionTienda,
@@ -122,7 +137,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -138,6 +153,9 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(pagosFiado, pagosFiado.anulado);
             await m.addColumn(gastos, gastos.anulado);
             await m.createTable(correcciones);
+          }
+          if (desde < 4) {
+            await m.createTable(lineasVenta);
           }
         },
       );
