@@ -6,6 +6,7 @@ import '../../providers/productos_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../providers/ticket_provider.dart';
+import '../../repositories/venta_repository.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
@@ -75,6 +76,15 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
         clienteId: clienteId,
         usuarioId: sesion.id,
         medioPago: porQr ? MedioPago.transferencia : MedioPago.efectivo,
+        lineas: [
+          for (final linea in ticket.lineas)
+            LineaNueva(
+              productoId: linea.productoId,
+              descripcion: linea.etiqueta,
+              precioUnitario: linea.precio,
+              cantidad: linea.cantidad,
+            ),
+        ],
       );
       if (!mounted) return;
       avisar(

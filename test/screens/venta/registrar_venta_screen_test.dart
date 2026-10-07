@@ -335,4 +335,50 @@ void main() {
     expect((await db.select(db.ventas).get()).single.medioPago,
         MedioPago.efectivo);
   });
+
+  testWidgets('cobrar un ticket guarda una línea por producto o monto',
+      (tester) async {
+    final arepa = await db.into(db.productos).insert(
+          ProductosCompanion.insert(nombre: 'Arepa', precio: 3500),
+        );
+    await abrirVenta(tester);
+
+    await tester.tap(find.byKey(Key('producto_$arepa')));
+    await tester.tap(find.byKey(const Key('monto_rapido_5000')));
+    await tester.tap(find.byKey(const Key('monto_rapido_5000')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+
+    final venta = (await db.select(db.ventas).get()).single;
+    expect(venta.monto, 13500);
+    final lineas = await db.select(db.lineasVenta).get();
+    expect(lineas, hasLength(2));
+    final deArepa = lineas.singleWhere((l) => l.productoId == arepa);
+    expect(deArepa.cantidad, 1);
+    expect(deArepa.descripcion, 'Arepa');
+    final suelto = lineas.singleWhere((l) => l.productoId == null);
+    expect(suelto.cantidad, 2);
+    expect(suelto.precioUnitario, 5000);
+    expect(suelto.descripcion, r'$5.000');
+  });
+
+  testWidgets('Deshacer no deja líneas huérfanas', (tester) async {
+    final arepa = await db.into(db.productos).insert(
+          ProductosCompanion.insert(nombre: 'Arepa', precio: 3500),
+        );
+    await abrirVenta(tester);
+
+    await tester.tap(find.byKey(Key('producto_$arepa')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+    expect(await db.select(db.lineasVenta).get(), hasLength(1));
+
+    await tester.tap(find.text('Deshacer'));
+    await tester.pumpAndSettle();
+
+    expect(await db.select(db.ventas).get(), isEmpty);
+    expect(await db.select(db.lineasVenta).get(), isEmpty);
+  });
 }
