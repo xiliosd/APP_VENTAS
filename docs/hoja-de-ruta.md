@@ -9,13 +9,11 @@ Actualizada: 2026-10-07. Cada fase pasa por especificación (`docs/superpowers/s
 - Fase 2A–2E — mejoras, respaldo en Supabase, UX, cobro por QR; marca VeciTienda.
 - Fase 3A — corregir y anular ventas, abonos y gastos.
 - Fase 3B — reportes por semana y por mes.
+- Fase 3C — detalle de tickets, productos más vendidos y horas de venta.
 
 ## En curso
 
-- **Fase 3C — Detalle de tickets y productos más vendidos.** Guardar qué productos lleva cada
-  venta (hoy un ticket con varios productos solo guarda el total) y agregar a Reportes el
-  ranking de productos y las horas de más venta. Es la base de la Fase 4: sin el detalle de
-  cada venta no se puede descontar inventario.
+- Nada; siguiente: Fase 4.
 
 ## Siguiente
 
@@ -44,4 +42,4 @@ Actualizada: 2026-10-07. Cada fase pasa por especificación (`docs/superpowers/s
 ## Pendiente de verificar
 
 - Recorrido manual en un celular real de: Cargar QR (2D), corregir y anular (3A) y reportes
-  (3B). APK de prueba: `build/VeciTienda-553d090.apk`.
+  (3B) y detalle de tickets (3C).
