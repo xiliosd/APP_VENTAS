@@ -53,7 +53,9 @@ class _HojaAjusteConteoState extends ConsumerState<_HojaAjusteConteo> {
     }
     setState(() => _guardando = true);
     try {
-      await ref.read(inventarioRepositoryProvider).ajustarConteo(
+      await ref
+          .read(inventarioRepositoryProvider)
+          .ajustarConteo(
             widget.producto.id,
             cantidad: cantidad,
             nota: _nota.text,
@@ -67,15 +69,18 @@ class _HojaAjusteConteoState extends ConsumerState<_HojaAjusteConteo> {
 
   @override
   Widget build(BuildContext context) {
-    final hay =
-        ref.watch(existenciasProductoProvider(widget.producto.id)).valueOrNull;
+    final hay = ref
+        .watch(existenciasProductoProvider(widget.producto.id))
+        .valueOrNull;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (hay != null)
-          Text('Según la app hay $hay. ¿Cuántas hay?',
-              key: const Key('texto_segun_app')),
+          Text(
+            'Según la app hay $hay. ¿Cuántas hay?',
+            key: const Key('texto_segun_app'),
+          ),
         const SizedBox(height: 12),
         TextField(
           key: const Key('campo_conteo'),

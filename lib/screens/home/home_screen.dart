@@ -12,6 +12,7 @@ import '../configuracion/ajustes_screen.dart';
 import '../configuracion/hoja_nombre_tienda.dart';
 import '../fiado/lista_fiado_screen.dart';
 import '../historial/historial_screen.dart';
+import '../inventario/inventario_screen.dart';
 import 'resumen_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -49,6 +50,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ResumenScreen(onVerFiado: () => setState(() => _tabActual = 1))),
       const _Pestana('Fiado', Icons.people_outline_rounded,
           Icons.people_rounded, ListaFiadoScreen()),
+      const _Pestana('Inventario', Icons.inventory_2_outlined,
+          Icons.inventory_2_rounded, InventarioScreen()),
       const _Pestana('Historial', Icons.receipt_long_outlined,
           Icons.receipt_long_rounded, HistorialScreen()),
       if (sesion.esAdmin)
