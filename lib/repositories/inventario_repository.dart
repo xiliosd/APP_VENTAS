@@ -28,6 +28,49 @@ class EntradaResumen {
   final String usuario;
 }
 
+/// Un producto en "Por pedir".
+class ProductoPorPedir {
+  const ProductoPorPedir({required this.producto, required this.existencias});
+
+  final Producto producto;
+  final int existencias;
+}
+
+/// Productos por pedir de un mismo proveedor preferido (null = sin proveedor).
+class GrupoPorPedir {
+  const GrupoPorPedir({required this.proveedor, required this.productos});
+
+  final Proveedor? proveedor;
+  final List<ProductoPorPedir> productos;
+}
+
+enum TipoMovimientoInventario { conteoInicial, ajuste, entrada }
+
+/// Un evento del historial de existencias de un producto.
+class MovimientoInventario {
+  const MovimientoInventario({
+    required this.tipo,
+    required this.fecha,
+    required this.cantidad,
+    required this.quien,
+    this.anterior,
+    this.anulada = false,
+  });
+
+  final TipoMovimientoInventario tipo;
+  final DateTime fecha;
+  final int cantidad;
+
+  /// Usuario que contó, o proveedor de la entrada.
+  final String quien;
+
+  /// Solo en ajustes: lo que decía la app.
+  final int? anterior;
+
+  /// Solo en entradas.
+  final bool anulada;
+}
+
 /// Existencias, conteos y entradas de mercancía. Las existencias no se
 /// guardan: salen del último conteo, más lo recibido y menos lo vendido
 /// después de él.
@@ -360,5 +403,119 @@ class InventarioRepository {
           ),
       ],
     );
+  }
+
+  // ---- Listas ----
+
+  /// Productos activos con control, por nombre, con sus existencias.
+  Future<List<({Producto producto, int existencias})>>
+  productosConControl() async {
+    final lista =
+        await (_db.select(_db.productos)
+              ..where(
+                (p) =>
+                    p.activo.equals(true) & p.controlaExistencias.equals(true),
+              )
+              ..orderBy([(p) => OrderingTerm.asc(p.nombre)]))
+            .get();
+    final existencias = await existenciasDe(lista.map((p) => p.id));
+    return [
+      for (final p in lista)
+        if (existencias[p.id] != null)
+          (producto: p, existencias: existencias[p.id]!),
+    ];
+  }
+
+  /// Productos activos con control y existencias ≤ mínimo, por proveedor
+  /// preferido.
+  Future<List<GrupoPorPedir>> porPedir() async {
+    final faltan = [
+      for (final p in await productosConControl())
+        if (p.existencias <= p.producto.minimo)
+          ProductoPorPedir(producto: p.producto, existencias: p.existencias),
+    ];
+    final preferidos = {
+      for (final v in await (_db.select(
+        _db.productosProveedores,
+      )..where((v) => v.preferido.equals(true))).get())
+        v.productoId: v.proveedorId,
+    };
+    final proveedores = {
+      for (final p in await _db.select(_db.proveedores).get()) p.id: p,
+    };
+    final grupos = <int?, List<ProductoPorPedir>>{};
+    for (final p in faltan) {
+      grupos.putIfAbsent(preferidos[p.producto.id], () => []).add(p);
+    }
+    int orden(ProductoPorPedir a, ProductoPorPedir b) {
+      final negA = a.existencias < 0 ? 0 : 1;
+      final negB = b.existencias < 0 ? 0 : 1;
+      if (negA != negB) return negA - negB;
+      final falta = (a.existencias - a.producto.minimo).compareTo(
+        b.existencias - b.producto.minimo,
+      );
+      if (falta != 0) return falta;
+      return a.producto.nombre.compareTo(b.producto.nombre);
+    }
+
+    final resultado =
+        [
+          for (final e in grupos.entries)
+            GrupoPorPedir(
+              proveedor: e.key == null ? null : proveedores[e.key],
+              productos: e.value..sort(orden),
+            ),
+        ]..sort((a, b) {
+          if (a.proveedor == null) return 1;
+          if (b.proveedor == null) return -1;
+          return a.proveedor!.nombre.toLowerCase().compareTo(
+            b.proveedor!.nombre.toLowerCase(),
+          );
+        });
+    return resultado;
+  }
+
+  /// Conteos y entradas del producto, del más reciente al más viejo.
+  Future<List<MovimientoInventario>> historial(
+    int productoId, {
+    int limite = 30,
+  }) async {
+    final usuarios = {
+      for (final u in await _db.select(_db.usuarios).get()) u.id: u.nombre,
+    };
+    final conteos = await (_db.select(
+      _db.conteosInventario,
+    )..where((c) => c.productoId.equals(productoId))).get();
+    final entradas = await (_db.select(_db.lineasEntrada).join([
+      innerJoin(
+        _db.entradasMercancia,
+        _db.entradasMercancia.id.equalsExp(_db.lineasEntrada.entradaId),
+      ),
+      innerJoin(
+        _db.proveedores,
+        _db.proveedores.id.equalsExp(_db.entradasMercancia.proveedorId),
+      ),
+    ])..where(_db.lineasEntrada.productoId.equals(productoId))).get();
+    final movimientos = [
+      for (final c in conteos)
+        MovimientoInventario(
+          tipo: c.tipo == TipoConteo.inicial
+              ? TipoMovimientoInventario.conteoInicial
+              : TipoMovimientoInventario.ajuste,
+          fecha: c.fecha,
+          cantidad: c.cantidad,
+          anterior: c.anterior,
+          quien: usuarios[c.usuarioId] ?? '',
+        ),
+      for (final f in entradas)
+        MovimientoInventario(
+          tipo: TipoMovimientoInventario.entrada,
+          fecha: f.readTable(_db.entradasMercancia).fecha,
+          cantidad: f.readTable(_db.lineasEntrada).cantidad,
+          quien: f.readTable(_db.proveedores).nombre,
+          anulada: f.readTable(_db.entradasMercancia).anulada,
+        ),
+    ]..sort((a, b) => b.fecha.compareTo(a.fecha));
+    return movimientos.take(limite).toList();
   }
 }
