@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/esquema_v1.dart';
 import '../support/esquema_v2.dart';
 import '../support/esquema_v3.dart';
+import '../support/esquema_v4.dart';
 
 void main() {
   late Directory carpeta;
@@ -50,7 +51,7 @@ void main() {
         MedioPago.transferencia);
     expect((await db.select(db.configuracionTienda).getSingle()).imagenQr,
         [1, 2]);
-    expect(db.schemaVersion, 4);
+    expect(db.schemaVersion, 5);
   });
 
   test('una base v2 abre en v3 sin nada anulado y sin correcciones', () async {
@@ -129,5 +130,74 @@ void main() {
     expect(linea.ventaId, venta);
     expect(linea.productoId, isNull);
     expect(linea.descripcion, r'$5.000');
+  });
+
+  test('una base v4 abre en v5 sin costos, proveedores ni nombre de tienda',
+      () async {
+    final archivo = File('${carpeta.path}/v4.sqlite');
+    crearBaseV4(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    expect((await db.select(db.lineasVenta).getSingle()).costoUnitario,
+        isNull);
+    expect(await db.select(db.proveedores).get(), isEmpty);
+    expect(await db.select(db.productosProveedores).get(), isEmpty);
+    expect(await db.select(db.configuracionTienda).get(), isEmpty);
+  });
+
+  for (final (version, crear) in [
+    (1, crearBaseV1),
+    (2, crearBaseV2),
+    (3, crearBaseV3),
+  ]) {
+    test('una base v$version abre en v5 y acepta líneas con costo y nombre',
+        () async {
+      final archivo = File('${carpeta.path}/vieja$version.sqlite');
+      crear(archivo.path);
+
+      final db = AppDatabase(NativeDatabase(archivo));
+      addTearDown(db.close);
+
+      final venta = (await db.select(db.ventas).getSingle()).id;
+      await db.into(db.lineasVenta).insert(LineasVentaCompanion.insert(
+            ventaId: venta,
+            descripcion: 'Arepa',
+            precioUnitario: 3500,
+            cantidad: 1,
+            costoUnitario: const Value(2500),
+          ));
+      await db.into(db.configuracionTienda).insert(
+          const ConfiguracionTiendaCompanion(
+              id: Value(1), nombreTienda: Value('La Esquina')));
+      expect((await db.select(db.lineasVenta).getSingle()).costoUnitario,
+          2500);
+      expect((await db.select(db.configuracionTienda).getSingle()).nombreTienda,
+          'La Esquina');
+    });
+  }
+
+  test('producto y proveedor no se pueden repetir', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final producto = await db
+        .into(db.productos)
+        .insert(ProductosCompanion.insert(nombre: 'Arepa', precio: 3500));
+    final proveedor = await db
+        .into(db.proveedores)
+        .insert(ProveedoresCompanion.insert(nombre: 'Postobón'));
+    await db.into(db.productosProveedores).insert(
+        ProductosProveedoresCompanion.insert(
+            productoId: producto, proveedorId: proveedor, precioCompra: 2500));
+
+    await expectLater(
+        db.into(db.productosProveedores).insert(
+            ProductosProveedoresCompanion.insert(
+                productoId: producto,
+                proveedorId: proveedor,
+                precioCompra: 2600)),
+        throwsA(anything));
+    expect((await db.select(db.proveedores).getSingle()).activo, isTrue);
   });
 }

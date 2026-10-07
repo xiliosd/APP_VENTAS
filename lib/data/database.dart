@@ -29,6 +29,32 @@ class Productos extends Table {
   BoolColumn get activo => boolean().withDefault(const Constant(true))();
 }
 
+/// A quién se le compran los productos.
+@DataClassName('Proveedor')
+class Proveedores extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get nombre => text()();
+  TextColumn get telefono => text().nullable()();
+  TextColumn get notas => text().nullable()();
+  BoolColumn get activo => boolean().withDefault(const Constant(true))();
+}
+
+/// Un proveedor de un producto y su precio de compra. Un producto con
+/// proveedores tiene exactamente un preferido (lo garantiza el repositorio).
+@DataClassName('ProductoProveedor')
+class ProductosProveedores extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get productoId => integer().references(Productos, #id)();
+  IntColumn get proveedorId => integer().references(Proveedores, #id)();
+  IntColumn get precioCompra => integer()();
+  BoolColumn get preferido => boolean().withDefault(const Constant(false))();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+        {productoId, proveedorId},
+      ];
+}
+
 @DataClassName('Cliente')
 class Clientes extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -63,6 +89,10 @@ class LineasVenta extends Table {
   TextColumn get descripcion => text()();
   IntColumn get precioUnitario => integer()();
   IntColumn get cantidad => integer()();
+
+  /// Costo de una unidad al vender (precio del proveedor preferido); null en
+  /// montos sueltos, productos sin proveedor o ventas anteriores a la 4A.
+  IntColumn get costoUnitario => integer().nullable()();
 }
 
 @DataClassName('PagoFiado')
@@ -93,6 +123,9 @@ class ConfiguracionTienda extends Table {
   IntColumn get id => integer()();
   BlobColumn get imagenQr => blob().nullable()();
 
+  /// Nombre de la tienda; null mientras no se ha configurado.
+  TextColumn get nombreTienda => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -118,6 +151,8 @@ class Correcciones extends Table {
   tables: [
     Usuarios,
     Productos,
+    Proveedores,
+    ProductosProveedores,
     Clientes,
     Ventas,
     LineasVenta,
@@ -137,7 +172,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -156,6 +191,18 @@ class AppDatabase extends _$AppDatabase {
           }
           if (desde < 4) {
             await m.createTable(lineasVenta);
+          }
+          if (desde < 5) {
+            await m.createTable(proveedores);
+            await m.createTable(productosProveedores);
+            // Si la tabla se creó en esta misma migración ya trae la columna.
+            if (desde >= 4) {
+              await m.addColumn(lineasVenta, lineasVenta.costoUnitario);
+            }
+            if (desde >= 2) {
+              await m.addColumn(
+                  configuracionTienda, configuracionTienda.nombreTienda);
+            }
           }
         },
       );
