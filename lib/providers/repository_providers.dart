@@ -6,6 +6,7 @@ import '../repositories/fiado_repository.dart';
 import '../repositories/gasto_repository.dart';
 import '../repositories/historial_repository.dart';
 import '../repositories/producto_repository.dart';
+import '../repositories/proveedor_repository.dart';
 import '../repositories/reporte_repository.dart';
 import '../repositories/resumen_repository.dart';
 import '../repositories/usuario_repository.dart';
@@ -62,4 +63,8 @@ final reporteRepositoryProvider = Provider(
     ref.watch(databaseProvider),
     ref.watch(fiadoRepositoryProvider),
   ),
+);
+
+final proveedorRepositoryProvider = Provider(
+  (ref) => ProveedorRepository(ref.watch(databaseProvider)),
 );
