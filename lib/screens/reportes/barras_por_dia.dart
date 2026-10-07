@@ -18,6 +18,54 @@ const _diasLargos = [
 String etiquetaDia(DateTime dia) =>
     '${_diasCortos[dia.weekday - 1]} ${dia.day}';
 
+/// "12 a. m.", "7 a. m.", "12 m.", "6 p. m.".
+String etiquetaHora(int hora) {
+  if (hora == 0) return '12 a. m.';
+  if (hora < 12) return '$hora a. m.';
+  if (hora == 12) return '12 m.';
+  return '${hora - 12} p. m.';
+}
+
+/// Una fila de [Barras]: su llave (`barra_<clave>`), etiqueta y valor.
+class FilaBarra {
+  const FilaBarra({
+    required this.clave,
+    required this.etiqueta,
+    required this.valor,
+  });
+
+  final String clave;
+  final String etiqueta;
+  final int valor;
+}
+
+/// Barras horizontales proporcionales al mayor valor, con [resaltada] (una
+/// clave) en verde intenso.
+class Barras extends StatelessWidget {
+  const Barras({super.key, required this.filas, this.resaltada});
+
+  final List<FilaBarra> filas;
+  final String? resaltada;
+
+  @override
+  Widget build(BuildContext context) {
+    final maximo = filas.fold<int>(0, (m, f) => f.valor > m ? f.valor : m);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final fila in filas)
+          Barra(
+            key: Key('barra_${fila.clave}'),
+            etiqueta: fila.etiqueta,
+            valor: fila.valor,
+            fraccion: maximo == 0 ? 0.0 : fila.valor / maximo,
+            resaltada: fila.clave == resaltada,
+          ),
+      ],
+    );
+  }
+}
+
 /// Ventas de cada día como barras horizontales, con el mejor día resaltado.
 class BarrasPorDia extends StatelessWidget {
   const BarrasPorDia({super.key, required this.ventasPorDia, this.mejorDia});
@@ -27,7 +75,6 @@ class BarrasPorDia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maximo = ventasPorDia.values.fold<int>(0, (m, v) => v > m ? v : m);
     final mejor = mejorDia;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -42,22 +89,25 @@ class BarrasPorDia extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-        for (final entrada in ventasPorDia.entries)
-          BarraDia(
-            key: Key('barra_${entrada.key.day}'),
-            etiqueta: etiquetaDia(entrada.key),
-            valor: entrada.value,
-            fraccion: maximo == 0 ? 0.0 : entrada.value / maximo,
-            resaltada: entrada.key == mejor,
-          ),
+        Barras(
+          filas: [
+            for (final entrada in ventasPorDia.entries)
+              FilaBarra(
+                clave: '${entrada.key.day}',
+                etiqueta: etiquetaDia(entrada.key),
+                valor: entrada.value,
+              ),
+          ],
+          resaltada: mejor == null ? null : '${mejor.day}',
+        ),
       ],
     );
   }
 }
 
-/// Una fila: etiqueta del día, barra proporcional y monto.
-class BarraDia extends StatelessWidget {
-  const BarraDia({
+/// Una fila: etiqueta, barra proporcional y monto.
+class Barra extends StatelessWidget {
+  const Barra({
     super.key,
     required this.etiqueta,
     required this.valor,
@@ -78,7 +128,7 @@ class BarraDia extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          SizedBox(width: 56, child: Text(etiqueta)),
+          SizedBox(width: 64, child: Text(etiqueta)),
           Expanded(
             child: Align(
               alignment: Alignment.centerLeft,

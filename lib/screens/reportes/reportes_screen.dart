@@ -36,7 +36,8 @@ class _ReportesScreenState extends ConsumerState<ReportesScreen> {
   Widget build(BuildContext context) {
     final esActual = _periodo.contiene(_hoy);
     final comparacionAsync = ref.watch(
-        comparacionReporteProvider((periodo: _periodo, hoy: _hoy)));
+      comparacionReporteProvider((periodo: _periodo, hoy: _hoy)),
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Reportes')),
@@ -60,8 +61,7 @@ class _ReportesScreenState extends ConsumerState<ReportesScreen> {
                 key: const Key('periodo_anterior'),
                 tooltip: 'Anterior',
                 icon: const Icon(Icons.chevron_left_rounded),
-                onPressed: () =>
-                    setState(() => _periodo = _periodo.anterior),
+                onPressed: () => setState(() => _periodo = _periodo.anterior),
               ),
               Expanded(
                 child: Text(
@@ -69,7 +69,9 @@ class _ReportesScreenState extends ConsumerState<ReportesScreen> {
                   key: const Key('titulo_periodo'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w700),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               IconButton(
@@ -89,10 +91,7 @@ class _ReportesScreenState extends ConsumerState<ReportesScreen> {
                     icono: Icons.bar_chart_rounded,
                     titulo: 'Sin ventas en este periodo',
                   )
-                : _Contenido(
-                    comparacion: comparacion,
-                    tipo: _periodo.tipo,
-                  ),
+                : _Contenido(comparacion: comparacion, tipo: _periodo.tipo),
             loading: () => const Padding(
               padding: EdgeInsets.all(24),
               child: Center(child: CircularProgressIndicator()),
@@ -114,8 +113,9 @@ class _Contenido extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = comparacion.actual;
-    final contra =
-        tipo == TipoPeriodo.semana ? 'vs. semana pasada' : 'vs. mes pasado';
+    final contra = tipo == TipoPeriodo.semana
+        ? 'vs. semana pasada'
+        : 'vs. mes pasado';
     const gris = TextStyle(color: ColoresApp.textoSecundario);
 
     return Column(
@@ -130,9 +130,10 @@ class _Contenido extends StatelessWidget {
           tamano: 28,
         ),
         _TextoCambio(
-            key: const Key('cambio_ventas'),
-            cambio: comparacion.cambioVentas,
-            contra: contra),
+          key: const Key('cambio_ventas'),
+          cambio: comparacion.cambioVentas,
+          contra: contra,
+        ),
         const SizedBox(height: 12),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,9 +158,10 @@ class _Contenido extends StatelessWidget {
                     tono: r.ganancia < 0 ? TonoMonto.sale : TonoMonto.neutro,
                   ),
                   _TextoCambio(
-                      key: const Key('cambio_ganancia'),
-                      cambio: comparacion.cambioGanancia,
-                      contra: contra),
+                    key: const Key('cambio_ganancia'),
+                    cambio: comparacion.cambioGanancia,
+                    contra: contra,
+                  ),
                 ],
               ),
             ),
@@ -193,8 +195,11 @@ class _Contenido extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        Text('Gastos ${formatoMoneda(r.gastos)}',
-            key: const Key('texto_gastos_caja'), style: gris),
+        Text(
+          'Gastos ${formatoMoneda(r.gastos)}',
+          key: const Key('texto_gastos_caja'),
+          style: gris,
+        ),
         const _Titulo('Fiado'),
         Text(
           'Fiaste ${formatoMoneda(r.fiado)} · '
@@ -209,6 +214,55 @@ class _Contenido extends StatelessWidget {
         ),
         const _Titulo('Ventas por día'),
         BarrasPorDia(ventasPorDia: r.ventasPorDia, mejorDia: r.mejorDia),
+        const _Titulo('Productos más vendidos'),
+        if (r.ranking.isEmpty && r.otrosMontos == 0)
+          const Text(
+            'Aún no hay ventas con detalle de productos en este periodo',
+            key: Key('texto_sin_detalle'),
+            style: gris,
+          )
+        else ...[
+          for (final (i, p) in r.ranking.indexed)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(
+                '${i + 1}. ${p.nombre} · ${p.unidades} u · '
+                '${formatoMoneda(p.dinero)}',
+                key: Key('ranking_$i'),
+              ),
+            ),
+          if (r.otrosMontos > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Otros montos · ${formatoMoneda(r.otrosMontos)}',
+                key: const Key('texto_otros_montos'),
+                style: gris,
+              ),
+            ),
+        ],
+        const _Titulo('Horas de más venta'),
+        if (r.horaPico case final pico?)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Hora pico: ${etiquetaHora(pico)} · '
+              '${formatoMoneda(r.ventasPorHora[pico]!)}',
+              key: const Key('texto_hora_pico'),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        Barras(
+          filas: [
+            for (final e in r.ventasPorHora.entries)
+              FilaBarra(
+                clave: 'h${e.key}',
+                etiqueta: etiquetaHora(e.key),
+                valor: e.value,
+              ),
+          ],
+          resaltada: r.horaPico == null ? null : 'h${r.horaPico}',
+        ),
       ],
     );
   }
@@ -221,10 +275,12 @@ class _Titulo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 24, bottom: 8),
-        child: Text(texto,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-      );
+    padding: const EdgeInsets.only(top: 24, bottom: 8),
+    child: Text(
+      texto,
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+    ),
+  );
 }
 
 /// "↑ 12 % vs. semana pasada" en verde, "↓ 8 % …" en rojo o "= …" en gris;
@@ -242,12 +298,14 @@ class _TextoCambio extends StatelessWidget {
     final (texto, color) = valor > 0
         ? ('↑ $valor % $contra', ColoresApp.entra)
         : valor < 0
-            ? ('↓ ${-valor} % $contra', ColoresApp.sale)
-            : ('= $contra', ColoresApp.textoSecundario);
+        ? ('↓ ${-valor} % $contra', ColoresApp.sale)
+        : ('= $contra', ColoresApp.textoSecundario);
     return Padding(
       padding: const EdgeInsets.only(top: 4),
-      child: Text(texto,
-          style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+      child: Text(
+        texto,
+        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+      ),
     );
   }
 }

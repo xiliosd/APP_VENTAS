@@ -26,14 +26,14 @@ void main() {
       DateTime(2026, 10, 7): 0,
     }, mejorDia: DateTime(2026, 10, 6));
 
-    expect(find.byType(BarraDia), findsNWidgets(3));
+    expect(find.byType(Barra), findsNWidgets(3));
     expect(find.text('Lun 5'), findsOneWidget);
     expect(find.text(r'$5.000'), findsOneWidget);
     expect(find.text(r'Mejor día: martes 6 · $5.000'), findsOneWidget);
-    final mejor = tester.widget<BarraDia>(find.byKey(const Key('barra_6')));
+    final mejor = tester.widget<Barra>(find.byKey(const Key('barra_6')));
     expect(mejor.resaltada, isTrue);
     expect(mejor.fraccion, 1.0);
-    final otra = tester.widget<BarraDia>(find.byKey(const Key('barra_5')));
+    final otra = tester.widget<Barra>(find.byKey(const Key('barra_5')));
     expect(otra.resaltada, isFalse);
     expect(otra.fraccion, 0.4);
   });
@@ -47,7 +47,35 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('texto_mejor_dia')), findsNothing);
-    expect(tester.widget<BarraDia>(find.byKey(const Key('barra_5'))).fraccion,
+    expect(tester.widget<Barra>(find.byKey(const Key('barra_5'))).fraccion,
         0.0);
+  });
+
+  test('etiquetaHora usa a. m., m. y p. m.', () {
+    expect(etiquetaHora(0), '12 a. m.');
+    expect(etiquetaHora(7), '7 a. m.');
+    expect(etiquetaHora(12), '12 m.');
+    expect(etiquetaHora(13), '1 p. m.');
+    expect(etiquetaHora(18), '6 p. m.');
+    expect(etiquetaHora(23), '11 p. m.');
+  });
+
+  testWidgets('Barras resalta la fila indicada', (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: Barras(
+          filas: [
+            FilaBarra(clave: 'h9', etiqueta: '9 a. m.', valor: 3000),
+            FilaBarra(clave: 'h18', etiqueta: '6 p. m.', valor: 1500),
+          ],
+          resaltada: 'h9',
+        ),
+      ),
+    ));
+
+    expect(tester.widget<Barra>(find.byKey(const Key('barra_h9'))).resaltada,
+        isTrue);
+    expect(tester.widget<Barra>(find.byKey(const Key('barra_h18'))).fraccion,
+        0.5);
   });
 }

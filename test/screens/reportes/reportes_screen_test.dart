@@ -1,5 +1,6 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/repositories/venta_repository.dart';
 import 'package:app_ventas/screens/reportes/barras_por_dia.dart';
 import 'package:app_ventas/screens/reportes/reportes_screen.dart';
 import 'package:app_ventas/ui/monto.dart';
@@ -138,7 +139,7 @@ void main() {
     expect(find.text(r'Fiaste $3.000 · Cobraste $1.000'), findsOneWidget);
     expect(find.text(r'Deuda: $2.000 → $4.000'), findsOneWidget);
     expect(find.text(r'Mejor día: martes 6 · $3.000'), findsOneWidget);
-    expect(tester.widget<BarraDia>(find.byKey(const Key('barra_6'))).resaltada,
+    expect(tester.widget<Barra>(find.byKey(const Key('barra_6'))).resaltada,
         isTrue);
   });
 
@@ -164,5 +165,49 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(en('reporte_ventas', r'$7.000'), findsOneWidget);
+  });
+
+  testWidgets('muestra el ranking, otros montos y la hora pico',
+      (tester) async {
+    final arepa = await db
+        .into(db.productos)
+        .insert(ProductosCompanion.insert(nombre: 'Arepa', precio: 3500));
+    await VentaRepository(db).registrarVenta(
+      monto: 12000,
+      esFiado: false,
+      usuarioId: ana,
+      fecha: DateTime(2026, 10, 6, 18, 20),
+      lineas: [
+        LineaNueva(
+            productoId: arepa,
+            descripcion: 'Arepa',
+            precioUnitario: 3500,
+            cantidad: 2),
+        const LineaNueva(
+            descripcion: r'$5.000', precioUnitario: 5000, cantidad: 1),
+      ],
+    );
+    await vender(1000, DateTime(2026, 10, 6, 8));
+    await montar(tester);
+
+    expect(find.text('Productos más vendidos'), findsOneWidget);
+    expect(find.text(r'1. Arepa · 2 u · $7.000'), findsOneWidget);
+    expect(find.text(r'Otros montos · $5.000'), findsOneWidget);
+    expect(find.text('Horas de más venta'), findsOneWidget);
+    expect(find.text(r'Hora pico: 6 p. m. · $12.000'), findsOneWidget);
+    expect(find.text('8 a. m.'), findsOneWidget);
+    expect(tester.widget<Barra>(find.byKey(const Key('barra_h18'))).resaltada,
+        isTrue);
+  });
+
+  testWidgets('con ventas sin detalle avisa en el ranking pero muestra horas',
+      (tester) async {
+    await vender(4000, DateTime(2026, 10, 6, 10));
+    await montar(tester);
+
+    expect(
+        find.text('Aún no hay ventas con detalle de productos en este periodo'),
+        findsOneWidget);
+    expect(find.text(r'Hora pico: 10 a. m. · $4.000'), findsOneWidget);
   });
 }
