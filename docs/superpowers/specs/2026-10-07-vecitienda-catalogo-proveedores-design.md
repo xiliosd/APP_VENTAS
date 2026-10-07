@@ -1,4 +1,4 @@
-# Fase 4A — Catálogo y proveedores
+# Fase 4A — Catálogo, proveedores y nombre de la tienda
 
 **Fecha:** 2026-10-07
 **Estado:** Diseño aprobado, pendiente de plan
@@ -28,6 +28,11 @@ y Reportes muestra cuánto dejan de ganancia los productos. Es la base de la 4B 
   y un aviso de lo vendido sin costo registrado.
 - **Enfoque (A):** tablas `proveedores` y `productos_proveedores`, y el costo guardado en cada
   línea de venta. Se descartaron columnas en el producto (B) y JSON (C).
+- **Nombre de la tienda** (pedido del usuario al aprobar esta especificación, para dar sentido
+  de pertenencia): la app sigue siendo de una sola tienda por celular; la tienda tiene un
+  nombre, todos los usuarios pertenecen a ella y el nombre se ve dentro de la app. Se
+  descartaron varias tiendas por celular y unirse a una tienda por la nube (serían fases
+  aparte).
 
 ## Modelo de datos (esquema v4 → v5)
 
@@ -36,9 +41,11 @@ y Reportes muestra cuánto dejan de ganancia los productos. Es la base de la 4B 
 - Tabla nueva `ProductosProveedores` (`@DataClassName('ProductoProveedor')`): `id`,
   `productoId` → `Productos`, `proveedorId` → `Proveedores`, `precioCompra` (entero > 0),
   `preferido` (bool, default false). Única por (`productoId`, `proveedorId`).
+- `ConfiguracionTienda.nombreTienda`: texto nullable (null = aún sin nombre).
 - `LineasVenta.costoUnitario`: entero nullable (null = sin costo: monto suelto, producto sin
   proveedores o venta anterior a la 4A).
-- Migración `desde < 5`: `createTable` ×2 y `addColumn(lineasVenta, costoUnitario)`. Solo agrega.
+- Migración `desde < 5`: `createTable` ×2, `addColumn(lineasVenta, costoUnitario)` y
+  `addColumn(configuracionTienda, nombreTienda)`. Solo agrega.
   `CopiaBaseDatos.tablas` no cambia.
 
 ## Reglas
@@ -65,8 +72,25 @@ y Reportes muestra cuánto dejan de ganancia los productos. Es la base de la 4B 
     (productos sin costo y montos sueltos).
   - La tarjeta "Ganancia" (ventas − gastos) no cambia.
 - **Acceso:** Productos y Proveedores siguen en Ajustes (solo administrador).
+- **Nombre de la tienda:** obligatorio al configurar la app por primera vez; de 1 a 40
+  caracteres sin espacios sobrantes. Solo el administrador lo cambia. Viaja en el respaldo
+  (vive en la base). Todos los usuarios que se crean pertenecen a esa tienda (no hay otra).
 
 ## Pantallas
+
+### Nombre de la tienda
+
+- **Primera configuración** (`CrearAdminInicialScreen`): campo nuevo "Nombre de la tienda"
+  (`campo_nombre_tienda`) antes del nombre y PIN del administrador; error "Escribe el nombre de
+  tu tienda".
+- **Instalaciones existentes sin nombre:** al entrar un administrador a Inicio, una hoja "¿Cómo
+  se llama tu tienda?" con el campo y "Guardar"; no se puede cerrar sin guardar. Un vendedor no
+  la ve (la app sigue funcionando y muestra lo de hoy hasta que el administrador lo ponga).
+- **Dónde se ve:**
+  - Elegir usuario e ingresar PIN: el nombre de la tienda como título sobre la lista / el PIN.
+  - Encabezado azul de Inicio: el nombre de la tienda en una línea pequeña bajo "Hola, Ana".
+  - Ajustes: primera fila "Tienda" con el nombre; el administrador la toca y lo cambia en una
+    hoja (aviso "Nombre guardado").
 
 ### Ajustes
 
@@ -115,10 +139,15 @@ y Reportes muestra cuánto dejan de ganancia los productos. Es la base de la 4B 
 - `ReporteRepository`: `ProductoVendido.ganancia` (`int?`), `Reporte.gananciaProductos`,
   `Reporte.vendidoSinCosto`.
 - Providers de proveedores con el patrón `tableUpdates()`.
+- `ConfiguracionRepository`: `nombreTienda()` y `guardarNombreTienda(String)`;
+  `nombreTiendaProvider` (stream o `tableUpdates()`); usado en login, Inicio y Ajustes.
 
 ## Pruebas (TDD)
 
-- Migración v4 → v5 (las de versiones anteriores siguen).
+- Migración v4 → v5 (las de versiones anteriores siguen); una base v4 abre sin nombre de tienda.
+- Nombre de la tienda: guardar y leer; validación (vacío, solo espacios, más de 40); la primera
+  configuración lo exige y lo guarda; la hoja aparece al administrador sin nombre y no al
+  vendedor; se ve en elegir usuario, PIN, Inicio y Ajustes; el administrador lo cambia.
 - Proveedores: crear, editar, desactivar/reactivar, conteo de productos, inactivo no
   agregable a un producto.
 - `guardarProducto`: primero queda preferido; cambiar preferido desmarca al anterior; quitar el
