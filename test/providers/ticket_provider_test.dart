@@ -7,8 +7,20 @@ void main() {
   late ProviderContainer container;
   late ProviderSubscription<Ticket> suscripcion;
 
-  const arepa = Producto(id: 1, nombre: 'Arepa', precio: 3500, activo: true);
-  const pan = Producto(id: 2, nombre: 'Pan', precio: 500, activo: true);
+  const arepa = Producto(
+      id: 1,
+      nombre: 'Arepa',
+      precio: 3500,
+      activo: true,
+      controlaExistencias: false,
+      minimo: 0);
+  const pan = Producto(
+      id: 2,
+      nombre: 'Pan',
+      precio: 500,
+      activo: true,
+      controlaExistencias: false,
+      minimo: 0);
 
   TicketNotifier notifier() => container.read(ticketProvider.notifier);
   Ticket ticket() => container.read(ticketProvider);
