@@ -244,6 +244,30 @@ void main() {
 
     await tester.tap(find.byKey(Key('opcion_proveedor_recibir_$alpina')));
     await tester.pumpAndSettle();
-    expect(precio(tester, arepa), '2500');
+    expect(precio(tester, arepa), '2800');
+  });
+
+  testWidgets('líneas iniciales sin precio toman el del proveedor que se elija',
+      (tester) async {
+    final (_, alpina, arepa) = await dosProveedores();
+    final producto = await (db.select(db.productos)
+          ..where((p) => p.id.equals(arepa)))
+        .getSingle();
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final container = await containerConSesion(db);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(appDePrueba(container,
+        inicio: RecibirMercanciaScreen(
+          lineasIniciales: [LineaInicial(producto: producto, cantidad: 3)],
+        )));
+    await tester.pumpAndSettle();
+    expect(precio(tester, arepa), '');
+
+    await tester.tap(find.byKey(Key('opcion_proveedor_recibir_$alpina')));
+    await tester.pumpAndSettle();
+
+    expect(precio(tester, arepa), '2800');
   });
 }

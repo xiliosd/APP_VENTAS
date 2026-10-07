@@ -60,8 +60,8 @@ Cada grupo gana un botón "Ver pedido sugerido" (`ver_pedido_<proveedorId|sin>`)
 ### Recibir mercancía
 
 `RecibirMercanciaScreen({Proveedor? proveedorInicial, List<LineaInicial> lineasIniciales})`
-con `LineaInicial(producto, cantidad, precio?)`: arranca con ese proveedor y esas líneas (las
-líneas iniciales cuentan como "editadas": cambiar de proveedor no reemplaza sus precios).
+con `LineaInicial(producto, cantidad, precio?)`: arranca con ese proveedor (solo si está activo)
+y esas líneas (sus precios son sugerencias: elegir o cambiar de proveedor los reemplaza).
 
 ### Ajustes → Producto
 

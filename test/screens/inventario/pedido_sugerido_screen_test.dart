@@ -123,4 +123,19 @@ void main() {
     expect(find.byType(RecibirMercanciaScreen), findsOneWidget);
     expect(habilitado(tester, 'boton_guardar_recibir'), isFalse);
   });
+
+  testWidgets('un proveedor desactivado no llega elegido a Recibir',
+      (tester) async {
+    final (postobon, _, _, _) = await preparar(tester);
+    await ProveedorRepository(db).desactivar(postobon);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(Key('ver_pedido_$postobon')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_recibir_pedido')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RecibirMercanciaScreen), findsOneWidget);
+    expect(habilitado(tester, 'boton_guardar_recibir'), isFalse);
+  });
 }

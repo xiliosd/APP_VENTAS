@@ -54,7 +54,7 @@ class RecibirMercanciaScreen extends ConsumerStatefulWidget {
 
   final Proveedor? proveedorInicial;
 
-  /// Sus precios cuentan como escritos: cambiar de proveedor no los reemplaza.
+  /// Sus precios son sugerencias: elegir o cambiar de proveedor los reemplaza.
   final List<LineaInicial> lineasIniciales;
 
   @override
@@ -77,8 +77,7 @@ class _RecibirMercanciaScreenState
     for (final l in widget.lineasIniciales) {
       _lineas.add(
         _Linea(l.producto, l.precio?.toString() ?? '')
-          ..cantidad = l.cantidad
-          ..editado = true,
+          ..cantidad = l.cantidad,
       );
     }
   }

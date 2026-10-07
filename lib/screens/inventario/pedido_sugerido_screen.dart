@@ -32,7 +32,9 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
     final total = await Navigator.of(context).push<int>(
       MaterialPageRoute(
         builder: (_) => RecibirMercanciaScreen(
-          proveedorInicial: widget.proveedor,
+          proveedorInicial: (widget.proveedor?.activo ?? false)
+              ? widget.proveedor
+              : null,
           lineasIniciales: [
             for (final l in lineas)
               if (_cantidad(l) > 0)
