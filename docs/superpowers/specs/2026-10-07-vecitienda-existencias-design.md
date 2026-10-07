@@ -1,7 +1,7 @@
 # Fase 4B — Existencias y "Por pedir"
 
 **Fecha:** 2026-10-07
-**Estado:** Diseño aprobado, pendiente de plan
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con Fases 1–4A (esquema v5: líneas de venta con costo, proveedores, nombre de la
 tienda).
 
