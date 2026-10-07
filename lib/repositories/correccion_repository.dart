@@ -39,7 +39,7 @@ class CorreccionRepository {
     await _db.transaction(() async {
       final venta = await _venta(id);
       _comprobar(por, venta.usuarioId, venta.fecha, venta.anulado);
-      final antes = await _antesVenta(venta);
+      final antes = await _antesVenta(venta, await _lineas(id));
       await (_db.update(_db.ventas)..where((v) => v.id.equals(id)))
           .write(const VentasCompanion(anulado: Value(true)));
       await _registrar(
@@ -48,26 +48,59 @@ class CorreccionRepository {
   }
 
   /// Una venta fiada guarda `efectivo` (no cuenta por medio de pago); una de
-  /// contado queda sin cliente.
+  /// contado queda sin cliente. Si la venta tiene líneas, [cantidades] (id de
+  /// línea → nueva cantidad; 0 = quitar) las ajusta y el monto se recalcula
+  /// con ellas ([monto] se ignora); debe quedar al menos una.
   Future<void> corregirVenta(
     int id, {
     required int monto,
     required bool esFiado,
     int? clienteId,
     MedioPago medioPago = MedioPago.efectivo,
+    Map<int, int>? cantidades,
     required Usuario por,
   }) async {
-    _validarMonto(monto);
     if (esFiado && clienteId == null) {
       throw const CorreccionInvalida('Una venta fiada necesita cliente');
     }
     await _db.transaction(() async {
       final venta = await _venta(id);
       _comprobar(por, venta.usuarioId, venta.fecha, venta.anulado);
-      final antes = await _antesVenta(venta);
+      final lineas = await _lineas(id);
+      final antes = await _antesVenta(venta, lineas);
+      var montoFinal = monto;
+      if (lineas.isEmpty) {
+        _validarMonto(monto);
+      } else {
+        var suma = 0;
+        var quedan = 0;
+        for (final linea in lineas) {
+          final cantidad = cantidades?[linea.id] ?? linea.cantidad;
+          if (cantidad < 0) {
+            throw const CorreccionInvalida('Cantidad inválida');
+          }
+          if (cantidad == 0) {
+            await (_db.delete(_db.lineasVenta)
+                  ..where((l) => l.id.equals(linea.id)))
+                .go();
+            continue;
+          }
+          if (cantidad != linea.cantidad) {
+            await (_db.update(_db.lineasVenta)
+                  ..where((l) => l.id.equals(linea.id)))
+                .write(LineasVentaCompanion(cantidad: Value(cantidad)));
+          }
+          suma += linea.precioUnitario * cantidad;
+          quedan++;
+        }
+        if (quedan == 0) {
+          throw const CorreccionInvalida('Para quitar todo, anula la venta');
+        }
+        montoFinal = suma;
+      }
       await (_db.update(_db.ventas)..where((v) => v.id.equals(id))).write(
         VentasCompanion(
-          monto: Value(monto),
+          monto: Value(montoFinal),
           esFiado: Value(esFiado),
           clienteId: Value(esFiado ? clienteId : null),
           medioPago: Value(esFiado ? MedioPago.efectivo : medioPago),
@@ -185,17 +218,30 @@ class CorreccionRepository {
     }
   }
 
-  Future<String> _antesVenta(Venta venta) async {
+  Future<List<LineaVenta>> _lineas(int ventaId) =>
+      (_db.select(_db.lineasVenta)
+            ..where((l) => l.ventaId.equals(ventaId))
+            ..orderBy([(l) => OrderingTerm.asc(l.id)]))
+          .get();
+
+  Future<String> _antesVenta(Venta venta, List<LineaVenta> lineas) async {
     final monto = formatoMoneda(venta.monto);
+    final String base;
     if (!venta.esFiado) {
-      return '$monto · Contado · ${_nombreMedio(venta.medioPago)}';
+      base = '$monto · Contado · ${_nombreMedio(venta.medioPago)}';
+    } else {
+      final clienteId = venta.clienteId;
+      final cliente = clienteId == null
+          ? null
+          : await (_db.select(_db.clientes)
+                ..where((c) => c.id.equals(clienteId)))
+              .getSingleOrNull();
+      base = '$monto · Fiado · ${cliente?.nombre ?? 'Sin cliente'}';
     }
-    final clienteId = venta.clienteId;
-    final cliente = clienteId == null
-        ? null
-        : await (_db.select(_db.clientes)..where((c) => c.id.equals(clienteId)))
-            .getSingleOrNull();
-    return '$monto · Fiado · ${cliente?.nombre ?? 'Sin cliente'}';
+    if (lineas.isEmpty) return base;
+    final productos =
+        lineas.map((l) => '${l.cantidad}× ${l.descripcion}').join(', ');
+    return '$base · $productos';
   }
 
   String _antesPago(PagoFiado pago) =>
