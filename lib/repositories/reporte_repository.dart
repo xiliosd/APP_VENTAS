@@ -12,6 +12,7 @@ class ProductoVendido {
     required this.nombre,
     required this.unidades,
     required this.dinero,
+    this.ganancia,
   });
 
   final int productoId;
@@ -20,6 +21,10 @@ class ProductoVendido {
   final String nombre;
   final int unidades;
   final int dinero;
+
+  /// Σ (precio − costo) × cantidad de sus líneas con costo; null si ninguna
+  /// tuvo costo.
+  final int? ganancia;
 }
 
 /// Cifras de un rango de días, sin nada anulado.
@@ -40,6 +45,9 @@ class Reporte {
     required this.otrosMontos,
     required this.ventasPorHora,
     required this.horaPico,
+    required this.gananciaProductos,
+    required this.vendidoSinCosto,
+    required this.hayCostos,
   });
 
   /// Contado + fiado.
@@ -82,6 +90,15 @@ class Reporte {
 
   /// Hora de más dinero (empate: la más temprana); null sin ventas.
   final int? horaPico;
+
+  /// Ganancia de todas las líneas con costo.
+  final int gananciaProductos;
+
+  /// Lo vendido en líneas sin costo (productos sin costo y montos sueltos).
+  final int vendidoSinCosto;
+
+  /// Hubo al menos una línea con costo.
+  final bool hayCostos;
 
   int get ganancia => ventas - gastos;
 
@@ -181,11 +198,25 @@ class ReporteRepository {
     final nombres = {
       for (final p in await _db.select(_db.productos).get()) p.id: p.nombre,
     };
-    final acumulado = <int, ({String nombre, int unidades, int dinero})>{};
+    final acumulado =
+        <int, ({String nombre, int unidades, int dinero, int? ganancia})>{};
     var otrosMontos = 0;
+    var gananciaProductos = 0;
+    var vendidoSinCosto = 0;
+    var hayCostos = false;
     for (final fila in filas) {
       final linea = fila.readTable(_db.lineasVenta);
       final subtotal = linea.precioUnitario * linea.cantidad;
+      final costo = linea.costoUnitario;
+      final gananciaLinea = costo == null
+          ? null
+          : (linea.precioUnitario - costo) * linea.cantidad;
+      if (gananciaLinea == null) {
+        vendidoSinCosto += subtotal;
+      } else {
+        gananciaProductos += gananciaLinea;
+        hayCostos = true;
+      }
       final productoId = linea.productoId;
       if (productoId == null) {
         otrosMontos += subtotal;
@@ -196,6 +227,9 @@ class ReporteRepository {
         nombre: nombres[productoId] ?? linea.descripcion,
         unidades: (previo?.unidades ?? 0) + linea.cantidad,
         dinero: (previo?.dinero ?? 0) + subtotal,
+        ganancia: gananciaLinea == null
+            ? previo?.ganancia
+            : (previo?.ganancia ?? 0) + gananciaLinea,
       );
     }
     final ranking = [
@@ -205,6 +239,7 @@ class ReporteRepository {
           nombre: e.value.nombre,
           unidades: e.value.unidades,
           dinero: e.value.dinero,
+          ganancia: e.value.ganancia,
         ),
     ]..sort((a, b) {
         final porUnidades = b.unidades.compareTo(a.unidades);
@@ -245,6 +280,9 @@ class ReporteRepository {
       otrosMontos: otrosMontos,
       ventasPorHora: ventasPorHora,
       horaPico: horaPico,
+      gananciaProductos: gananciaProductos,
+      vendidoSinCosto: vendidoSinCosto,
+      hayCostos: hayCostos,
     );
   }
 

@@ -58,12 +58,22 @@ class VentaRepository {
             ),
           );
       for (final linea in lineas) {
+        final productoId = linea.productoId;
+        final costo = productoId == null
+            ? null
+            : (await (_db.select(_db.productosProveedores)
+                      ..where((p) =>
+                          p.productoId.equals(productoId) &
+                          p.preferido.equals(true)))
+                    .getSingleOrNull())
+                ?.precioCompra;
         await _db.into(_db.lineasVenta).insert(LineasVentaCompanion.insert(
               ventaId: id,
               productoId: Value(linea.productoId),
               descripcion: linea.descripcion,
               precioUnitario: linea.precioUnitario,
               cantidad: linea.cantidad,
+              costoUnitario: Value(costo),
             ));
       }
       return id;
