@@ -89,65 +89,77 @@ class InventarioRepository {
   /// Existencias de los productos de [productoIds] que tienen control y
   /// conteo (los demás no aparecen).
   Future<Map<int, int>> existenciasDe(Iterable<int> productoIds) async {
-    final resultado = <int, int>{};
-    for (final id in productoIds) {
-      final producto = await (_db.select(
-        _db.productos,
-      )..where((p) => p.id.equals(id))).getSingleOrNull();
-      if (producto == null || !producto.controlaExistencias) continue;
-      final conteo = await _ultimoConteo(id);
-      if (conteo == null) continue;
+    // Pocas consultas en lote, sin importar cuántos productos haya: productos
+    // con control, sus conteos, y las líneas recibidas y vendidas desde el
+    // conteo más viejo; luego cada producto filtra desde su último conteo.
+    final ids = productoIds.toSet().toList();
+    if (ids.isEmpty) return {};
+    final controlados =
+        (await (_db.select(_db.productos)..where(
+                  (p) => p.id.isIn(ids) & p.controlaExistencias.equals(true),
+                ))
+                .get())
+            .map((p) => p.id)
+            .toList();
+    if (controlados.isEmpty) return {};
+    final ultimo = <int, ConteoInventario>{};
+    for (final c
+        in await (_db.select(_db.conteosInventario)
+              ..where((c) => c.productoId.isIn(controlados))
+              ..orderBy([
+                (c) => OrderingTerm.asc(c.fecha),
+                (c) => OrderingTerm.asc(c.id),
+              ]))
+            .get()) {
+      ultimo[c.productoId] = c;
+    }
+    if (ultimo.isEmpty) return {};
+    final desde = ultimo.values
+        .map((c) => c.fecha)
+        .reduce((a, b) => a.isBefore(b) ? a : b);
 
-      final recibidas =
-          await (_db.select(_db.lineasEntrada).join([
-                innerJoin(
-                  _db.entradasMercancia,
-                  _db.entradasMercancia.id.equalsExp(
-                    _db.lineasEntrada.entradaId,
-                  ),
-                ),
-              ])..where(
-                _db.lineasEntrada.productoId.equals(id) &
-                    _db.entradasMercancia.anulada.equals(false) &
-                    _db.entradasMercancia.fecha.isBiggerThanValue(conteo.fecha),
-              ))
-              .get();
-      final vendidas =
-          await (_db.select(_db.lineasVenta).join([
-                innerJoin(
-                  _db.ventas,
-                  _db.ventas.id.equalsExp(_db.lineasVenta.ventaId),
-                ),
-              ])..where(
-                _db.lineasVenta.productoId.equals(id) &
-                    _db.ventas.anulado.equals(false) &
-                    _db.ventas.fecha.isBiggerThanValue(conteo.fecha),
-              ))
-              .get();
-
-      resultado[id] =
-          conteo.cantidad +
-          recibidas.fold<int>(
-            0,
-            (s, f) => s + f.readTable(_db.lineasEntrada).cantidad,
-          ) -
-          vendidas.fold<int>(
-            0,
-            (s, f) => s + f.readTable(_db.lineasVenta).cantidad,
-          );
+    final resultado = {for (final e in ultimo.entries) e.key: e.value.cantidad};
+    final recibidas =
+        await (_db.select(_db.lineasEntrada).join([
+              innerJoin(
+                _db.entradasMercancia,
+                _db.entradasMercancia.id.equalsExp(_db.lineasEntrada.entradaId),
+              ),
+            ])..where(
+              _db.lineasEntrada.productoId.isIn(ultimo.keys) &
+                  _db.entradasMercancia.anulada.equals(false) &
+                  _db.entradasMercancia.fecha.isBiggerThanValue(desde),
+            ))
+            .get();
+    for (final f in recibidas) {
+      final linea = f.readTable(_db.lineasEntrada);
+      final fecha = f.readTable(_db.entradasMercancia).fecha;
+      if (fecha.isAfter(ultimo[linea.productoId]!.fecha)) {
+        resultado[linea.productoId] =
+            resultado[linea.productoId]! + linea.cantidad;
+      }
+    }
+    final vendidas =
+        await (_db.select(_db.lineasVenta).join([
+              innerJoin(
+                _db.ventas,
+                _db.ventas.id.equalsExp(_db.lineasVenta.ventaId),
+              ),
+            ])..where(
+              _db.lineasVenta.productoId.isIn(ultimo.keys) &
+                  _db.ventas.anulado.equals(false) &
+                  _db.ventas.fecha.isBiggerThanValue(desde),
+            ))
+            .get();
+    for (final f in vendidas) {
+      final linea = f.readTable(_db.lineasVenta);
+      final productoId = linea.productoId!;
+      if (f.readTable(_db.ventas).fecha.isAfter(ultimo[productoId]!.fecha)) {
+        resultado[productoId] = resultado[productoId]! - linea.cantidad;
+      }
     }
     return resultado;
   }
-
-  Future<ConteoInventario?> _ultimoConteo(int productoId) =>
-      (_db.select(_db.conteosInventario)
-            ..where((c) => c.productoId.equals(productoId))
-            ..orderBy([
-              (c) => OrderingTerm.desc(c.fecha),
-              (c) => OrderingTerm.desc(c.id),
-            ])
-            ..limit(1))
-          .getSingleOrNull();
 
   // ---- Control y conteos ----
 

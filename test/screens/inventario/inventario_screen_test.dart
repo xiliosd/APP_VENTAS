@@ -159,4 +159,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(InventarioScreen), findsOneWidget);
   });
+
+  testWidgets('confirmar la anulación de una entrada ya anulada no rompe',
+      (tester) async {
+    final (container, ana) = await montar(tester);
+    final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
+    final pan = await producto('Pan', proveedor: postobon);
+    final entrada = await InventarioRepository(db).recibirMercancia(
+      proveedorId: postobon,
+      lineas: [LineaRecibida(productoId: pan, cantidad: 2, precioCompra: 400)],
+      por: ana,
+    );
+    await pintar(tester, container);
+    await tester.scrollUntilVisible(find.byKey(Key('entrada_$entrada')), 200);
+    await tester.tap(find.byKey(Key('entrada_$entrada')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('boton_anular_entrada')));
+    await tester.pumpAndSettle();
+    await InventarioRepository(db).anularEntrada(entrada, por: ana);
+    await tester.tap(find.byKey(const Key('confirmar_anular_entrada')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('La entrada ya estaba anulada'), findsOneWidget);
+  });
 }

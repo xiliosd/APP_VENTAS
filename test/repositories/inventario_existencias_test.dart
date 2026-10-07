@@ -2,6 +2,7 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/repositories/correccion_repository.dart';
 import 'package:app_ventas/repositories/inventario_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -173,4 +174,56 @@ void main() {
         throwsArgumentError);
     expect(await db.select(db.conteosInventario).get(), hasLength(1));
   });
+
+  test('existenciasDe hace pocas consultas aunque haya muchos productos',
+      () async {
+    final contador = _ContadorConsultas();
+    final otraDb =
+        AppDatabase(NativeDatabase.memory().interceptWith(contador));
+    addTearDown(otraDb.close);
+    final repoOtro =
+        InventarioRepository(otraDb, reloj: () => DateTime(2026, 10, 7, 8));
+    final usuarioId = await otraDb.into(otraDb.usuarios).insert(
+        UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'));
+    final usuario = await (otraDb.select(otraDb.usuarios)
+          ..where((u) => u.id.equals(usuarioId)))
+        .getSingle();
+    final ids = <int>[];
+    for (var i = 0; i < 30; i++) {
+      final id = await otraDb.into(otraDb.productos).insert(
+          ProductosCompanion.insert(nombre: 'P$i', precio: 1000));
+      await repoOtro.activarControl(id, cantidad: 10 + i, minimo: 0, por: usuario);
+      ids.add(id);
+    }
+    await VentaRepository(otraDb).registrarVenta(
+      monto: 2000,
+      esFiado: false,
+      usuarioId: usuarioId,
+      fecha: DateTime(2026, 10, 7, 9),
+      lineas: [
+        LineaNueva(
+            productoId: ids[3], descripcion: 'P3', precioUnitario: 1000, cantidad: 2),
+      ],
+    );
+
+    contador.selects = 0;
+    final mapa = await repoOtro.existenciasDe(ids);
+
+    expect(mapa, hasLength(30));
+    expect(mapa[ids[0]], 10);
+    expect(mapa[ids[3]], 11);
+    expect(contador.selects, lessThanOrEqualTo(6));
+  });
+}
+
+/// Cuenta las consultas SELECT que llegan a la base.
+class _ContadorConsultas extends QueryInterceptor {
+  int selects = 0;
+
+  @override
+  Future<List<Map<String, Object?>>> runSelect(
+      QueryExecutor executor, String statement, List<Object?> args) {
+    selects++;
+    return super.runSelect(executor, statement, args);
+  }
 }

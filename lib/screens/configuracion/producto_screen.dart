@@ -61,6 +61,10 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   String? _error;
   bool _guardando = false;
 
+  /// Id del producto nuevo ya creado en un intento anterior que falló después
+  /// (al activar el control): reintentar lo actualiza en vez de duplicarlo.
+  int? _productoIdGuardado;
+
   /// Al editar, true hasta que llegan los proveedores del producto: guardar o
   /// agregar antes reemplazaría la lista con una incompleta.
   late bool _cargando = widget.producto != null;
@@ -161,7 +165,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
       final productoId = await ref
           .read(productoRepositoryProvider)
           .guardarProducto(
-            id: widget.producto?.id,
+            id: _productoIdGuardado ?? widget.producto?.id,
             nombre: nombre,
             precio: precio!,
             proveedores: [
@@ -173,6 +177,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
                 ),
             ],
           );
+      _productoIdGuardado = productoId;
       final inventario = ref.read(inventarioRepositoryProvider);
       if (_controla && !_controlabaAlAbrir) {
         await inventario.activarControl(
@@ -190,6 +195,10 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     } on ArgumentError {
       if (mounted) {
         setState(() => _error = 'No se pudo guardar, revisa los proveedores');
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'No se pudo guardar, intenta de nuevo');
       }
     } finally {
       if (mounted) setState(() => _guardando = false);

@@ -77,4 +77,21 @@ void main() {
     expect(find.text('Escribe cuántas hay'), findsOneWidget);
     expect(await db.select(db.conteosInventario).get(), hasLength(1));
   });
+
+  testWidgets('si el control se desactivó, guardar avisa sin romperse',
+      (tester) async {
+    final container = await containerConSesion(db);
+    addTearDown(container.dispose);
+    final ana = container.read(sesionProvider).usuarioActivo!;
+    final producto = await conControl(ana, 12);
+    await abrir(tester, producto, container);
+
+    await InventarioRepository(db).desactivarControl(producto.id);
+    await tester.enterText(find.byKey(const Key('campo_conteo')), '9');
+    await tester.tap(find.byKey(const Key('boton_guardar_conteo')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('No se pudo guardar, intenta de nuevo'), findsOneWidget);
+  });
 }

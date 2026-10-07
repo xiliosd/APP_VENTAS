@@ -108,6 +108,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(Key('opcion_proveedor_recibir_$alpina')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('boton_agregar_producto_recibir')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(Key('opcion_producto_recibir_$avena')));
@@ -117,5 +118,95 @@ void main() {
     await tester.enterText(find.byKey(Key('precio_recibir_$avena')), '1.500');
     await tester.pumpAndSettle();
     expect(guardarHabilitado(tester), isTrue);
+  });
+
+  Future<(int, int, int)> dosProveedores() async {
+    final proveedores = ProveedorRepository(db);
+    final postobon = await proveedores.crear(nombre: 'Postobón');
+    final alpina = await proveedores.crear(nombre: 'Alpina');
+    final arepa = await ProductoRepository(db).guardarProducto(
+      nombre: 'Arepa',
+      precio: 3500,
+      proveedores: [
+        ProveedorDeProducto(
+            proveedorId: postobon, precioCompra: 2500, preferido: true),
+        ProveedorDeProducto(
+            proveedorId: alpina, precioCompra: 2800, preferido: false),
+      ],
+    );
+    return (postobon, alpina, arepa);
+  }
+
+  Future<void> abrirRecibir(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final container = await containerConSesion(db);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+        appDePrueba(container, inicio: const RecibirMercanciaScreen()));
+    await tester.pumpAndSettle();
+  }
+
+  String precio(WidgetTester tester, int producto) => tester
+      .widget<TextField>(find.byKey(Key('precio_recibir_$producto')))
+      .controller!
+      .text;
+
+  testWidgets('sin proveedor no se pueden agregar productos', (tester) async {
+    await dosProveedores();
+    await abrirRecibir(tester);
+
+    expect(
+        tester
+            .widget<TextButton>(
+                find.byKey(const Key('boton_agregar_producto_recibir')))
+            .onPressed,
+        isNull);
+  });
+
+  testWidgets('cambiar de proveedor vuelve a sugerir los precios no editados',
+      (tester) async {
+    final (postobon, alpina, arepa) = await dosProveedores();
+    await abrirRecibir(tester);
+
+    await tester.tap(find.byKey(Key('opcion_proveedor_recibir_$postobon')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_agregar_producto_recibir')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('opcion_producto_recibir_$arepa')));
+    await tester.pumpAndSettle();
+    expect(precio(tester, arepa), '2500');
+
+    await tester.tap(find.byKey(Key('opcion_proveedor_recibir_$alpina')));
+    await tester.pumpAndSettle();
+    expect(precio(tester, arepa), '2800');
+
+    await tester.enterText(find.byKey(Key('precio_recibir_$arepa')), '2.700');
+    await tester.tap(find.byKey(Key('opcion_proveedor_recibir_$postobon')));
+    await tester.pumpAndSettle();
+    expect(precio(tester, arepa), '2.700');
+  });
+
+  testWidgets('si el proveedor se desactivó, guardar avisa y no se cierra',
+      (tester) async {
+    final (postobon, _, arepa) = await dosProveedores();
+    await abrirRecibir(tester);
+    await tester.tap(find.byKey(Key('opcion_proveedor_recibir_$postobon')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_agregar_producto_recibir')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('opcion_producto_recibir_$arepa')));
+    await tester.pumpAndSettle();
+
+    await ProveedorRepository(db).desactivar(postobon);
+    await tester.ensureVisible(find.byKey(const Key('boton_guardar_recibir')));
+    await tester.tap(find.byKey(const Key('boton_guardar_recibir')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('No se pudo guardar, intenta de nuevo'), findsOneWidget);
+    expect(find.byType(RecibirMercanciaScreen), findsOneWidget);
+    expect(await db.select(db.entradasMercancia).get(), isEmpty);
   });
 }

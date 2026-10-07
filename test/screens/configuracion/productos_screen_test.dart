@@ -358,6 +358,36 @@ void main() {
     expect((await db.select(db.productos).getSingle()).controlaExistencias,
         isFalse);
   });
+
+  testWidgets('si activar el control falla, reintentar no duplica el producto',
+      (tester) async {
+    await montar(tester, overrides: [
+      inventarioRepositoryProvider
+          .overrideWith((ref) => _InventarioQueFallaUnaVez(db)),
+    ]);
+
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('campo_nombre_producto')), 'Arepa');
+    await tester.enterText(
+        find.byKey(const Key('campo_precio_producto')), '3.500');
+    await tester.ensureVisible(find.byKey(const Key('interruptor_existencias')));
+    await tester.tap(find.byKey(const Key('interruptor_existencias')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('campo_hay_ahora')), '20');
+    await guardar(tester);
+
+    expect(find.text('No se pudo guardar, intenta de nuevo'), findsOneWidget);
+    expect(find.byType(ProductoScreen), findsOneWidget);
+
+    await guardar(tester);
+
+    expect(find.byType(ProductoScreen), findsNothing);
+    final productos = await db.select(db.productos).get();
+    expect(productos, hasLength(1));
+    expect(productos.single.controlaExistencias, isTrue);
+  });
 }
 
 /// Demora la carga de proveedores de un producto hasta [_espera].
@@ -390,5 +420,27 @@ class _ProductoRepositoryLento extends ProductoRepository {
     await _espera;
     return super.guardarProducto(
         id: id, nombre: nombre, precio: precio, proveedores: proveedores);
+  }
+}
+
+/// Falla la primera vez que activa el control, como un error de la base.
+class _InventarioQueFallaUnaVez extends InventarioRepository {
+  _InventarioQueFallaUnaVez(super.db);
+
+  bool _fallo = false;
+
+  @override
+  Future<void> activarControl(
+    int productoId, {
+    required int cantidad,
+    required int minimo,
+    required Usuario por,
+  }) async {
+    if (!_fallo) {
+      _fallo = true;
+      throw Exception('falla de la base');
+    }
+    return super.activarControl(productoId,
+        cantidad: cantidad, minimo: minimo, por: por);
   }
 }

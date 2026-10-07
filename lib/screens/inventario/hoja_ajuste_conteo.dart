@@ -62,6 +62,10 @@ class _HojaAjusteConteoState extends ConsumerState<_HojaAjusteConteo> {
             por: ref.read(sesionProvider).usuarioActivo!,
           );
       if (mounted) Navigator.of(context).pop(true);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'No se pudo guardar, intenta de nuevo');
+      }
     } finally {
       if (mounted) setState(() => _guardando = false);
     }

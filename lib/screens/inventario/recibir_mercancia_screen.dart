@@ -20,6 +20,9 @@ class _Linea {
   int cantidad = 1;
   final TextEditingController precio;
 
+  /// El usuario escribió el precio: ya no se reemplaza con la sugerencia.
+  bool editado = false;
+
   int? get precioValido {
     final p = parsearMonto(precio.text);
     return p == null || p <= 0 ? null : p;
@@ -42,6 +45,7 @@ class _RecibirMercanciaScreenState
   final List<_Linea> _lineas = [];
   final _nota = TextEditingController();
   bool _guardando = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -63,6 +67,20 @@ class _RecibirMercanciaScreenState
     }
     final costo = await repo.costoDe(productoId);
     return costo == null ? '' : '$costo';
+  }
+
+  /// Elige el proveedor y vuelve a sugerir los precios que el usuario no ha
+  /// escrito, para no guardar en este proveedor el precio de otro.
+  Future<void> _elegirProveedor(Proveedor proveedor) async {
+    setState(() {
+      _proveedor = proveedor;
+      _error = null;
+    });
+    for (final l in _lineas.where((l) => !l.editado).toList()) {
+      final precio = await _precioSugerido(l.producto.id);
+      if (!mounted || _proveedor?.id != proveedor.id) return;
+      setState(() => l.precio.text = precio);
+    }
   }
 
   Future<void> _agregarProducto() async {
@@ -108,6 +126,10 @@ class _RecibirMercanciaScreenState
             por: ref.read(sesionProvider).usuarioActivo!,
           );
       if (mounted) Navigator.of(context).pop(total);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'No se pudo guardar, intenta de nuevo');
+      }
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -137,7 +159,7 @@ class _RecibirMercanciaScreenState
                   key: Key('opcion_proveedor_recibir_${p.id}'),
                   label: Text(p.nombre),
                   selected: _proveedor?.id == p.id,
-                  onSelected: (_) => setState(() => _proveedor = p),
+                  onSelected: (_) => _elegirProveedor(p),
                 ),
             ],
           ),
@@ -194,7 +216,7 @@ class _RecibirMercanciaScreenState
                             key: Key('precio_recibir_${l.producto.id}'),
                             controller: l.precio,
                             keyboardType: TextInputType.number,
-                            onChanged: (_) => setState(() {}),
+                            onChanged: (_) => setState(() => l.editado = true),
                             decoration: const InputDecoration(
                               labelText: 'Precio de compra',
                             ),
@@ -213,7 +235,8 @@ class _RecibirMercanciaScreenState
             ),
           TextButton.icon(
             key: const Key('boton_agregar_producto_recibir'),
-            onPressed: _agregarProducto,
+            // Sin proveedor no hay precio que sugerir: se elige primero.
+            onPressed: _proveedor == null ? null : _agregarProducto,
             icon: const Icon(Icons.add_rounded),
             label: const Text('Agregar producto'),
           ),
@@ -229,6 +252,13 @@ class _RecibirMercanciaScreenState
             controller: _nota,
             decoration: const InputDecoration(labelText: 'Nota'),
           ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(_error!,
+                  key: const Key('error_recibir'),
+                  style: const TextStyle(color: ColoresApp.sale)),
+            ),
           const SizedBox(height: 24),
           BotonPrincipal(
             key: const Key('boton_guardar_recibir'),
