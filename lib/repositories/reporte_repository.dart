@@ -5,6 +5,23 @@ import '../util/fecha_util.dart';
 import '../util/periodo.dart';
 import 'fiado_repository.dart';
 
+/// Un producto del ranking del periodo.
+class ProductoVendido {
+  const ProductoVendido({
+    required this.productoId,
+    required this.nombre,
+    required this.unidades,
+    required this.dinero,
+  });
+
+  final int productoId;
+
+  /// Nombre actual del producto.
+  final String nombre;
+  final int unidades;
+  final int dinero;
+}
+
 /// Cifras de un rango de días, sin nada anulado.
 class Reporte {
   const Reporte({
@@ -19,6 +36,10 @@ class Reporte {
     required this.deudaFin,
     required this.ventasPorDia,
     required this.mejorDia,
+    required this.ranking,
+    required this.otrosMontos,
+    required this.ventasPorHora,
+    required this.horaPico,
   });
 
   /// Contado + fiado.
@@ -49,6 +70,18 @@ class Reporte {
 
   /// Día de mayores ventas (empate: el primero); null sin ventas.
   final DateTime? mejorDia;
+
+  /// Hasta 10 productos, por unidades (empate: dinero, luego nombre).
+  final List<ProductoVendido> ranking;
+
+  /// Dinero de líneas sin producto ("+ Otro" y montos rápidos).
+  final int otrosMontos;
+
+  /// Hora local (0–23) → dinero vendido; solo horas con ventas, en orden.
+  final Map<int, int> ventasPorHora;
+
+  /// Hora de más dinero (empate: la más temprana); null sin ventas.
+  final int? horaPico;
 
   int get ganancia => ventas - gastos;
 
@@ -139,6 +172,62 @@ class ReporteRepository {
       }
     }
 
+    final filas = await (_db.select(_db.lineasVenta).join([
+      innerJoin(_db.ventas, _db.ventas.id.equalsExp(_db.lineasVenta.ventaId)),
+    ])
+          ..where(_db.ventas.anulado.equals(false) &
+              _db.ventas.fecha.isBetweenValues(inicio, fin)))
+        .get();
+    final nombres = {
+      for (final p in await _db.select(_db.productos).get()) p.id: p.nombre,
+    };
+    final acumulado = <int, ({String nombre, int unidades, int dinero})>{};
+    var otrosMontos = 0;
+    for (final fila in filas) {
+      final linea = fila.readTable(_db.lineasVenta);
+      final subtotal = linea.precioUnitario * linea.cantidad;
+      final productoId = linea.productoId;
+      if (productoId == null) {
+        otrosMontos += subtotal;
+        continue;
+      }
+      final previo = acumulado[productoId];
+      acumulado[productoId] = (
+        nombre: nombres[productoId] ?? linea.descripcion,
+        unidades: (previo?.unidades ?? 0) + linea.cantidad,
+        dinero: (previo?.dinero ?? 0) + subtotal,
+      );
+    }
+    final ranking = [
+      for (final e in acumulado.entries)
+        ProductoVendido(
+          productoId: e.key,
+          nombre: e.value.nombre,
+          unidades: e.value.unidades,
+          dinero: e.value.dinero,
+        ),
+    ]..sort((a, b) {
+        final porUnidades = b.unidades.compareTo(a.unidades);
+        if (porUnidades != 0) return porUnidades;
+        final porDinero = b.dinero.compareTo(a.dinero);
+        if (porDinero != 0) return porDinero;
+        return a.nombre.compareTo(b.nombre);
+      });
+
+    final porHoraDesordenado = <int, int>{};
+    for (final v in ventas) {
+      porHoraDesordenado.update(v.fecha.hour, (s) => s + v.monto,
+          ifAbsent: () => v.monto);
+    }
+    final horas = porHoraDesordenado.keys.toList()..sort();
+    final ventasPorHora = {for (final h in horas) h: porHoraDesordenado[h]!};
+    int? horaPico;
+    for (final h in horas) {
+      if (horaPico == null || ventasPorHora[h]! > ventasPorHora[horaPico]!) {
+        horaPico = h;
+      }
+    }
+
     return Reporte(
       ventas: _suma(ventas.map((v) => v.monto)),
       cantidadVentas: ventas.length,
@@ -152,6 +241,10 @@ class ReporteRepository {
       deudaFin: await _fiado.deudaTotalAl(ultimo),
       ventasPorDia: porDia,
       mejorDia: mejorDia,
+      ranking: ranking.take(10).toList(),
+      otrosMontos: otrosMontos,
+      ventasPorHora: ventasPorHora,
+      horaPico: horaPico,
     );
   }
 
