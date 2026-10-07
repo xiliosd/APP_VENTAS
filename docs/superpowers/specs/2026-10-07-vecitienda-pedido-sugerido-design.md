@@ -1,7 +1,7 @@
 # Fase 4C — Pedido sugerido por proveedor
 
 **Fecha:** 2026-10-07
-**Estado:** Diseño aprobado, pendiente de plan
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con Fases 1–4B (esquema v6: existencias, "Por pedir", recibir mercancía).
 
 ## Objetivo

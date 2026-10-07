@@ -12,10 +12,11 @@ Actualizada: 2026-10-07. Cada fase pasa por especificación (`docs/superpowers/s
 - Fase 3C — detalle de tickets, productos más vendidos y horas de venta.
 - Fase 4A — catálogo, proveedores, ganancia por producto y nombre de la tienda.
 - Fase 4B — existencias, recibir mercancía, ajustes por conteo y "Por pedir".
+- Fase 4C — pedido sugerido por proveedor (sin envío ni historial, por decisión del usuario).
 
 ## En curso
 
-- **Fase 4C — Pedido sugerido por proveedor** (spec `2026-10-07-vecitienda-pedido-sugerido-design.md`): solo sugerencia y recibir desde ella; el usuario decidió no enviar ni guardar pedidos.
+- Nada; la Fase 4 quedó completa.
 
 ## Siguiente
 
@@ -44,4 +45,4 @@ Actualizada: 2026-10-07. Cada fase pasa por especificación (`docs/superpowers/s
 ## Pendiente de verificar
 
 - Recorrido manual en un celular real de: Cargar QR (2D), corregir y anular (3A) y reportes
-  (3B), detalle de tickets (3C) y catálogo, proveedores y nombre de la tienda (4A) e inventario (4B).
+  (3B), detalle de tickets (3C) y catálogo, proveedores y nombre de la tienda (4A), inventario (4B) y pedido sugerido (4C).
