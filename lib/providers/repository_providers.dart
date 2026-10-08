@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../repositories/catalogo_repository.dart';
 import '../repositories/cliente_repository.dart';
 import '../repositories/correccion_repository.dart';
 import '../repositories/fiado_repository.dart';
@@ -73,4 +74,13 @@ final proveedorRepositoryProvider = Provider(
 
 final inventarioRepositoryProvider = Provider(
   (ref) => InventarioRepository(ref.watch(databaseProvider)),
+);
+
+final catalogoRepositoryProvider = Provider(
+  (ref) => CatalogoRepository(
+    ref.watch(databaseProvider),
+    ref.watch(productoRepositoryProvider),
+    ref.watch(proveedorRepositoryProvider),
+    ref.watch(inventarioRepositoryProvider),
+  ),
 );

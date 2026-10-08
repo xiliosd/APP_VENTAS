@@ -6,7 +6,7 @@ import '../../providers/inventario_providers.dart';
 import '../../providers/proveedores_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
-import '../../repositories/producto_repository.dart';
+import '../../repositories/catalogo_repository.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
@@ -25,7 +25,7 @@ class _Fila {
   });
 
   /// Null = proveedor nuevo, se crea al guardar el producto.
-  int? proveedorId;
+  final int? proveedorId;
   final String nombre;
   final bool activo;
   int precioCompra;
@@ -70,10 +70,6 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   String? _errorPrecio;
   String? _error;
   bool _guardando = false;
-
-  /// Id del producto nuevo ya creado en un intento anterior que falló después
-  /// (al activar el control): reintentar lo actualiza en vez de duplicarlo.
-  int? _productoIdGuardado;
 
   /// Al editar, true hasta que llegan los proveedores del producto: guardar o
   /// agregar antes reemplazaría la lista con una incompleta.
@@ -198,45 +194,29 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     }
     setState(() => _guardando = true);
     try {
-      final proveedores = ref.read(proveedorRepositoryProvider);
-      for (final f in _filas.where((f) => f.proveedorId == null)) {
-        f.proveedorId = (await proveedores.buscarPorNombre(f.nombre))?.id ??
-            await proveedores.crear(nombre: f.nombre);
-      }
-      final productoId = await ref
-          .read(productoRepositoryProvider)
-          .guardarProducto(
-            id: _productoIdGuardado ?? widget.producto?.id,
+      await ref.read(catalogoRepositoryProvider).guardarProductoCompleto(
+            id: widget.producto?.id,
             nombre: nombre,
             precio: precio!,
             proveedores: [
               for (final f in _filas)
-                ProveedorDeProducto(
-                  proveedorId: f.proveedorId!,
+                ProveedorEnFormulario(
+                  proveedorId: f.proveedorId,
+                  nombre: f.nombre,
                   precioCompra: f.precioCompra,
                   preferido: f.preferido,
                 ),
             ],
+            control: _controla
+                ? ControlEnFormulario(
+                    hayAhora: hay,
+                    minimo: minimo!,
+                    pedirHasta: pedirHasta,
+                  )
+                : null,
+            controlabaAntes: _controlabaAlAbrir,
+            por: ref.read(sesionProvider).usuarioActivo!,
           );
-      _productoIdGuardado = productoId;
-      final inventario = ref.read(inventarioRepositoryProvider);
-      if (_controla && !_controlabaAlAbrir) {
-        await inventario.activarControl(
-          productoId,
-          cantidad: hay!,
-          minimo: minimo!,
-          por: ref.read(sesionProvider).usuarioActivo!,
-        );
-      }
-      if (_controla) {
-        await inventario.cambiarLimites(
-          productoId,
-          minimo: minimo!,
-          pedirHasta: pedirHasta,
-        );
-      } else if (_controlabaAlAbrir) {
-        await inventario.desactivarControl(productoId);
-      }
       if (mounted) Navigator.of(context).pop(true);
     } on ArgumentError {
       if (mounted) {
