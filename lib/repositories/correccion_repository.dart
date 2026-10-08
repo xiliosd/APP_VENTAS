@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../data/database.dart';
 import '../util/formato_moneda.dart';
 import '../util/permisos.dart';
+import 'cliente_repository.dart';
 import 'fiado_repository.dart';
 
 /// El usuario no puede corregir ni anular ese movimiento.
@@ -51,22 +52,29 @@ class CorreccionRepository {
   /// Una venta fiada guarda `efectivo` (no cuenta por medio de pago); una de
   /// contado queda sin cliente. Si la venta tiene líneas, [cantidades] (id de
   /// línea → nueva cantidad; 0 = quitar) las ajusta y el monto se recalcula
-  /// con ellas ([monto] se ignora); debe quedar al menos una.
+  /// con ellas ([monto] se ignora); debe quedar al menos una. Si es fiada,
+  /// [clienteId] o [clienteNuevo] (se obtiene o crea en la misma transacción).
   Future<void> corregirVenta(
     int id, {
     required int monto,
     required bool esFiado,
     int? clienteId,
+    String? clienteNuevo,
     MedioPago medioPago = MedioPago.efectivo,
     Map<int, int>? cantidades,
     required Usuario por,
   }) async {
-    if (esFiado && clienteId == null) {
+    final nuevo = clienteNuevo?.trim() ?? '';
+    if (esFiado && clienteId == null && nuevo.isEmpty) {
       throw const CorreccionInvalida('Una venta fiada necesita cliente');
     }
     await _db.transaction(() async {
       final venta = await _venta(id);
       _comprobar(por, venta.usuarioId, venta.fecha, venta.anulado);
+      final cliente = !esFiado
+          ? null
+          : clienteId ??
+              await ClienteRepository(_db).obtenerOCrearCliente(nuevo);
       final lineas = await _lineas(id);
       var montoFinal = monto;
       final nuevas = <int, int>{};
@@ -98,7 +106,7 @@ class CorreccionRepository {
           montoFinal == venta.monto &&
           esFiado == venta.esFiado &&
           (esFiado
-              ? clienteId == venta.clienteId
+              ? cliente == venta.clienteId
               : medioPago == venta.medioPago);
       if (igual) return;
       final antes = await _antesVenta(venta, lineas);
@@ -118,7 +126,7 @@ class CorreccionRepository {
         VentasCompanion(
           monto: Value(montoFinal),
           esFiado: Value(esFiado),
-          clienteId: Value(esFiado ? clienteId : null),
+          clienteId: Value(cliente),
           medioPago: Value(esFiado ? MedioPago.efectivo : medioPago),
         ),
       );

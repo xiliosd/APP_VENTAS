@@ -118,4 +118,45 @@ void main() {
       expect(await correcciones(), isEmpty);
     });
   });
+
+  group('cliente nuevo al corregir', () {
+    test('se crea y se asigna dentro de la corrección', () async {
+      final id = await VentaRepository(db).registrarVenta(
+          monto: 5000, esFiado: false, usuarioId: ana.id, fecha: hoy);
+      await repo.corregirVenta(id,
+          monto: 5000, esFiado: true, clienteNuevo: 'Rosa', por: ana);
+      final rosa = await (db.select(db.clientes)
+            ..where((c) => c.nombre.equals('Rosa')))
+          .getSingle();
+      final venta = await (db.select(db.ventas)..where((v) => v.id.equals(id)))
+          .getSingle();
+      expect(venta.clienteId, rosa.id);
+    });
+
+    test('si la corrección falla no queda creado', () async {
+      final id = await VentaRepository(db).registrarVenta(
+          monto: 5000, esFiado: false, usuarioId: ana.id, fecha: hoy);
+      await repo.anularVenta(id, por: ana);
+      await expectLater(
+        repo.corregirVenta(id,
+            monto: 5000, esFiado: true, clienteNuevo: 'Rosa', por: ana),
+        throwsA(isA<CorreccionInvalida>()),
+      );
+      expect(
+          await (db.select(db.clientes)..where((c) => c.nombre.equals('Rosa')))
+              .get(),
+          isEmpty);
+    });
+
+    test('un nombre igual a un cliente existente lo reutiliza', () async {
+      final id = await VentaRepository(db).registrarVenta(
+          monto: 5000, esFiado: false, usuarioId: ana.id, fecha: hoy);
+      await repo.corregirVenta(id,
+          monto: 5000, esFiado: true, clienteNuevo: ' don pedro ', por: ana);
+      final venta = await (db.select(db.ventas)..where((v) => v.id.equals(id)))
+          .getSingle();
+      expect(venta.clienteId, pedro);
+      expect(await db.select(db.clientes).get(), hasLength(1));
+    });
+  });
 }

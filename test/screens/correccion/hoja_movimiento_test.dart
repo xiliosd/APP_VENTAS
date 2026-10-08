@@ -498,6 +498,7 @@ class _RepoSinPermiso extends CorreccionRepository {
     required int monto,
     required bool esFiado,
     int? clienteId,
+    String? clienteNuevo,
     MedioPago medioPago = MedioPago.efectivo,
     Map<int, int>? cantidades,
     required Usuario por,

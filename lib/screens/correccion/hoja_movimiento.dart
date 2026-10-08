@@ -236,18 +236,12 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
       final repo = ref.read(correccionRepositoryProvider);
       switch (_m.tipo) {
         case TipoMovimiento.venta:
-          int? clienteId;
-          if (_esFiado) {
-            final cliente = _clienteElegido!;
-            clienteId = cliente.id ??
-                await ref
-                    .read(clienteRepositoryProvider)
-                    .obtenerOCrearCliente(cliente.nombre);
-          }
+          final cliente = _esFiado ? _clienteElegido! : null;
           await repo.corregirVenta(_m.id,
               monto: _total,
               esFiado: _esFiado,
-              clienteId: clienteId,
+              clienteId: cliente?.id,
+              clienteNuevo: cliente?.id == null ? cliente?.nombre : null,
               medioPago: _medio,
               cantidades: _lineas.isEmpty
                   ? null
