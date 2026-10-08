@@ -140,10 +140,9 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
             for (final g in grupos) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 8, 0, 4),
-                // Si no caben, el botón baja a su propia línea a la derecha.
+                // Si no caben, el botón baja a su propia línea.
                 child: OverflowBar(
                   alignment: MainAxisAlignment.spaceBetween,
-                  overflowAlignment: OverflowBarAlignment.end,
                   children: [
                     Text(
                       '${g.proveedor?.nombre ?? 'Sin proveedor'} · '

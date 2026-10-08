@@ -124,13 +124,15 @@ class Barra extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final escala = MediaQuery.textScalerOf(context);
+    // Cuánto crece el texto de 14 de esta fila (en Android 14+ el escalado
+    // no es lineal: escalar 64 u 84 como si fueran letra daría de menos).
+    final k = MediaQuery.textScalerOf(context).scale(14) / 14;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
           SizedBox(
-            width: escala.scale(64),
+            width: 64 * k,
             child: Text(etiqueta, maxLines: 1, softWrap: false),
           ),
           Expanded(
@@ -151,7 +153,7 @@ class Barra extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           SizedBox(
-            width: escala.scale(84),
+            width: 84 * k,
             child: Text(
               formatoMoneda(valor),
               textAlign: TextAlign.right,

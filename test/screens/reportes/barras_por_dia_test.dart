@@ -99,4 +99,40 @@ void main() {
     expect(tester.getSize(find.text(r'$1.250.000')).height, alto);
     expect(alto, lessThan(50)); // una línea de 14 px al 200 %
   });
+
+  testWidgets('con escalado no lineal (Android 14+) los anchos siguen al texto',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: MediaQuery(
+        data: MediaQueryData(textScaler: _NoLineal()),
+        child: Scaffold(
+          body: Barra(
+            etiqueta: 'Lun 5',
+            valor: 5000,
+            fraccion: 0.5,
+            resaltada: false,
+          ),
+        ),
+      ),
+    ));
+
+    double ancho(String texto) => tester
+        .widget<SizedBox>(find
+            .ancestor(of: find.text(texto), matching: find.byType(SizedBox))
+            .first)
+        .width!;
+    expect(ancho('Lun 5'), 128); // 64 × 2, como el texto de 14
+    expect(ancho(r'$5.000'), 168); // 84 × 2
+  });
+}
+
+/// Como Android 14+: duplica la letra chica y casi no agranda la grande.
+class _NoLineal extends TextScaler {
+  const _NoLineal();
+
+  @override
+  double scale(double fontSize) => fontSize <= 20 ? fontSize * 2 : fontSize * 1.1;
+
+  @override
+  double get textScaleFactor => 2;
 }

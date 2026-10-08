@@ -213,6 +213,8 @@ void main() {
     expect(tester.getSize(grupo).height, lessThan(50)); // una línea
     expect(tester.getTopLeft(find.byKey(Key('ver_pedido_$postobon'))).dy,
         greaterThan(tester.getTopLeft(grupo).dy));
+    // El nombre del grupo sigue alineado a la izquierda.
+    expect(tester.getTopLeft(grupo).dx, lessThan(40));
   });
 
   testWidgets('con letra normal el grupo y el botón van en una fila',
