@@ -38,6 +38,12 @@ class VentaRepository {
     MedioPago medioPago = MedioPago.efectivo,
     List<LineaNueva> lineas = const [],
   }) async {
+    for (final linea in lineas) {
+      if (linea.cantidad <= 0 || linea.precioUnitario <= 0) {
+        throw ArgumentError(
+            'Cada línea necesita cantidad y precio mayores que 0');
+      }
+    }
     if (lineas.isNotEmpty) {
       final suma = lineas.fold<int>(0, (s, l) => s + l.subtotal);
       if (suma != monto) {
