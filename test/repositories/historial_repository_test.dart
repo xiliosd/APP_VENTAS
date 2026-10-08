@@ -1,4 +1,5 @@
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/repositories/cliente_repository.dart';
 import 'package:app_ventas/repositories/correccion_repository.dart';
 import 'package:app_ventas/repositories/gasto_repository.dart';
 import 'package:app_ventas/repositories/historial_repository.dart';
@@ -19,7 +20,8 @@ void main() {
     db = AppDatabase(NativeDatabase.memory());
     ventaRepo = VentaRepository(db);
     gastoRepo = GastoRepository(db);
-    repo = HistorialRepository(ventaRepo, gastoRepo, CorreccionRepository(db));
+    repo = HistorialRepository(
+        ventaRepo, gastoRepo, CorreccionRepository(db), ClienteRepository(db));
     ana = await db.into(db.usuarios).insert(
           UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
         );
@@ -136,5 +138,26 @@ void main() {
     expect(gasto.monto, 1200);
     expect(gasto.anulado, isFalse);
     expect(gasto.ultimaCorreccion!.antes, r'$1.000 · Hielo');
+  });
+
+  test('las ventas fiadas traen el nombre del cliente', () async {
+    final pedro = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
+    await ventaRepo.registrarVenta(
+        monto: 3000,
+        esFiado: true,
+        clienteId: pedro,
+        usuarioId: ana,
+        fecha: DateTime(2026, 9, 2, 10));
+    await ventaRepo.registrarVenta(
+        monto: 1000,
+        esFiado: false,
+        usuarioId: ana,
+        fecha: DateTime(2026, 9, 2, 9));
+
+    final movimientos = await repo.movimientosDelDia(dia);
+
+    expect(movimientos.map((m) => m.nombreCliente), ['Don Pedro', null]);
   });
 }

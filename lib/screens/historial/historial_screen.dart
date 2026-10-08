@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
-import '../../providers/clientes_providers.dart';
 import '../../providers/historial_providers.dart';
 import '../../providers/usuarios_providers.dart';
 import '../../repositories/historial_repository.dart';
@@ -32,11 +31,6 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
     final usuarios =
         ref.watch(listaUsuariosProvider).valueOrNull ?? const <Usuario>[];
     final nombres = {for (final u in usuarios) u.id: u.nombre};
-    final clientes = {
-      for (final c
-          in ref.watch(listaClientesProvider).valueOrNull ?? const <Cliente>[])
-        c.id: c.nombre,
-    };
     final movimientosAsync =
         ref.watch(historialProvider((dia: _dia, usuarioId: _usuarioId)));
 
@@ -131,7 +125,7 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
                                 onTap: () => abrirHojaMovimiento(
                                   context,
                                   MovimientoEditable.desdeHistorial(m,
-                                      nombreCliente: clientes[m.clienteId]),
+                                      nombreCliente: m.nombreCliente),
                                 ),
                               ),
                           ],

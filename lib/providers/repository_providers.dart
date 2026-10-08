@@ -52,6 +52,7 @@ final historialRepositoryProvider = Provider(
     ref.watch(ventaRepositoryProvider),
     ref.watch(gastoRepositoryProvider),
     ref.watch(correccionRepositoryProvider),
+    ref.watch(clienteRepositoryProvider),
   ),
 );
 

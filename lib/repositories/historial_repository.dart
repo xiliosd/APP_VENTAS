@@ -1,4 +1,5 @@
 import '../data/database.dart';
+import 'cliente_repository.dart';
 import 'correccion_repository.dart';
 import 'gasto_repository.dart';
 import 'venta_repository.dart';
@@ -14,6 +15,7 @@ class MovimientoHistorial {
     required this.usuarioId,
     this.esFiado = false,
     this.clienteId,
+    this.nombreCliente,
     this.descripcion,
     this.medioPago = MedioPago.efectivo,
     this.anulado = false,
@@ -34,6 +36,9 @@ class MovimientoHistorial {
   /// Solo aplica a ventas fiadas.
   final int? clienteId;
 
+  /// Solo aplica a ventas fiadas.
+  final String? nombreCliente;
+
   /// Solo aplica a gastos; null para ventas o gastos sin descripción.
   final String? descripcion;
 
@@ -52,11 +57,13 @@ class HistorialRepository {
     this._ventaRepository,
     this._gastoRepository,
     this._correccionRepository,
+    this._clienteRepository,
   );
 
   final VentaRepository _ventaRepository;
   final GastoRepository _gastoRepository;
   final CorreccionRepository _correccionRepository;
+  final ClienteRepository _clienteRepository;
 
   /// Movimientos de [dia], incluidos los anulados (para mostrarlos tachados).
   Future<List<MovimientoHistorial>> movimientosDelDia(
@@ -67,6 +74,8 @@ class HistorialRepository {
         usuarioId: usuarioId, incluirAnulados: true);
     final gastos = await _gastoRepository.gastosDelDia(dia,
         usuarioId: usuarioId, incluirAnulados: true);
+    final nombres = await _clienteRepository.nombresPorId(
+        {for (final v in ventas) if (v.clienteId != null) v.clienteId!});
     final correccionesVentas = await _correccionRepository
         .ultimasCorrecciones(TipoMovimiento.venta, ventas.map((v) => v.id));
     final correccionesGastos = await _correccionRepository
@@ -81,6 +90,7 @@ class HistorialRepository {
           usuarioId: v.usuarioId,
           esFiado: v.esFiado,
           clienteId: v.clienteId,
+          nombreCliente: nombres[v.clienteId],
           medioPago: v.medioPago,
           anulado: v.anulado,
           ultimaCorreccion: correccionesVentas[v.id],

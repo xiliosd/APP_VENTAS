@@ -33,4 +33,13 @@ class ClienteRepository {
     }
     return crearCliente(nombre: limpio);
   }
+
+  /// Nombre de cada cliente de [ids], por id.
+  Future<Map<int, String>> nombresPorId(Iterable<int> ids) async {
+    if (ids.isEmpty) return {};
+    final filas = await (_db.select(_db.clientes)
+          ..where((c) => c.id.isIn(ids)))
+        .get();
+    return {for (final c in filas) c.id: c.nombre};
+  }
 }
