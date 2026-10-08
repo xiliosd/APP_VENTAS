@@ -36,8 +36,8 @@ indicados en una sola línea.
    `estiloTitulo(tamano: 22)`.
 6. **Azul claro de marca:** nuevo `ColoresApp.primarioSuave = Color(0xFFDDE5F0)` (15 % de
    `#1A539B` sobre blanco). Reemplaza `0xFFDBE4FF` (indicador de la barra inferior en
-   `tema_app.dart`) y `0xFFE8EDF8` (círculo de `EstadoVacio`). No quedan hex sueltos fuera de
-   `colores_app.dart`.
+   `tema_app.dart`) y `0xFFE8EDF8` (círculo de `EstadoVacio`). Los demás hex fuera de
+   `colores_app.dart` (paleta de avatares, acción del aviso inferior) no cambian.
 7. **Guardia de Nunito:** prueba que recorre `lib/` y falla si `familiaTitulos` o `'Nunito'`
    aparecen fuera de `lib/ui/tipografia.dart` (todo título de marca pasa por `estiloTitulo`, que
    fija el eje `wght`; sin él la fuente variable sale con peso 200).
