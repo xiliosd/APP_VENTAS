@@ -14,16 +14,14 @@ Actualizada: 2026-10-08. Cada fase pasa por especificación (`docs/superpowers/s
 - Fase 4B — existencias, recibir mercancía, ajustes por conteo y "Por pedir".
 - Fase 4C — pedido sugerido por proveedor (sin envío ni historial, por decisión del usuario).
 - Pulido, tanda 1 — 18 detalles visibles de las fases 3A–4C.
+- Pulido, tanda 2 — letra grande y detalles de la marca (incluido el ícono temático).
 
 ## En curso
 
-- Pulido, tandas 2 (letra grande y marca) y 3 (mejoras internas).
+- Pulido, tanda 3 (mejoras internas).
 
 ## Siguiente
 
-- Pulido, tanda 2 — textos que se parten con letra grande (barras de reportes, etiquetas de
-  hora, encabezado de Inicio, botón del pedido) y 7 detalles visuales de la marca (ver
-  `docs/marca/vecitienda-marca.md`).
 - Pulido, tanda 3 — mejoras internas sin efecto visible (transacciones, providers, consultas
   repetidas, guardado atómico del producto).
 
@@ -36,4 +34,5 @@ Actualizada: 2026-10-08. Cada fase pasa por especificación (`docs/superpowers/s
 ## Pendiente de verificar
 
 - Recorrido manual en un celular real de: Cargar QR (2D), corregir y anular (3A) y reportes
-  (3B), detalle de tickets (3C) y catálogo, proveedores y nombre de la tienda (4A), inventario (4B), pedido sugerido (4C) y pulido tanda 1.
+  (3B), detalle de tickets (3C) y catálogo, proveedores y nombre de la tienda (4A), inventario (4B), pedido sugerido (4C), pulido tanda 1 y pulido tanda 2 (incluido el ícono temático en
+  Android 13+).

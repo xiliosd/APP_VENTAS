@@ -1,7 +1,7 @@
 # Pulido — Tanda 2: letra grande y marca
 
 **Fecha:** 2026-10-08
-**Estado:** Aprobado el diseño en conversación; falta plan
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con la tanda 1 (484cadf, 507 pruebas).
 
 ## Objetivo
