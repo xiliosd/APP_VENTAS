@@ -1,7 +1,7 @@
 # Pulido — Tanda 1: fallas y detalles visibles
 
 **Fecha:** 2026-10-08
-**Estado:** Aprobado el diseño en conversación; falta plan
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con Fases 1–4C (esquema v7, 464 pruebas).
 
 ## Objetivo
@@ -60,8 +60,10 @@ No hay cambios de esquema (sigue v7) ni librerías nuevas.
     - La hoja ya no llama a `ProveedorRepository.crear`: devuelve una fila con
       `proveedorId` null y el nombre nuevo. `_guardar` del producto crea esos proveedores
       justo antes de `guardarProducto` (si se cancela el producto, no se crea nada).
-    - Si el nombre escrito coincide con uno existente (activo o no; comparación sin
-      mayúsculas y con espacios recortados/colapsados), la hoja usa ese proveedor.
+    - Si el nombre escrito coincide con uno existente (comparación sin mayúsculas y con
+      espacios recortados/colapsados), la hoja usa ese proveedor; si está desactivado,
+      avisa "<nombre> está desactivado: reactívalo en Proveedores" (un producto no puede
+      vincular proveedores inactivos).
     - `ProveedorRepository.crear` y `actualizar` lanzan
       `ArgumentError('Ya existe un proveedor con ese nombre')` ante un nombre repetido (con la
       misma comparación); Proveedores muestra ese mensaje.
