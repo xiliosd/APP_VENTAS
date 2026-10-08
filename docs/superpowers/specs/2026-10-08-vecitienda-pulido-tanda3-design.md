@@ -1,7 +1,7 @@
 # Pulido — Tanda 3: mejoras internas
 
 **Fecha:** 2026-10-08
-**Estado:** Aprobado el diseño en conversación; falta plan
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con las tandas 1 y 2 (b68fa31, 516 pruebas).
 
 ## Objetivo
