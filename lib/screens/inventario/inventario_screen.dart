@@ -140,15 +140,16 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
             for (final g in grupos) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 8, 0, 4),
-                child: Row(
+                // Si no caben, el botón baja a su propia línea a la derecha.
+                child: OverflowBar(
+                  alignment: MainAxisAlignment.spaceBetween,
+                  overflowAlignment: OverflowBarAlignment.end,
                   children: [
-                    Expanded(
-                      child: Text(
-                        '${g.proveedor?.nombre ?? 'Sin proveedor'} · '
-                        '${plural(g.productos.length, 'producto', 'productos')}',
-                        key: Key('grupo_por_pedir_${g.proveedor?.id ?? 'sin'}'),
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
+                    Text(
+                      '${g.proveedor?.nombre ?? 'Sin proveedor'} · '
+                      '${plural(g.productos.length, 'producto', 'productos')}',
+                      key: Key('grupo_por_pedir_${g.proveedor?.id ?? 'sin'}'),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     TextButton(
                       key: Key('ver_pedido_${g.proveedor?.id ?? 'sin'}'),

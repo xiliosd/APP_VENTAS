@@ -193,4 +193,41 @@ void main() {
     expect(find.text('Pídele al administrador que lo active'), findsOneWidget);
     expect(find.text('Actívalo en Ajustes → Productos'), findsNothing);
   });
+
+  testWidgets('con letra grande el botón del pedido baja y el grupo no se parte',
+      (tester) async {
+    final (container, ana) = await montar(tester);
+    final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
+    final coca = await producto('Coca', proveedor: postobon);
+    await InventarioRepository(db)
+        .activarControl(coca, cantidad: 1, minimo: 5, por: ana);
+    // La fuente de prueba (Ahem) es casi el doble de ancha que Inter: 800 dp
+    // aquí equivalen a un celular común con la fuente real.
+    tester.view.physicalSize = const Size(2100, 2400);
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await pintar(tester, container);
+
+    expect(tester.takeException(), isNull);
+    final grupo = find.byKey(Key('grupo_por_pedir_$postobon'));
+    expect(tester.getSize(grupo).height, lessThan(50)); // una línea
+    expect(tester.getTopLeft(find.byKey(Key('ver_pedido_$postobon'))).dy,
+        greaterThan(tester.getTopLeft(grupo).dy));
+  });
+
+  testWidgets('con letra normal el grupo y el botón van en una fila',
+      (tester) async {
+    final (container, ana) = await montar(tester);
+    final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
+    final coca = await producto('Coca', proveedor: postobon);
+    await InventarioRepository(db)
+        .activarControl(coca, cantidad: 1, minimo: 5, por: ana);
+    tester.view.physicalSize = const Size(2100, 2400); // ver nota de Ahem
+    await pintar(tester, container);
+
+    final grupo =
+        tester.getCenter(find.byKey(Key('grupo_por_pedir_$postobon')));
+    final boton = tester.getCenter(find.byKey(Key('ver_pedido_$postobon')));
+    expect((grupo.dy - boton.dy).abs(), lessThan(8));
+  });
 }
