@@ -124,11 +124,15 @@ class Barra extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final escala = MediaQuery.textScalerOf(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          SizedBox(width: 64, child: Text(etiqueta)),
+          SizedBox(
+            width: escala.scale(64),
+            child: Text(etiqueta, maxLines: 1, softWrap: false),
+          ),
           Expanded(
             child: Align(
               alignment: Alignment.centerLeft,
@@ -147,10 +151,12 @@ class Barra extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           SizedBox(
-            width: 84,
+            width: escala.scale(84),
             child: Text(
               formatoMoneda(valor),
               textAlign: TextAlign.right,
+              maxLines: 1,
+              softWrap: false,
               style: const TextStyle(
                 fontFeatures: [FontFeature.tabularFigures()],
               ),

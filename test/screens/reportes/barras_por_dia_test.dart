@@ -78,4 +78,25 @@ void main() {
     expect(tester.widget<Barra>(find.byKey(const Key('barra_h18'))).fraccion,
         0.5);
   });
+
+  testWidgets('con letra grande la etiqueta y el monto van en una línea',
+      (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: Barra(
+          etiqueta: '10 a. m.',
+          valor: 1250000,
+          fraccion: 0.5,
+          resaltada: false,
+        ),
+      ),
+    ));
+
+    expect(tester.takeException(), isNull);
+    final alto = tester.getSize(find.text('10 a. m.')).height;
+    expect(tester.getSize(find.text(r'$1.250.000')).height, alto);
+    expect(alto, lessThan(50)); // una línea de 14 px al 200 %
+  });
 }
