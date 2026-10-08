@@ -77,6 +77,14 @@ void main() {
     await tester.tap(find.byKey(Key('sumar_pedido_$pan')));
     await tester.pump();
     expect(find.text(r'Total estimado $22.900'), findsOneWidget);
+
+    await tester.tap(find.byKey(Key('cantidad_pedido_$pan')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('campo_cantidad')), '0');
+    await tester.tap(find.byKey(const Key('aceptar_cantidad')));
+    await tester.pumpAndSettle();
+    expect(
+        tester.widget<Text>(find.byKey(Key('cantidad_pedido_$pan'))).data, '0');
   });
 
   testWidgets('Recibir este pedido abre Recibir lleno y suma existencias',

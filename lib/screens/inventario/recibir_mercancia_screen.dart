@@ -9,6 +9,7 @@ import '../../providers/sesion_provider.dart';
 import '../../repositories/inventario_repository.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/dialogo_cantidad.dart';
 import '../../ui/hoja_inferior.dart';
 import '../../util/formato_moneda.dart';
 
@@ -235,9 +236,27 @@ class _RecibirMercanciaScreenState
                               ? () => setState(() => l.cantidad--)
                               : null,
                         ),
-                        Text(
-                          '${l.cantidad}',
-                          key: Key('cantidad_recibir_${l.producto.id}'),
+                        InkWell(
+                          onTap: () async {
+                            final n = await pedirCantidad(
+                              context,
+                              actual: l.cantidad,
+                              minimo: 1,
+                            );
+                            if (n != null && mounted) {
+                              setState(() => l.cantidad = n);
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 12,
+                            ),
+                            child: Text(
+                              '${l.cantidad}',
+                              key: Key('cantidad_recibir_${l.producto.id}'),
+                            ),
+                          ),
                         ),
                         IconButton(
                           key: Key('sumar_recibir_${l.producto.id}'),

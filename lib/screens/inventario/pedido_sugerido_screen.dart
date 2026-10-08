@@ -6,6 +6,7 @@ import '../../providers/inventario_providers.dart';
 import '../../repositories/inventario_repository.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/dialogo_cantidad.dart';
 import '../../util/formato_moneda.dart';
 import 'inventario_screen.dart';
 import 'recibir_mercancia_screen.dart';
@@ -112,12 +113,29 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
                             )
                           : null,
                     ),
-                    Text(
-                      '${_cantidad(l)}',
-                      key: Key('cantidad_pedido_${l.producto.id}'),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                    InkWell(
+                      onTap: () async {
+                        final n = await pedirCantidad(
+                          context,
+                          actual: _cantidad(l),
+                        );
+                        if (n != null && mounted) {
+                          setState(() => _cantidades[l.producto.id] = n);
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 12,
+                        ),
+                        child: Text(
+                          '${_cantidad(l)}',
+                          key: Key('cantidad_pedido_${l.producto.id}'),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
                     IconButton(

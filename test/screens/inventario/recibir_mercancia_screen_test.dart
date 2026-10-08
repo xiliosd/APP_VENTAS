@@ -242,6 +242,13 @@ void main() {
     expect(precio(tester, arepa), '2500');
     expect(find.text(r'Total $15.000'), findsOneWidget);
 
+    await tester.tap(find.byKey(Key('cantidad_recibir_$arepa')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('campo_cantidad')), '10');
+    await tester.tap(find.byKey(const Key('aceptar_cantidad')));
+    await tester.pumpAndSettle();
+    expect(find.text(r'Total $25.000'), findsOneWidget);
+
     await tester.tap(find.byKey(Key('opcion_proveedor_recibir_$alpina')));
     await tester.pumpAndSettle();
     expect(precio(tester, arepa), '2800');
