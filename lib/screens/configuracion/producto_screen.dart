@@ -11,6 +11,7 @@ import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
 import '../../util/formato_moneda.dart';
+import '../../util/texto_util.dart';
 import '../inventario/hoja_ajuste_conteo.dart';
 
 /// Un proveedor en edición dentro del formulario.
@@ -23,11 +24,16 @@ class _Fila {
     required this.preferido,
   });
 
-  final int proveedorId;
+  /// Null = proveedor nuevo, se crea al guardar el producto.
+  int? proveedorId;
   final String nombre;
   final bool activo;
-  final int precioCompra;
+  int precioCompra;
   bool preferido;
+
+  /// Identifica la fila en las claves y al excluir repetidos.
+  String get clave =>
+      proveedorId?.toString() ?? 'nuevo_${claveNombre(nombre)}';
 }
 
 /// Crea ([producto] null) o edita un producto con sus proveedores. Se cierra
@@ -119,7 +125,11 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
       context,
       titulo: 'Agregar proveedor',
       builder: (_) => _HojaAgregarProveedor(
-        excluir: {for (final f in _filas) f.proveedorId},
+        excluir: {
+          for (final f in _filas)
+            if (f.proveedorId != null) f.proveedorId!,
+        },
+        excluirNombres: {for (final f in _filas) claveNombre(f.nombre)},
       ),
     );
     if (elegido == null) return;
@@ -127,6 +137,15 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
       elegido.preferido = _filas.isEmpty;
       _filas.add(elegido);
     });
+  }
+
+  Future<void> _editarPrecio(_Fila fila) async {
+    final precio = await mostrarHojaInferior<int>(
+      context,
+      titulo: fila.nombre,
+      builder: (_) => _HojaPrecioCompra(precio: fila.precioCompra),
+    );
+    if (precio != null) setState(() => fila.precioCompra = precio);
   }
 
   void _marcarPreferido(_Fila fila) => setState(() {
@@ -179,6 +198,11 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     }
     setState(() => _guardando = true);
     try {
+      final proveedores = ref.read(proveedorRepositoryProvider);
+      for (final f in _filas.where((f) => f.proveedorId == null)) {
+        f.proveedorId = (await proveedores.buscarPorNombre(f.nombre))?.id ??
+            await proveedores.crear(nombre: f.nombre);
+      }
       final productoId = await ref
           .read(productoRepositoryProvider)
           .guardarProducto(
@@ -188,7 +212,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
             proveedores: [
               for (final f in _filas)
                 ProveedorDeProducto(
-                  proveedorId: f.proveedorId,
+                  proveedorId: f.proveedorId!,
                   precioCompra: f.precioCompra,
                   preferido: f.preferido,
                 ),
@@ -323,19 +347,34 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
           const SizedBox(height: 8),
           for (final f in _filas)
             Row(
-              key: Key('fila_proveedor_${f.proveedorId}'),
+              key: Key('fila_proveedor_${f.clave}'),
               children: [
                 Expanded(
-                  child: Text(
-                    f.nombre,
-                    style: TextStyle(
-                      color: f.activo ? null : ColoresApp.textoSecundario,
+                  child: InkWell(
+                    key: Key('editar_proveedor_${f.clave}'),
+                    onTap: () => _editarPrecio(f),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              f.nombre,
+                              style: TextStyle(
+                                color: f.activo
+                                    ? null
+                                    : ColoresApp.textoSecundario,
+                              ),
+                            ),
+                          ),
+                          Text(formatoMoneda(f.precioCompra)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-                Text(formatoMoneda(f.precioCompra)),
                 IconButton(
-                  key: Key('preferido_${f.proveedorId}'),
+                  key: Key('preferido_${f.clave}'),
                   tooltip: 'Preferido',
                   icon: Icon(
                     f.preferido
@@ -346,7 +385,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
                   onPressed: () => _marcarPreferido(f),
                 ),
                 IconButton(
-                  key: Key('quitar_proveedor_${f.proveedorId}'),
+                  key: Key('quitar_proveedor_${f.clave}'),
                   tooltip: 'Quitar',
                   icon: const Icon(Icons.close_rounded),
                   onPressed: () => _quitar(f),
@@ -438,9 +477,15 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
 /// Elige un proveedor activo que el producto no tenga (o crea uno nuevo) y
 /// su precio de compra. Devuelve la fila a agregar.
 class _HojaAgregarProveedor extends ConsumerStatefulWidget {
-  const _HojaAgregarProveedor({required this.excluir});
+  const _HojaAgregarProveedor({
+    required this.excluir,
+    required this.excluirNombres,
+  });
 
   final Set<int> excluir;
+
+  /// [claveNombre] de los proveedores que ya tiene el producto.
+  final Set<String> excluirNombres;
 
   @override
   ConsumerState<_HojaAgregarProveedor> createState() =>
@@ -477,16 +522,33 @@ class _HojaAgregarProveedorState extends ConsumerState<_HojaAgregarProveedor> {
     try {
       var proveedor = _elegido;
       if (proveedor == null) {
-        final repo = ref.read(proveedorRepositoryProvider);
-        final id = await repo.crear(nombre: nombreNuevo);
-        proveedor = (await repo.todos()).firstWhere((p) => p.id == id);
+        proveedor = await ref
+            .read(proveedorRepositoryProvider)
+            .buscarPorNombre(nombreNuevo);
+        final repetido = proveedor == null
+            ? widget.excluirNombres.contains(claveNombre(nombreNuevo))
+            : widget.excluir.contains(proveedor.id);
+        if (repetido) {
+          if (mounted) {
+            setState(() => _error = 'Ese proveedor ya está en el producto');
+          }
+          return;
+        }
+        if (proveedor != null && !proveedor.activo) {
+          final nombre = proveedor.nombre;
+          if (mounted) {
+            setState(() => _error =
+                '$nombre está desactivado: reactívalo en Proveedores');
+          }
+          return;
+        }
       }
       if (!mounted) return;
       Navigator.of(context).pop(
         _Fila(
-          proveedorId: proveedor.id,
-          nombre: proveedor.nombre,
-          activo: true,
+          proveedorId: proveedor?.id,
+          nombre: proveedor?.nombre ?? nombreNuevo,
+          activo: proveedor?.activo ?? true,
           precioCompra: precio,
           preferido: false,
         ),
@@ -548,6 +610,62 @@ class _HojaAgregarProveedorState extends ConsumerState<_HojaAgregarProveedor> {
           key: const Key('boton_agregar_proveedor_producto'),
           texto: 'Agregar',
           onPressed: _guardando ? null : _agregar,
+        ),
+      ],
+    );
+  }
+}
+
+/// Cambia el precio de compra de un proveedor ya agregado. Devuelve el precio.
+class _HojaPrecioCompra extends StatefulWidget {
+  const _HojaPrecioCompra({required this.precio});
+
+  final int precio;
+
+  @override
+  State<_HojaPrecioCompra> createState() => _HojaPrecioCompraState();
+}
+
+class _HojaPrecioCompraState extends State<_HojaPrecioCompra> {
+  late final _precio = TextEditingController(text: '${widget.precio}');
+  String? _error;
+
+  @override
+  void dispose() {
+    _precio.dispose();
+    super.dispose();
+  }
+
+  void _guardar() {
+    final precio = parsearMonto(_precio.text);
+    if (precio == null || precio <= 0) {
+      setState(() => _error = 'Escribe un precio válido');
+      return;
+    }
+    Navigator.of(context).pop(precio);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          key: const Key('campo_precio_compra'),
+          controller: _precio,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Precio de compra',
+            errorText: _error,
+          ),
+        ),
+        const SizedBox(height: 16),
+        BotonPrincipal(
+          key: const Key('boton_guardar_precio_compra'),
+          texto: 'Guardar',
+          onPressed: _guardar,
         ),
       ],
     );

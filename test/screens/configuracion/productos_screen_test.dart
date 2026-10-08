@@ -444,6 +444,131 @@ void main() {
     final p = await db.select(db.productos).getSingle();
     expect((p.minimo, p.pedirHasta), (3, 12));
   });
+
+  testWidgets('editar el precio de compra conserva el preferido',
+      (tester) async {
+    final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
+    final id = await ProductoRepository(db).guardarProducto(
+      nombre: 'Coca',
+      precio: 1500,
+      proveedores: [
+        ProveedorDeProducto(
+            proveedorId: postobon, precioCompra: 900, preferido: true),
+      ],
+    );
+    await montar(tester);
+
+    await tester.tap(find.byKey(Key('producto_item_$id')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('editar_proveedor_$postobon')));
+    await tester.pumpAndSettle();
+    expect(find.text('900'), findsOneWidget);
+    await tester.enterText(
+        find.byKey(const Key('campo_precio_compra')), '1.000');
+    await tester.tap(find.byKey(const Key('boton_guardar_precio_compra')));
+    await tester.pumpAndSettle();
+    await guardar(tester);
+
+    final vinculo = (await ProductoRepository(db).proveedoresDe(id)).single;
+    expect((vinculo.precioCompra, vinculo.preferido), (1000, true));
+  });
+
+  testWidgets('cancelar el producto no deja creado el proveedor nuevo',
+      (tester) async {
+    await montar(tester);
+
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('boton_agregar_proveedor')));
+    await tester.tap(find.byKey(const Key('boton_agregar_proveedor')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('campo_nuevo_proveedor')), 'Alpina');
+    await tester.enterText(
+        find.byKey(const Key('campo_precio_compra')), '1.500');
+    await tester.tap(find.byKey(const Key('boton_agregar_proveedor_producto')));
+    await tester.pumpAndSettle();
+    expect(find.text('Alpina'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(await db.select(db.proveedores).get(), isEmpty);
+  });
+
+  testWidgets('un nombre nuevo igual a uno existente usa ese proveedor',
+      (tester) async {
+    final alpina = await ProveedorRepository(db).crear(nombre: 'Alpina');
+    await montar(tester);
+
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('campo_nombre_producto')), 'Avena');
+    await tester.enterText(
+        find.byKey(const Key('campo_precio_producto')), '2.000');
+    await tester.ensureVisible(find.byKey(const Key('boton_agregar_proveedor')));
+    await tester.tap(find.byKey(const Key('boton_agregar_proveedor')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('campo_nuevo_proveedor')), ' alpina ');
+    await tester.enterText(
+        find.byKey(const Key('campo_precio_compra')), '1.500');
+    await tester.tap(find.byKey(const Key('boton_agregar_proveedor_producto')));
+    await tester.pumpAndSettle();
+    await guardar(tester);
+
+    expect(await db.select(db.proveedores).get(), hasLength(1));
+    final id = (await db.select(db.productos).getSingle()).id;
+    expect((await ProductoRepository(db).proveedoresDe(id)).single.proveedorId,
+        alpina);
+  });
+
+  testWidgets('un nombre igual a un proveedor desactivado pide reactivarlo',
+      (tester) async {
+    final alpina = await ProveedorRepository(db).crear(nombre: 'Alpina');
+    await ProveedorRepository(db).desactivar(alpina);
+    await montar(tester);
+
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('boton_agregar_proveedor')));
+    await tester.tap(find.byKey(const Key('boton_agregar_proveedor')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('campo_nuevo_proveedor')), 'ALPINA');
+    await tester.enterText(
+        find.byKey(const Key('campo_precio_compra')), '1.500');
+    await tester.tap(find.byKey(const Key('boton_agregar_proveedor_producto')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alpina está desactivado: reactívalo en Proveedores'),
+        findsOneWidget);
+    expect(await db.select(db.proveedores).get(), hasLength(1));
+  });
+
+  testWidgets('no se agrega dos veces el mismo proveedor nuevo',
+      (tester) async {
+    await montar(tester);
+
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    for (final nombre in ['Alpina', 'ALPINA']) {
+      await tester.ensureVisible(
+          find.byKey(const Key('boton_agregar_proveedor')));
+      await tester.tap(find.byKey(const Key('boton_agregar_proveedor')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+          find.byKey(const Key('campo_nuevo_proveedor')), nombre);
+      await tester.enterText(
+          find.byKey(const Key('campo_precio_compra')), '1.500');
+      await tester.tap(
+          find.byKey(const Key('boton_agregar_proveedor_producto')));
+      await tester.pumpAndSettle();
+    }
+
+    expect(find.text('Ese proveedor ya está en el producto'), findsOneWidget);
+  });
 }
 
 /// Demora la carga de proveedores de un producto hasta [_espera].
