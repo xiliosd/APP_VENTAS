@@ -217,9 +217,8 @@ class FiadoRepository {
     ]..sort((a, b) => b.fecha.compareTo(a.fecha));
   }
 
-  /// Saldo de cada cliente al cierre de [dia]: ventas fiadas menos abonos
-  /// hechos hasta ese momento.
-  Future<Map<int, int>> _saldosAl(DateTime dia) async {
+  /// Ventas fiadas y abonos no anulados hasta el cierre de [dia].
+  Future<(List<Venta>, List<PagoFiado>)> _movimientosHasta(DateTime dia) async {
     final corte = finDelDia(dia);
     final ventas = await (_db.select(_db.ventas)
           ..where((v) =>
@@ -232,29 +231,48 @@ class FiadoRepository {
           ..where((p) =>
               p.anulado.equals(false) & p.fecha.isSmallerOrEqualValue(corte)))
         .get();
+    return (ventas, pagos);
+  }
 
+  /// Saldo de cada cliente al cierre de [dia]: ventas fiadas menos abonos
+  /// hechos hasta ese momento, entre los movimientos dados.
+  Map<int, int> _saldos(
+      List<Venta> ventas, List<PagoFiado> pagos, DateTime dia) {
+    final corte = finDelDia(dia);
     final saldos = <int, int>{};
-    for (final v in ventas) {
+    for (final v in ventas.where((v) => !v.fecha.isAfter(corte))) {
       saldos.update(v.clienteId!, (s) => s + v.monto, ifAbsent: () => v.monto);
     }
-    for (final p in pagos) {
+    for (final p in pagos.where((p) => !p.fecha.isAfter(corte))) {
       saldos.update(p.clienteId, (s) => s - p.monto, ifAbsent: () => -p.monto);
     }
     return saldos;
   }
 
-  /// Lo que deben todos los clientes al cierre de [dia]. Un cliente con saldo
-  /// a favor cuenta como 0, para que no reste a la deuda de los demás.
-  Future<int> deudaTotalAl(DateTime dia) async {
-    final saldos = await _saldosAl(dia);
-    return saldos.values
-        .where((s) => s > 0)
-        .fold<int>(0, (suma, s) => suma + s);
+  /// Deuda de todos los clientes al cierre de cada día de [dias], con una
+  /// sola lectura. Un cliente con saldo a favor cuenta como 0, para que no
+  /// reste a la deuda de los demás.
+  Future<Map<DateTime, int>> deudasTotalesAl(Iterable<DateTime> dias) async {
+    final lista = dias.toList();
+    if (lista.isEmpty) return {};
+    final ultimo = lista.reduce((a, b) => a.isAfter(b) ? a : b);
+    final (ventas, pagos) = await _movimientosHasta(ultimo);
+    return {
+      for (final d in lista)
+        d: _saldos(ventas, pagos, d)
+            .values
+            .where((s) => s > 0)
+            .fold<int>(0, (suma, s) => suma + s),
+    };
   }
+
+  /// Lo que deben todos los clientes al cierre de [dia].
+  Future<int> deudaTotalAl(DateTime dia) async =>
+      (await deudasTotalesAl([dia]))[dia]!;
 
   /// Cuántos clientes deben algo al cierre de [dia].
   Future<int> clientesConDeudaAl(DateTime dia) async {
-    final saldos = await _saldosAl(dia);
-    return saldos.values.where((s) => s > 0).length;
+    final (ventas, pagos) = await _movimientosHasta(dia);
+    return _saldos(ventas, pagos, dia).values.where((s) => s > 0).length;
   }
 }

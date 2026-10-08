@@ -151,6 +151,19 @@ class ReporteRepository {
   Future<Reporte> reporte(DateTime desde, DateTime hasta) async {
     final inicio = inicioDelDia(desde);
     final ultimo = inicioDelDia(hasta);
+    final deudas = await _fiado.deudasTotalesAl([_diaAntes(inicio), ultimo]);
+    return _reporte(inicio, ultimo, deudas);
+  }
+
+  /// Como [reporte], con la deuda al día anterior a [desde] y al cierre de
+  /// [hasta] ya calculadas en [deudas].
+  Future<Reporte> _reporte(
+    DateTime desde,
+    DateTime hasta,
+    Map<DateTime, int> deudas,
+  ) async {
+    final inicio = inicioDelDia(desde);
+    final ultimo = inicioDelDia(hasta);
     final fin = finDelDia(ultimo);
 
     final ventas = await (_db.select(_db.ventas)
@@ -271,9 +284,8 @@ class ReporteRepository {
       recibidoTransferencia: recibido(MedioPago.transferencia),
       fiado: _suma(ventas.where((v) => v.esFiado).map((v) => v.monto)),
       cobrado: _suma(pagos.map((p) => p.monto)),
-      deudaInicio: await _fiado.deudaTotalAl(
-          DateTime(inicio.year, inicio.month, inicio.day - 1)),
-      deudaFin: await _fiado.deudaTotalAl(ultimo),
+      deudaInicio: deudas[_diaAntes(inicio)]!,
+      deudaFin: deudas[ultimo]!,
       ventasPorDia: porDia,
       mejorDia: mejorDia,
       ranking: ranking.take(10).toList(),
@@ -307,8 +319,14 @@ class ReporteRepository {
       hasta = periodo.ultimoDia;
       hastaAnterior = anterior.ultimoDia;
     }
-    final actual = await reporte(periodo.inicio, hasta);
-    final previo = await reporte(anterior.inicio, hastaAnterior);
+    final deudas = await _fiado.deudasTotalesAl([
+      _diaAntes(periodo.inicio),
+      inicioDelDia(hasta),
+      _diaAntes(anterior.inicio),
+      inicioDelDia(hastaAnterior),
+    ]);
+    final actual = await _reporte(periodo.inicio, hasta, deudas);
+    final previo = await _reporte(anterior.inicio, hastaAnterior, deudas);
     return ComparacionReporte(
       actual: actual,
       anterior: previo,
@@ -317,3 +335,5 @@ class ReporteRepository {
     );
   }
 }
+
+DateTime _diaAntes(DateTime dia) => DateTime(dia.year, dia.month, dia.day - 1);

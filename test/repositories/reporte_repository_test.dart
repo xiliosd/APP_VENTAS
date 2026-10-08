@@ -211,4 +211,31 @@ void main() {
     expect(cambioPorcentual(1000, 3000), -67);
     expect(cambioPorcentual(500, 0), isNull);
   });
+
+  test('comparar lee la deuda de las cuatro fechas de una vez', () async {
+    final fiado = _FiadoContador(db);
+    final hoy = DateTime(2026, 10, 7);
+    await ReporteRepository(db, fiado)
+        .comparar(Periodo.actual(TipoPeriodo.semana, hoy), hoy: hoy);
+    expect((fiado.lotes, fiado.sueltas), (1, 0));
+  });
+}
+
+class _FiadoContador extends FiadoRepository {
+  _FiadoContador(super.db);
+
+  int lotes = 0;
+  int sueltas = 0;
+
+  @override
+  Future<Map<DateTime, int>> deudasTotalesAl(Iterable<DateTime> dias) {
+    lotes++;
+    return super.deudasTotalesAl(dias);
+  }
+
+  @override
+  Future<int> deudaTotalAl(DateTime dia) {
+    sueltas++;
+    return super.deudaTotalAl(dia);
+  }
 }

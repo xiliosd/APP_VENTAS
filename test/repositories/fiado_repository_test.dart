@@ -332,6 +332,43 @@ void main() {
         clienteId: clienteId, monto: 2000, usuarioId: usuarioId);
     expect(await saldoDeCliente(db, clienteId), 3000);
   });
+
+  test('deudasTotalesAl da lo mismo que deudaTotalAl para cada día', () async {
+    final a = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'A'));
+    final b = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'B'));
+    Future<void> fiar(int c, int monto, DateTime f) =>
+        db.into(db.ventas).insert(VentasCompanion.insert(
+            monto: monto,
+            fecha: f,
+            usuarioId: usuarioId,
+            esFiado: const Value(true),
+            clienteId: Value(c)));
+    await fiar(a, 5000, DateTime(2026, 10, 1, 9));
+    await fiar(b, 1000, DateTime(2026, 10, 3, 9));
+    // B paga de más: su saldo a favor no resta a la deuda de A.
+    await repo.registrarPago(
+        clienteId: b,
+        monto: 3000,
+        usuarioId: usuarioId,
+        fecha: DateTime(2026, 10, 4, 9));
+    final dias = [
+      DateTime(2026, 9, 30),
+      DateTime(2026, 10, 1),
+      DateTime(2026, 10, 3),
+      DateTime(2026, 10, 5),
+    ];
+
+    final deudas = await repo.deudasTotalesAl(dias);
+
+    for (final d in dias) {
+      expect(deudas[d], await repo.deudaTotalAl(d), reason: '$d');
+    }
+    expect([for (final d in dias) deudas[d]], [0, 5000, 6000, 5000]);
+  });
 }
 
 class _CorreccionesEspia extends CorreccionRepository {
