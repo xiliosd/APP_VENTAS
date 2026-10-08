@@ -23,8 +23,9 @@ No hay cambios de esquema (sigue v7) ni librerías nuevas.
      "El abono no puede ser mayor que la deuda ($X)").
    - Cualquier otro → "No se pudo guardar, intenta de nuevo" (como hoy).
 2. **Tope al corregir un abono.** `CorreccionRepository.corregirPago` rechaza con
-   `CorreccionInvalida('El abono no puede ser mayor que la deuda (\$X)')` cuando
-   `monto > saldo actual del cliente + monto original del abono`, donde X es ese máximo. El saldo se calcula
+   `CorreccionInvalida('El abono no puede ser mayor que la deuda (\$X)')` cuando el abono
+   **sube** (`monto > monto original`) y `monto > saldo actual del cliente + monto original`,
+   donde X es ese máximo. Bajar el monto o solo cambiar el medio de pago siempre se permite. El saldo se calcula
    dentro de la transacción con las mismas reglas de `FiadoRepository.saldoCliente`
    (ventas fiadas no anuladas − abonos no anulados).
 3. **Nombre del cliente en Historial.** `HistorialRepository` trae `nombreCliente` en cada
@@ -47,8 +48,8 @@ No hay cambios de esquema (sigue v7) ni librerías nuevas.
 7. **Error amable.** En vez de `Error: $e`, Reportes muestra un `EstadoVacio` "No se pudo
    cargar el reporte" con botón **Reintentar** (`ref.invalidate` del provider).
 8. **Pérdidas.** En la lista de productos del reporte, una ganancia negativa se muestra como
-   "pierde $X" en rojo (`ColoresApp.sale`); "Ganancia en productos" negativa se muestra como
-   "Pérdida en productos: $X" en rojo.
+   "pierde $X" y esa línea va en rojo (`ColoresApp.sale`); "Ganancia en productos" negativa
+   se muestra como "Pérdida en productos: $X" en rojo.
 
 ### Catálogo (4A)
 
@@ -84,9 +85,11 @@ No hay cambios de esquema (sigue v7) ni librerías nuevas.
     pedido".
 16. **Mínimo y "Pedir hasta".** `InventarioRepository.cambiarMinimo` rechaza con
     `ArgumentError('El mínimo no puede ser mayor que "Pedir hasta"')` si el producto tiene
-    `pedirHasta` y `minimo > pedirHasta`. Producto guarda primero "Pedir hasta" y luego el
-    mínimo cuando ambos cambian y el nuevo mínimo es mayor que el "Pedir hasta" anterior
-    (para no rechazar un cambio válido de los dos), y muestra el error si queda inválido.
+    `pedirHasta` y `minimo > pedirHasta`. Nuevo `cambiarLimites(productoId, minimo:,
+    pedirHasta:)` guarda los dos en una sola escritura (valida `minimo ≥ 0` y
+    `pedirHasta ≥ minimo`); Producto lo usa en vez de llamar a `cambiarMinimo` y
+    `cambiarPedirHasta` por separado, así subir o bajar los dos a la vez nunca choca con el
+    valor anterior.
 17. **Apagar el control borra "Pedir hasta".** `desactivarControl` escribe
     `pedirHasta: null` junto con `controlaExistencias: false`.
 
