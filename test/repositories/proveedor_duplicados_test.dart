@@ -44,4 +44,28 @@ void main() {
     expect((await repo.buscarPorNombre('don juan'))?.id, id);
     expect(await repo.buscarPorNombre('Otro'), isNull);
   });
+
+  group('con repetidos que ya existían', () {
+    Future<int> repetido(String nombre) => db
+        .into(db.proveedores)
+        .insert(ProveedoresCompanion.insert(nombre: nombre));
+
+    test('editar el teléfono del segundo no se bloquea', () async {
+      await repetido('Postobón');
+      final segundo = await repetido('Postobón');
+      await repo.actualizar(segundo,
+          nombre: 'Postobón', telefono: '3001234567');
+      final p = await (db.select(db.proveedores)
+            ..where((p) => p.id.equals(segundo)))
+          .getSingle();
+      expect(p.telefono, '3001234567');
+    });
+
+    test('buscarPorNombre prefiere el activo', () async {
+      final inactivo = await repetido('Alpina');
+      final activo = await repetido('Alpina');
+      await repo.desactivar(inactivo);
+      expect((await repo.buscarPorNombre('alpina'))?.id, activo);
+    });
+  });
 }

@@ -32,19 +32,25 @@ class ProveedorRepository {
 
   Future<List<Proveedor>> todos() => _db.select(_db.proveedores).get();
 
-  /// Proveedor (activo o no) con el mismo nombre que [nombre], según
+  /// Proveedores (activos o no) con el mismo nombre que [nombre], según
   /// [claveNombre].
-  Future<Proveedor?> buscarPorNombre(String nombre) async {
+  Future<List<Proveedor>> _mismoNombre(String nombre) async {
     final clave = claveNombre(nombre);
-    for (final p in await todos()) {
-      if (claveNombre(p.nombre) == clave) return p;
-    }
-    return null;
+    return [
+      for (final p in await todos())
+        if (claveNombre(p.nombre) == clave) p,
+    ];
+  }
+
+  /// Proveedor con el mismo nombre que [nombre], según [claveNombre]; si hay
+  /// varios (repetidos de antes), prefiere uno activo.
+  Future<Proveedor?> buscarPorNombre(String nombre) async {
+    final iguales = await _mismoNombre(nombre);
+    return iguales.where((p) => p.activo).firstOrNull ?? iguales.firstOrNull;
   }
 
   Future<void> _sinRepetir(String nombre, {int? salvo}) async {
-    final existente = await buscarPorNombre(nombre);
-    if (existente != null && existente.id != salvo) {
+    if ((await _mismoNombre(nombre)).any((p) => p.id != salvo)) {
       throw ArgumentError('Ya existe un proveedor con ese nombre');
     }
   }
@@ -70,7 +76,14 @@ class ProveedorRepository {
     String? notas,
   }) async {
     final limpio = _nombreValido(nombre);
-    await _sinRepetir(limpio, salvo: id);
+    final actual = await (_db.select(_db.proveedores)
+          ..where((p) => p.id.equals(id)))
+        .getSingle();
+    // Solo se valida si cambia el nombre: así se pueden editar repetidos que
+    // ya existían.
+    if (claveNombre(actual.nombre) != claveNombre(limpio)) {
+      await _sinRepetir(limpio, salvo: id);
+    }
     await (_db.update(_db.proveedores)..where((p) => p.id.equals(id))).write(
       ProveedoresCompanion(
         nombre: Value(limpio),
