@@ -65,7 +65,7 @@ class _ReportesScreenState extends ConsumerState<ReportesScreen> {
               ),
               Expanded(
                 child: Text(
-                  _periodo.titulo,
+                  _periodo.titulo(_hoy),
                   key: const Key('titulo_periodo'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
@@ -96,7 +96,16 @@ class _ReportesScreenState extends ConsumerState<ReportesScreen> {
               padding: EdgeInsets.all(24),
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (e, st) => Text('Error: $e'),
+            error: (e, st) => EstadoVacio(
+              icono: Icons.error_outline_rounded,
+              titulo: 'No se pudo cargar el reporte',
+              accion: TextButton(
+                key: const Key('reintentar_reporte'),
+                onPressed: () => ref.invalidate(comparacionReporteProvider(
+                    (periodo: _periodo, hoy: _hoy))),
+                child: const Text('Reintentar'),
+              ),
+            ),
           ),
         ],
       ),
@@ -226,9 +235,16 @@ class _Contenido extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                'Ganancia en productos: ${formatoMoneda(r.gananciaProductos)}',
+                r.gananciaProductos < 0
+                    ? 'Pérdida en productos: '
+                        '${formatoMoneda(-r.gananciaProductos)}'
+                    : 'Ganancia en productos: '
+                        '${formatoMoneda(r.gananciaProductos)}',
                 key: const Key('texto_ganancia_productos'),
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: r.gananciaProductos < 0 ? ColoresApp.sale : null,
+                ),
               ),
             ),
           for (final (i, p) in r.ranking.indexed)
@@ -237,8 +253,15 @@ class _Contenido extends StatelessWidget {
               child: Text(
                 '${i + 1}. ${p.nombre} · ${p.unidades} u · '
                 '${formatoMoneda(p.dinero)}'
-                '${p.ganancia == null ? '' : ' · gana ${formatoMoneda(p.ganancia!)}'}',
+                '${switch (p.ganancia) {
+                  null => '',
+                  final g when g < 0 => ' · pierde ${formatoMoneda(-g)}',
+                  final g => ' · gana ${formatoMoneda(g)}',
+                }}',
                 key: Key('ranking_$i'),
+                style: (p.ganancia ?? 0) < 0
+                    ? const TextStyle(color: ColoresApp.sale)
+                    : null,
               ),
             ),
           if (r.otrosMontos > 0)

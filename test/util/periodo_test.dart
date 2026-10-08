@@ -3,25 +3,33 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('semana', () {
+    test('una semana de otro año lleva el año', () {
+      final hoy = DateTime(2026, 10, 7);
+      expect(Periodo.de(TipoPeriodo.semana, DateTime(2025, 10, 8)).titulo(hoy),
+          'Semana del 6 al 12 oct. 2025');
+      expect(Periodo.de(TipoPeriodo.semana, DateTime(2025, 10, 1)).titulo(hoy),
+          'Semana del 29 sep. al 5 oct. 2025');
+    });
+
     test('la semana de un miércoles va de lunes a domingo', () {
       final p = Periodo.de(TipoPeriodo.semana, DateTime(2026, 10, 7, 15));
       expect(p.inicio, DateTime(2026, 10, 5));
       expect(p.ultimoDia, DateTime(2026, 10, 11));
       expect(p.fin, DateTime(2026, 10, 11, 23, 59, 59, 999));
-      expect(p.titulo, 'Semana del 5 al 11 oct.');
+      expect(p.titulo(DateTime(2026, 10, 7)), 'Semana del 5 al 11 oct.');
     });
 
     test('una semana que cruza de mes nombra los dos meses', () {
       final p = Periodo.de(TipoPeriodo.semana, DateTime(2026, 10, 1));
       expect(p.inicio, DateTime(2026, 9, 28));
-      expect(p.titulo, 'Semana del 28 sep. al 4 oct.');
+      expect(p.titulo(DateTime(2026, 10, 7)), 'Semana del 28 sep. al 4 oct.');
     });
 
     test('una semana que cruza de año lleva el año', () {
       final p = Periodo.de(TipoPeriodo.semana, DateTime(2026, 12, 30));
       expect(p.inicio, DateTime(2026, 12, 28));
       expect(p.ultimoDia, DateTime(2027, 1, 3));
-      expect(p.titulo, 'Semana del 28 dic. al 3 ene. 2027');
+      expect(p.titulo(DateTime(2026, 10, 7)), 'Semana del 28 dic. al 3 ene. 2027');
     });
 
     test('anterior y siguiente cruzan el año', () {
@@ -54,7 +62,7 @@ void main() {
       final p = Periodo.de(TipoPeriodo.mes, DateTime(2026, 10, 15));
       expect(p.inicio, DateTime(2026, 10, 1));
       expect(p.ultimoDia, DateTime(2026, 10, 31));
-      expect(p.titulo, 'Octubre 2026');
+      expect(p.titulo(DateTime(2026, 10, 7)), 'Octubre 2026');
     });
 
     test('febrero tiene 28 o 29 días', () {
@@ -74,7 +82,7 @@ void main() {
         DateTime(2026, 1, 20),
       ).anterior;
       expect(anterior.inicio, DateTime(2025, 12, 1));
-      expect(anterior.titulo, 'Diciembre 2025');
+      expect(anterior.titulo(DateTime(2026, 10, 7)), 'Diciembre 2025');
     });
   });
 

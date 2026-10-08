@@ -79,8 +79,9 @@ class Periodo {
       !momento.isBefore(inicio) && !momento.isAfter(fin);
 
   /// "Semana del 5 al 11 oct.", "Semana del 28 sep. al 4 oct.",
-  /// "Semana del 28 dic. al 3 ene. 2027" u "Octubre 2026".
-  String get titulo {
+  /// "Semana del 28 dic. al 3 ene. 2027", "Semana del 6 al 12 oct. 2025"
+  /// (de otro año que [hoy]) u "Octubre 2026".
+  String titulo(DateTime hoy) {
     if (tipo == TipoPeriodo.mes) {
       return '${_mesesLargos[inicio.month - 1]} ${inicio.year}';
     }
@@ -88,13 +89,11 @@ class Periodo {
     final b = ultimoDia;
     final mesA = _mesesCortos[a.month - 1];
     final mesB = _mesesCortos[b.month - 1];
-    if (a.year != b.year) {
-      return 'Semana del ${a.day} $mesA al ${b.day} $mesB ${b.year}';
-    }
+    final anio = a.year != b.year || b.year != hoy.year ? ' ${b.year}' : '';
     if (a.month != b.month) {
-      return 'Semana del ${a.day} $mesA al ${b.day} $mesB';
+      return 'Semana del ${a.day} $mesA al ${b.day} $mesB$anio';
     }
-    return 'Semana del ${a.day} al ${b.day} $mesB';
+    return 'Semana del ${a.day} al ${b.day} $mesB$anio';
   }
 
   @override

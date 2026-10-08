@@ -1,10 +1,12 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/providers/reporte_providers.dart';
 import 'package:app_ventas/repositories/producto_repository.dart';
 import 'package:app_ventas/repositories/proveedor_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
 import 'package:app_ventas/screens/reportes/barras_por_dia.dart';
 import 'package:app_ventas/screens/reportes/reportes_screen.dart';
+import 'package:app_ventas/ui/colores_app.dart';
 import 'package:app_ventas/ui/monto.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/drift.dart' show Value;
@@ -244,5 +246,71 @@ void main() {
     expect(find.text(r'Ganancia en productos: $2.000'), findsOneWidget);
     expect(find.text(r'1. Arepa · 2 u · $7.000 · gana $2.000'), findsOneWidget);
     expect(find.text(r'$5.000 vendidos sin costo registrado'), findsOneWidget);
+  });
+
+  testWidgets('si falla muestra un mensaje y deja reintentar', (tester) async {
+    var intentos = 0;
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        comparacionReporteProvider.overrideWith((ref, consulta) async {
+          intentos++;
+          throw StateError('falla');
+        }),
+      ],
+      child:
+          MaterialApp(theme: temaApp(), home: ReportesScreen(reloj: () => hoy)),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo cargar el reporte'), findsOneWidget);
+    expect(find.textContaining('StateError'), findsNothing);
+    await tester.tap(find.byKey(const Key('reintentar_reporte')));
+    await tester.pumpAndSettle();
+    expect(intentos, 2);
+  });
+
+  testWidgets('un producto vendido con pérdida dice cuánto pierde',
+      (tester) async {
+    final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
+    final arepa = await ProductoRepository(db).guardarProducto(
+      nombre: 'Arepa',
+      precio: 3500,
+      proveedores: [
+        ProveedorDeProducto(
+            proveedorId: postobon, precioCompra: 4000, preferido: true),
+      ],
+    );
+    await VentaRepository(db).registrarVenta(
+      monto: 7000,
+      esFiado: false,
+      usuarioId: ana,
+      fecha: DateTime(2026, 10, 6, 9),
+      lineas: [
+        LineaNueva(
+            productoId: arepa,
+            descripcion: 'Arepa',
+            precioUnitario: 3500,
+            cantidad: 2),
+      ],
+    );
+    await montar(tester);
+
+    expect(find.text(r'Pérdida en productos: $1.000'), findsOneWidget);
+    final linea = find.text(r'1. Arepa · 2 u · $7.000 · pierde $1.000');
+    expect(linea, findsOneWidget);
+    expect(tester.widget<Text>(linea).style?.color, ColoresApp.sale);
+  });
+
+  testWidgets('una semana del año pasado muestra el año', (tester) async {
+    await montar(tester, reloj: () => DateTime(2027, 1, 20));
+    for (var i = 0; i < 4; i++) {
+      await tester.tap(find.byKey(const Key('periodo_anterior')));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('Semana del 21 al 27 dic. 2026'), findsOneWidget);
   });
 }
