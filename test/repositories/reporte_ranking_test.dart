@@ -138,4 +138,15 @@ void main() {
     expect(r.ventasPorHora, isEmpty);
     expect(r.horaPico, isNull);
   });
+
+  test('con unidades y dinero iguales desempata sin mayúsculas', () async {
+    final z = await producto('Zanahoria', 1000);
+    final a = await producto('arepa', 1000);
+    await vender(DateTime(2026, 10, 5, 9),
+        [de(z, 'Zanahoria', 1000, 1), de(a, 'arepa', 1000, 1)]);
+
+    final r = await repo.reporte(lunes, domingo);
+
+    expect(r.ranking.map((p) => p.nombre), ['arepa', 'Zanahoria']);
+  });
 }

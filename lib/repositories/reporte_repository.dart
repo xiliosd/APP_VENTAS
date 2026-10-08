@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../data/database.dart';
 import '../util/fecha_util.dart';
 import '../util/periodo.dart';
+import '../util/texto_util.dart';
 import 'fiado_repository.dart';
 
 /// Un producto del ranking del periodo.
@@ -259,7 +260,7 @@ class ReporteRepository {
         if (porUnidades != 0) return porUnidades;
         final porDinero = b.dinero.compareTo(a.dinero);
         if (porDinero != 0) return porDinero;
-        return a.nombre.compareTo(b.nombre);
+        return claveNombre(a.nombre).compareTo(claveNombre(b.nombre));
       });
 
     final porHoraDesordenado = <int, int>{};

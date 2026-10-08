@@ -118,7 +118,8 @@ class Barra extends StatelessWidget {
   final String etiqueta;
   final int valor;
 
-  /// De 0 a 1, respecto al día de más venta.
+  /// De 0 a 1, respecto a la barra más alta del gráfico (día u hora de más
+  /// venta).
   final double fraccion;
   final bool resaltada;
 
