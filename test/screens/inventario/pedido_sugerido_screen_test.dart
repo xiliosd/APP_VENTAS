@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/providers/inventario_providers.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/repositories/inventario_repository.dart';
 import 'package:app_ventas/repositories/producto_repository.dart';
 import 'package:app_ventas/repositories/proveedor_repository.dart';
 import 'package:app_ventas/screens/inventario/inventario_screen.dart';
+import 'package:app_ventas/screens/inventario/pedido_sugerido_screen.dart';
 import 'package:app_ventas/screens/inventario/recibir_mercancia_screen.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/montaje.dart';
@@ -70,7 +75,7 @@ void main() {
         tester.widget<Text>(find.byKey(Key('cantidad_pedido_$coca'))).data, '22');
     expect(
         tester.widget<Text>(find.byKey(Key('cantidad_pedido_$pan'))).data, '9');
-    expect(find.text(r'$900 c/u'), findsOneWidget);
+    expect(find.text(r'22 × $900 = $19.800'), findsOneWidget);
     expect(find.text(r'Total estimado $23.400'), findsOneWidget);
 
     await tester.tap(find.byKey(Key('restar_pedido_$coca')));
@@ -145,5 +150,38 @@ void main() {
 
     expect(find.byType(RecibirMercanciaScreen), findsOneWidget);
     expect(habilitado(tester, 'boton_guardar_recibir'), isFalse);
+  });
+
+  Future<Proveedor> proveedorSinPedido() async {
+    final id = await ProveedorRepository(db).crear(nombre: 'Alpina');
+    return (db.select(db.proveedores)..where((p) => p.id.equals(id)))
+        .getSingle();
+  }
+
+  testWidgets('sin nada que pedir lo dice', (tester) async {
+    final proveedor = await proveedorSinPedido();
+    final container = await containerConSesion(db);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(appDePrueba(container,
+        inicio: PedidoSugeridoScreen(proveedor: proveedor)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No hay nada por pedir a este proveedor'), findsOneWidget);
+    expect(find.byKey(const Key('boton_recibir_pedido')), findsNothing);
+  });
+
+  testWidgets('mientras carga muestra el indicador', (tester) async {
+    final proveedor = await proveedorSinPedido();
+    final container = await containerConSesion(db, overrides: [
+      sugerenciaPedidoProvider.overrideWith(
+          (ref, id) => Completer<List<LineaSugerida>>().future),
+    ]);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(appDePrueba(container,
+        inicio: PedidoSugeridoScreen(proveedor: proveedor)));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('No hay nada por pedir a este proveedor'), findsNothing);
   });
 }

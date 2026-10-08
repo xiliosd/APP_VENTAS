@@ -7,6 +7,7 @@ import '../../repositories/inventario_repository.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/dialogo_cantidad.dart';
+import '../../ui/estado_vacio.dart';
 import '../../util/formato_moneda.dart';
 import 'inventario_screen.dart';
 import 'recibir_mercancia_screen.dart';
@@ -53,9 +54,8 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final lineas =
-        ref.watch(sugerenciaPedidoProvider(widget.proveedor?.id)).valueOrNull ??
-        const <LineaSugerida>[];
+    final pedido = ref.watch(sugerenciaPedidoProvider(widget.proveedor?.id));
+    final lineas = pedido.valueOrNull ?? const <LineaSugerida>[];
     final total = lineas.fold<int>(
       0,
       (s, l) => s + (l.precio == null ? 0 : _cantidad(l) * l.precio!),
@@ -69,101 +69,121 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
           'Pedido sugerido · ${widget.proveedor?.nombre ?? 'Sin proveedor'}',
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          for (final l in lineas)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+      body: !pedido.hasValue
+          ? pedido.hasError
+                ? const EstadoVacio(
+                    icono: Icons.error_outline_rounded,
+                    titulo: 'No se pudo cargar el pedido',
+                  )
+                : const Center(child: CircularProgressIndicator())
+          : lineas.isEmpty
+          ? const EstadoVacio(
+              icono: Icons.inventory_2_outlined,
+              titulo: 'No hay nada por pedir a este proveedor',
+            )
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                for (final l in lineas)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Row(
                         children: [
-                          Text(
-                            l.producto.nombre,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l.producto.nombre,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  'quedan ${numeroConSigno(l.existencias)} · '
+                                  'mín. ${l.producto.minimo}'
+                                  '${l.producto.pedirHasta == null ? '' : ' · hasta ${l.producto.pedirHasta}'}',
+                                  style: gris,
+                                ),
+                                Text(
+                                  l.precio == null
+                                      ? 'Sin precio'
+                                      : '${_cantidad(l)} × '
+                                            '${formatoMoneda(l.precio!)} = '
+                                            '${formatoMoneda(_cantidad(l) * l.precio!)}',
+                                  key: Key('precio_pedido_${l.producto.id}'),
+                                  style: gris,
+                                ),
+                              ],
+                            ),
                           ),
-                          Text(
-                            'quedan ${numeroConSigno(l.existencias)} · '
-                            'mín. ${l.producto.minimo}'
-                            '${l.producto.pedirHasta == null ? '' : ' · hasta ${l.producto.pedirHasta}'}',
-                            style: gris,
+                          IconButton(
+                            key: Key('restar_pedido_${l.producto.id}'),
+                            tooltip: 'Restar',
+                            icon: const Icon(Icons.remove_rounded),
+                            onPressed: _cantidad(l) > 0
+                                ? () => setState(
+                                    () => _cantidades[l.producto.id] =
+                                        _cantidad(l) - 1,
+                                  )
+                                : null,
                           ),
-                          Text(
-                            l.precio == null
-                                ? 'Sin precio'
-                                : '${formatoMoneda(l.precio!)} c/u',
-                            key: Key('precio_pedido_${l.producto.id}'),
-                            style: gris,
+                          InkWell(
+                            onTap: () async {
+                              final n = await pedirCantidad(
+                                context,
+                                actual: _cantidad(l),
+                              );
+                              if (n != null && mounted) {
+                                setState(() => _cantidades[l.producto.id] = n);
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 12,
+                              ),
+                              child: Text(
+                                '${_cantidad(l)}',
+                                key: Key('cantidad_pedido_${l.producto.id}'),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            key: Key('sumar_pedido_${l.producto.id}'),
+                            tooltip: 'Sumar',
+                            icon: const Icon(Icons.add_rounded),
+                            onPressed: () => setState(
+                              () =>
+                                  _cantidades[l.producto.id] = _cantidad(l) + 1,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    IconButton(
-                      key: Key('restar_pedido_${l.producto.id}'),
-                      tooltip: 'Restar',
-                      icon: const Icon(Icons.remove_rounded),
-                      onPressed: _cantidad(l) > 0
-                          ? () => setState(
-                              () =>
-                                  _cantidades[l.producto.id] = _cantidad(l) - 1,
-                            )
-                          : null,
-                    ),
-                    InkWell(
-                      onTap: () async {
-                        final n = await pedirCantidad(
-                          context,
-                          actual: _cantidad(l),
-                        );
-                        if (n != null && mounted) {
-                          setState(() => _cantidades[l.producto.id] = n);
-                        }
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 12,
-                        ),
-                        child: Text(
-                          '${_cantidad(l)}',
-                          key: Key('cantidad_pedido_${l.producto.id}'),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      key: Key('sumar_pedido_${l.producto.id}'),
-                      tooltip: 'Sumar',
-                      icon: const Icon(Icons.add_rounded),
-                      onPressed: () => setState(
-                        () => _cantidades[l.producto.id] = _cantidad(l) + 1,
-                      ),
-                    ),
-                  ],
+                  ),
+                const SizedBox(height: 12),
+                Text(
+                  'Total estimado ${formatoMoneda(total)}',
+                  key: const Key('total_pedido'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 24),
+                BotonPrincipal(
+                  key: const Key('boton_recibir_pedido'),
+                  texto: 'Recibir este pedido',
+                  onPressed: hayAlgo ? () => _recibir(lineas) : null,
+                ),
+              ],
             ),
-          const SizedBox(height: 12),
-          Text(
-            'Total estimado ${formatoMoneda(total)}',
-            key: const Key('total_pedido'),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 24),
-          BotonPrincipal(
-            key: const Key('boton_recibir_pedido'),
-            texto: 'Recibir este pedido',
-            onPressed: hayAlgo ? () => _recibir(lineas) : null,
-          ),
-        ],
-      ),
     );
   }
 }
