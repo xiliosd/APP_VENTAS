@@ -33,6 +33,8 @@ void main() {
         child: MaterialApp(home: IngresarPinScreen(usuario: usuario)),
       ),
     );
+    expect(tester.widget<Text>(find.text('Hola, Ana')).style?.fontFamily,
+        'Nunito');
 
     for (final digito in ['0', '0', '0', '0']) {
       await tester.tap(find.byKey(Key('tecla_$digito')));

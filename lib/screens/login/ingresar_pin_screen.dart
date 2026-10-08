@@ -5,6 +5,7 @@ import '../../data/database.dart';
 import '../../providers/sesion_provider.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/tipografia.dart';
 import '../../widgets/teclado_numerico.dart';
 import '../../widgets/nombre_tienda.dart';
 
@@ -80,10 +81,7 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
                     const SizedBox(height: 12),
                     Text(
                       'Hola, ${usuario.nombre}',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: estiloTitulo(tamano: 22),
                     ),
                     const SizedBox(height: 4),
                     const Text(

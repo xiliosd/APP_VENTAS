@@ -84,4 +84,19 @@ void main() {
         as RoundedRectangleBorder;
     expect(forma.borderRadius, BorderRadius.circular(16));
   });
+
+  test('Nunito solo se usa a través de estiloTitulo', () {
+    final fuera = <String>[];
+    for (final archivo in Directory('lib').listSync(recursive: true)) {
+      if (archivo is! File || !archivo.path.endsWith('.dart')) continue;
+      final ruta = archivo.path.replaceAll(r'\', '/');
+      if (ruta.endsWith('lib/ui/tipografia.dart')) continue;
+      final texto = archivo.readAsStringSync();
+      if (texto.contains("'Nunito'") || texto.contains('familiaTitulos')) {
+        fuera.add(ruta);
+      }
+    }
+    expect(fuera, isEmpty,
+        reason: 'Sin el eje wght la fuente variable sale con peso 200');
+  });
 }
