@@ -184,4 +184,13 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('La entrada ya estaba anulada'), findsOneWidget);
   });
+
+  testWidgets('el vendedor sin productos con control ve a quién pedírselo',
+      (tester) async {
+    final (container, _) = await montar(tester, rol: 'vendedor');
+    await pintar(tester, container);
+
+    expect(find.text('Pídele al administrador que lo active'), findsOneWidget);
+    expect(find.text('Actívalo en Ajustes → Productos'), findsNothing);
+  });
 }

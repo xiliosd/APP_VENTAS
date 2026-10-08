@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/inventario_providers.dart';
+import '../../providers/sesion_provider.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
@@ -81,10 +82,12 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
         ),
         const SizedBox(height: 12),
         if (controlados.isEmpty)
-          const EstadoVacio(
+          EstadoVacio(
             icono: Icons.inventory_2_outlined,
             titulo: 'Aún no controlas existencias',
-            mensaje: 'Actívalo en Ajustes → Productos',
+            mensaje: ref.watch(sesionProvider).esAdmin
+                ? 'Actívalo en Ajustes → Productos'
+                : 'Pídele al administrador que lo active',
           )
         else ...[
           SelectorSegmentado<_Vista>(

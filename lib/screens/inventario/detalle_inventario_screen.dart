@@ -5,6 +5,7 @@ import '../../providers/inventario_providers.dart';
 import '../../repositories/inventario_repository.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/estado_vacio.dart';
 import '../../util/fecha_util.dart';
 import 'hoja_ajuste_conteo.dart';
 import 'inventario_screen.dart';
@@ -34,17 +35,22 @@ class DetalleInventarioScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final item =
-        (ref.watch(productosConControlProvider).valueOrNull ?? const [])
-            .where((c) => c.producto.id == productoId)
-            .firstOrNull;
+    final control = ref.watch(productosConControlProvider);
+    final item = (control.valueOrNull ?? const [])
+        .where((c) => c.producto.id == productoId)
+        .firstOrNull;
     final historial =
         ref.watch(historialInventarioProvider(productoId)).valueOrNull ??
         const <MovimientoInventario>[];
     if (item == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: const Center(child: CircularProgressIndicator()),
+        body: control.hasValue
+            ? const EstadoVacio(
+                icono: Icons.inventory_2_outlined,
+                titulo: 'Este producto ya no controla existencias',
+              )
+            : const Center(child: CircularProgressIndicator()),
       );
     }
     return Scaffold(
