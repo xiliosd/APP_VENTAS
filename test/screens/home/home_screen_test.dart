@@ -154,4 +154,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(anillo(), findsNothing);
   });
+
+  testWidgets('con letra grande la barra azul crece y no desborda',
+      (tester) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await montar(tester);
+
+    expect(tester.takeException(), isNull);
+    final barra = tester.widget<AppBar>(find.byType(AppBar).first);
+    expect(barra.toolbarHeight, greaterThan(kToolbarHeight));
+  });
+
+  testWidgets('la barra azul no tiene la línea gris de abajo', (tester) async {
+    await montar(tester);
+    AppBar barra() => tester.widget<AppBar>(find.byType(AppBar).first);
+
+    expect(barra().shape, const Border());
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+    expect(barra().shape, isNull); // las demás usan el borde del tema
+  });
 }

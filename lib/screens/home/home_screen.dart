@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -61,8 +63,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (_tabActual >= tabs.length) _tabActual = 0;
 
     final esInicio = _tabActual == 0;
+    final escala = MediaQuery.textScalerOf(context);
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: esInicio
+            ? math.max(
+                kToolbarHeight,
+                escala.scale(20) * 1.3 + escala.scale(12) * 1.3 + 16,
+              )
+            : null,
+        // Sin la línea gris del tema bajo el azul.
+        shape: esInicio ? const Border() : null,
         // Header de marca solo en Inicio; las demás pestañas, barra blanca.
         backgroundColor: esInicio ? ColoresApp.primario : null,
         foregroundColor: esInicio ? Colors.white : null,
@@ -80,6 +91,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       children: [
                         Text(
                           'Hola, ${usuario.nombre}',
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const NombreTienda(
