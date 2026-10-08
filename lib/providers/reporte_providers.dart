@@ -11,9 +11,10 @@ typedef ConsultaReporte = ({Periodo periodo, DateTime hoy});
 
 /// Emite con cada cambio en la base, para recalcular el reporte abierto
 /// (mismo patrón que resumen_providers.dart).
-final _cambiosReporteProvider = StreamProvider<void>((ref) {
-  return ref.watch(databaseProvider).tableUpdates().map((_) {});
-});
+final _cambiosReporteProvider = StreamProvider.autoDispose<void>(
+  (ref) => ref.watch(databaseProvider).tableUpdates().map((_) {}),
+  name: 'cambiosReporte',
+);
 
 final comparacionReporteProvider = FutureProvider.autoDispose
     .family<ComparacionReporte, ConsultaReporte>((ref, consulta) {
