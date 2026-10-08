@@ -3,14 +3,15 @@ import 'package:drift/drift.dart';
 import '../data/database.dart';
 import '../util/formato_moneda.dart';
 import '../util/permisos.dart';
+import 'fiado_repository.dart';
 
 /// El usuario no puede corregir ni anular ese movimiento.
 class PermisoDenegado implements Exception {
   const PermisoDenegado();
 }
 
-/// La corrección no es válida: monto en 0, venta fiada sin cliente o
-/// movimiento ya anulado.
+/// La corrección no es válida: monto en 0, venta fiada sin cliente, abono
+/// mayor que la deuda o movimiento ya anulado.
 class CorreccionInvalida implements Exception {
   const CorreccionInvalida(this.mensaje);
 
@@ -67,33 +68,21 @@ class CorreccionRepository {
       final venta = await _venta(id);
       _comprobar(por, venta.usuarioId, venta.fecha, venta.anulado);
       final lineas = await _lineas(id);
-      final antes = await _antesVenta(venta, lineas);
       var montoFinal = monto;
+      final nuevas = <int, int>{};
       if (lineas.isEmpty) {
         _validarMonto(monto);
       } else {
         var suma = 0;
-        var quedan = 0;
         for (final linea in lineas) {
           final cantidad = cantidades?[linea.id] ?? linea.cantidad;
           if (cantidad < 0) {
             throw const CorreccionInvalida('Cantidad inválida');
           }
-          if (cantidad == 0) {
-            await (_db.delete(_db.lineasVenta)
-                  ..where((l) => l.id.equals(linea.id)))
-                .go();
-            continue;
-          }
-          if (cantidad != linea.cantidad) {
-            await (_db.update(_db.lineasVenta)
-                  ..where((l) => l.id.equals(linea.id)))
-                .write(LineasVentaCompanion(cantidad: Value(cantidad)));
-          }
+          nuevas[linea.id] = cantidad;
           suma += linea.precioUnitario * cantidad;
-          quedan++;
         }
-        if (quedan == 0) {
+        if (nuevas.values.every((c) => c == 0)) {
           throw const CorreccionInvalida('Para quitar todo, anula la venta');
         }
         // Sin cambios de cantidad, un monto distinto a la suma es un total
@@ -103,6 +92,27 @@ class CorreccionRepository {
               'El total de una venta con productos sale de sus líneas');
         }
         montoFinal = suma;
+      }
+      final cambianLineas = lineas.any((l) => nuevas[l.id] != l.cantidad);
+      final igual = !cambianLineas &&
+          montoFinal == venta.monto &&
+          esFiado == venta.esFiado &&
+          (esFiado
+              ? clienteId == venta.clienteId
+              : medioPago == venta.medioPago);
+      if (igual) return;
+      final antes = await _antesVenta(venta, lineas);
+      for (final linea in lineas) {
+        final cantidad = nuevas[linea.id]!;
+        if (cantidad == 0) {
+          await (_db.delete(_db.lineasVenta)
+                ..where((l) => l.id.equals(linea.id)))
+              .go();
+        } else if (cantidad != linea.cantidad) {
+          await (_db.update(_db.lineasVenta)
+                ..where((l) => l.id.equals(linea.id)))
+              .write(LineasVentaCompanion(cantidad: Value(cantidad)));
+        }
       }
       await (_db.update(_db.ventas)..where((v) => v.id.equals(id))).write(
         VentasCompanion(
@@ -140,6 +150,15 @@ class CorreccionRepository {
     await _db.transaction(() async {
       final pago = await _pago(id);
       _comprobar(por, pago.usuarioId, pago.fecha, pago.anulado);
+      if (monto == pago.monto && medioPago == pago.medioPago) return;
+      if (monto > pago.monto) {
+        final maximo =
+            await FiadoRepository(_db).saldoCliente(pago.clienteId) + pago.monto;
+        if (monto > maximo) {
+          throw CorreccionInvalida('El abono no puede ser mayor que la deuda '
+              '(${formatoMoneda(maximo < 0 ? 0 : maximo)})');
+        }
+      }
       await (_db.update(_db.pagosFiado)..where((p) => p.id.equals(id))).write(
           PagosFiadoCompanion(monto: Value(monto), medioPago: Value(medioPago)));
       await _registrar(TipoMovimiento.abono, id, AccionCorreccion.corregido,
@@ -170,6 +189,9 @@ class CorreccionRepository {
     await _db.transaction(() async {
       final gasto = await _gasto(id);
       _comprobar(por, gasto.usuarioId, gasto.fecha, gasto.anulado);
+      final igual = monto == gasto.monto &&
+          (descripcion?.trim() ?? '') == (gasto.descripcion?.trim() ?? '');
+      if (igual) return;
       await (_db.update(_db.gastos)..where((g) => g.id.equals(id))).write(
           GastosCompanion(monto: Value(monto), descripcion: Value(descripcion)));
       await _registrar(TipoMovimiento.gasto, id, AccionCorreccion.corregido,

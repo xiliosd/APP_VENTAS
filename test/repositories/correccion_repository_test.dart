@@ -128,6 +128,9 @@ void main() {
 
   group('abonos', () {
     test('corregir cambia monto y medio de pago', () async {
+      await ventas.registrarVenta(
+          monto: 5000, esFiado: true, clienteId: pedro, usuarioId: ana.id,
+          fecha: hoy);
       final id = await fiado.registrarPago(
           clienteId: pedro, monto: 2000, usuarioId: ana.id, fecha: hoy);
 
