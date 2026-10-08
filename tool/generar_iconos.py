@@ -16,14 +16,14 @@ LOGO = RAIZ / "docs" / "marca" / "logo-vecitienda.jpeg"
 RES = RAIZ / "android" / "app" / "src" / "main" / "res"
 DENSIDADES = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
 
-# El isotipo ocupa la franja superior del logo; el nombre "VeciTienda"
-# empieza más abajo (~62 % de la altura). Se corta antes, al 59 %.
-FIN_ISOTIPO = 0.59
+# Banda vacía mínima (fracción de la altura) que separa el isotipo del nombre.
+BANDA_MINIMA = 0.01
 
 XML_ADAPTATIVO = """<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+    <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>
 </adaptive-icon>
 """
 
@@ -34,15 +34,38 @@ XML_COLOR = """<?xml version="1.0" encoding="utf-8"?>
 """
 
 
+def fin_isotipo(rgb):
+    """Fila donde termina el isotipo: el inicio de la primera banda sin tinta
+    (>= BANDA_MINIMA de la altura) que sigue a la primera fila con tinta y
+    antes de que vuelva la tinta (el nombre "VeciTienda")."""
+    tinta = rgb.convert("L").point(lambda v: 255 if v < 235 else 0)
+    banda = max(1, int(tinta.height * BANDA_MINIMA))
+    vista = False
+    vacias = 0
+    for y in range(tinta.height):
+        con_tinta = tinta.crop((0, y, tinta.width, y + 1)).getbbox() is not None
+        if con_tinta:
+            if vista and vacias >= banda:
+                return y - vacias
+            vista = True
+            vacias = 0
+        elif vista:
+            vacias += 1
+    raise SystemExit(
+        "No encontré el espacio entre el isotipo y el nombre en el logo; "
+        "revisa docs/marca/logo-vecitienda.jpeg"
+    )
+
+
 def recortar_isotipo(logo):
     """Recorta el isotipo, vuelve transparente el blanco y lo deja cuadrado."""
     rgb = logo.convert("RGB")
-    franja = rgb.crop((0, 0, rgb.width, int(rgb.height * FIN_ISOTIPO)))
+    franja = rgb.crop((0, 0, rgb.width, fin_isotipo(rgb)))
     tinta = franja.convert("L").point(lambda v: 255 if v < 235 else 0)
     isotipo = franja.crop(tinta.getbbox()).convert("RGBA")
     # get_flattened_data reemplaza a getdata (obsoleto desde Pillow 12).
     pixeles = getattr(isotipo, "get_flattened_data", isotipo.getdata)()
-    isotipo.putdata([(r, g, b, _alfa(r, g, b)) for (r, g, b, _) in pixeles])
+    isotipo.putdata([_sin_fondo(r, g, b) for (r, g, b, _) in pixeles])
     return _cuadrar(isotipo)
 
 
@@ -54,6 +77,27 @@ def _alfa(r, g, b):
     if luz <= 200:
         return 255
     return int((245 - luz) / 45 * 255)
+
+
+def _sin_fondo(r, g, b):
+    """Color y alfa de un píxel sobre blanco. En los bordes semitransparentes
+    se quita el blanco mezclado, para que no quede un halo claro."""
+    a = _alfa(r, g, b)
+    if a in (0, 255):
+        return (r, g, b, a)
+    f = a / 255
+
+    def canal(c):
+        return max(0, min(255, round((c - 255 * (1 - f)) / f)))
+
+    return (canal(r), canal(g), canal(b), a)
+
+
+def monocromo(capa):
+    """Silueta blanca con el alfa de [capa] (ícono temático de Android 13+)."""
+    silueta = Image.new("RGBA", capa.size, (255, 255, 255, 0))
+    silueta.putalpha(capa.getchannel("A"))
+    return silueta
 
 
 def _cuadrar(imagen, margen=0.08):
@@ -100,9 +144,9 @@ def main():
         carpeta = RES / f"mipmap-{nombre}"
         carpeta.mkdir(exist_ok=True)
         icono_clasico(isotipo, int(48 * escala)).save(carpeta / "ic_launcher.png")
-        primer_plano(isotipo, int(108 * escala)).save(
-            carpeta / "ic_launcher_foreground.png"
-        )
+        frente = primer_plano(isotipo, int(108 * escala))
+        frente.save(carpeta / "ic_launcher_foreground.png")
+        monocromo(frente).save(carpeta / "ic_launcher_monochrome.png")
 
     adaptativo = RES / "mipmap-anydpi-v26"
     adaptativo.mkdir(exist_ok=True)
@@ -110,6 +154,8 @@ def main():
     (RES / "values" / "ic_launcher_background.xml").write_text(
         XML_COLOR, encoding="utf-8"
     )
+    fila = fin_isotipo(Image.open(LOGO).convert("RGB"))
+    print(f"Isotipo cortado en la fila {fila} de {Image.open(LOGO).height}")
     print("Isotipo e íconos generados")
 
 

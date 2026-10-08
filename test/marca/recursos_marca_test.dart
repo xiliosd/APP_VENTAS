@@ -45,12 +45,16 @@ void main() {
       expect(cabeceraPng('$carpeta/ic_launcher_foreground.png').ancho,
           lado * 108 ~/ 48,
           reason: densidad);
+      expect(cabeceraPng('$carpeta/ic_launcher_monochrome.png').ancho,
+          lado * 108 ~/ 48,
+          reason: densidad);
     });
     final adaptativo = File(
             'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml')
         .readAsStringSync();
     expect(adaptativo, contains('@mipmap/ic_launcher_foreground'));
     expect(adaptativo, contains('@color/ic_launcher_background'));
+    expect(adaptativo, contains('@mipmap/ic_launcher_monochrome'));
   });
 
   test('Android muestra el nombre VeciTienda', () {
