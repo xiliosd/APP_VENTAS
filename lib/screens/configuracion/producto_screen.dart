@@ -227,13 +227,15 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
           minimo: minimo!,
           por: ref.read(sesionProvider).usuarioActivo!,
         );
-      } else if (_controla) {
-        await inventario.cambiarMinimo(productoId, minimo!);
-      } else if (_controlabaAlAbrir) {
-        await inventario.desactivarControl(productoId);
       }
       if (_controla) {
-        await inventario.cambiarPedirHasta(productoId, pedirHasta);
+        await inventario.cambiarLimites(
+          productoId,
+          minimo: minimo!,
+          pedirHasta: pedirHasta,
+        );
+      } else if (_controlabaAlAbrir) {
+        await inventario.desactivarControl(productoId);
       }
       if (mounted) Navigator.of(context).pop(true);
     } on ArgumentError {

@@ -214,16 +214,47 @@ class InventarioRepository {
     });
   }
 
-  /// Deja de controlar existencias; el historial se conserva.
+  /// Deja de controlar existencias; el historial se conserva y "pedir hasta"
+  /// se borra (al activarlo de nuevo se vuelve a pedir el mínimo).
   Future<void> desactivarControl(int productoId) =>
       (_db.update(_db.productos)..where((p) => p.id.equals(productoId))).write(
-        const ProductosCompanion(controlaExistencias: Value(false)),
+        const ProductosCompanion(
+          controlaExistencias: Value(false),
+          pedirHasta: Value(null),
+        ),
       );
 
   Future<void> cambiarMinimo(int productoId, int minimo) async {
     if (minimo < 0) throw ArgumentError('Escribe un mínimo válido');
+    final producto = await (_db.select(
+      _db.productos,
+    )..where((p) => p.id.equals(productoId))).getSingle();
+    final pedirHasta = producto.pedirHasta;
+    if (pedirHasta != null && minimo > pedirHasta) {
+      throw ArgumentError('El mínimo no puede ser mayor que "Pedir hasta"');
+    }
     await (_db.update(_db.productos)..where((p) => p.id.equals(productoId)))
         .write(ProductosCompanion(minimo: Value(minimo)));
+  }
+
+  /// Cambia el mínimo y "pedir hasta" (null lo borra) en una sola escritura;
+  /// "pedir hasta" debe ser ≥ mínimo.
+  Future<void> cambiarLimites(
+    int productoId, {
+    required int minimo,
+    int? pedirHasta,
+  }) async {
+    if (minimo < 0) throw ArgumentError('Escribe un mínimo válido');
+    if (pedirHasta != null && pedirHasta < minimo) {
+      throw ArgumentError('Debe ser mayor o igual que el mínimo');
+    }
+    await (_db.update(_db.productos)..where((p) => p.id.equals(productoId)))
+        .write(
+          ProductosCompanion(
+            minimo: Value(minimo),
+            pedirHasta: Value(pedirHasta),
+          ),
+        );
   }
 
   /// Registra que hay [cantidad] unidades; guarda lo que decía la app.

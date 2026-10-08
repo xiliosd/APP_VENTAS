@@ -569,6 +569,27 @@ void main() {
 
     expect(find.text('Ese proveedor ya está en el producto'), findsOneWidget);
   });
+
+  testWidgets('subir mínimo y "Pedir hasta" juntos se guarda', (tester) async {
+    final id = await crearArepa();
+    final container = await containerConSesion(db, nombre: 'Beto');
+    final beto = container.read(sesionProvider).usuarioActivo!;
+    container.dispose();
+    final inv = InventarioRepository(db);
+    await inv.activarControl(id, cantidad: 10, minimo: 3, por: beto);
+    await inv.cambiarPedirHasta(id, 12);
+    await montar(tester);
+
+    await tester.tap(find.byKey(Key('producto_item_$id')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('campo_minimo')));
+    await tester.enterText(find.byKey(const Key('campo_minimo')), '15');
+    await tester.enterText(find.byKey(const Key('campo_pedir_hasta')), '20');
+    await guardar(tester);
+
+    final p = await db.select(db.productos).getSingle();
+    expect((p.minimo, p.pedirHasta), (15, 20));
+  });
 }
 
 /// Demora la carga de proveedores de un producto hasta [_espera].
