@@ -181,6 +181,8 @@ class _FormularioProveedorState extends ConsumerState<_FormularioProveedor> {
         );
       }
       if (mounted) Navigator.of(context).pop(true);
+    } on ArgumentError catch (e) {
+      if (mounted) setState(() => _error = '${e.message}');
     } finally {
       if (mounted) setState(() => _guardando = false);
     }

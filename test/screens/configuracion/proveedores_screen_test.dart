@@ -107,4 +107,20 @@ void main() {
 
     expect(find.byType(ProveedoresScreen), findsOneWidget);
   });
+
+  testWidgets('un nombre repetido muestra el error y no se guarda',
+      (tester) async {
+    await ProveedorRepository(db).crear(nombre: 'Postobón');
+    await montar(tester);
+
+    await tester.tap(find.byKey(const Key('boton_agregar_proveedor_nuevo')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('campo_nombre_proveedor')), 'postobón');
+    await tester.tap(find.byKey(const Key('boton_guardar_proveedor')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ya existe un proveedor con ese nombre'), findsOneWidget);
+    expect(await db.select(db.proveedores).get(), hasLength(1));
+  });
 }

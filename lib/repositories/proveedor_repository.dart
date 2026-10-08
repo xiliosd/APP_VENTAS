@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../data/database.dart';
+import '../util/texto_util.dart';
 
 String? _opcional(String? texto) {
   final limpio = texto?.trim() ?? '';
@@ -31,13 +32,32 @@ class ProveedorRepository {
 
   Future<List<Proveedor>> todos() => _db.select(_db.proveedores).get();
 
+  /// Proveedor (activo o no) con el mismo nombre que [nombre], según
+  /// [claveNombre].
+  Future<Proveedor?> buscarPorNombre(String nombre) async {
+    final clave = claveNombre(nombre);
+    for (final p in await todos()) {
+      if (claveNombre(p.nombre) == clave) return p;
+    }
+    return null;
+  }
+
+  Future<void> _sinRepetir(String nombre, {int? salvo}) async {
+    final existente = await buscarPorNombre(nombre);
+    if (existente != null && existente.id != salvo) {
+      throw ArgumentError('Ya existe un proveedor con ese nombre');
+    }
+  }
+
   Future<int> crear({
     required String nombre,
     String? telefono,
     String? notas,
   }) async {
+    final limpio = _nombreValido(nombre);
+    await _sinRepetir(limpio);
     return _db.into(_db.proveedores).insert(ProveedoresCompanion.insert(
-          nombre: _nombreValido(nombre),
+          nombre: limpio,
           telefono: Value(_opcional(telefono)),
           notas: Value(_opcional(notas)),
         ));
@@ -49,9 +69,11 @@ class ProveedorRepository {
     String? telefono,
     String? notas,
   }) async {
+    final limpio = _nombreValido(nombre);
+    await _sinRepetir(limpio, salvo: id);
     await (_db.update(_db.proveedores)..where((p) => p.id.equals(id))).write(
       ProveedoresCompanion(
-        nombre: Value(_nombreValido(nombre)),
+        nombre: Value(limpio),
         telefono: Value(_opcional(telefono)),
         notas: Value(_opcional(notas)),
       ),
