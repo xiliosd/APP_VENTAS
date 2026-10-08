@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/lineas_venta_providers.dart';
+import 'package:app_ventas/providers/repository_providers.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/repositories/correccion_repository.dart';
 import 'package:app_ventas/repositories/fiado_repository.dart';
@@ -375,22 +376,43 @@ void main() {
     expect(guardarHabilitado(tester), isFalse);
   });
 
-  testWidgets('restar hasta 0 quita la línea', (tester) async {
+  testWidgets('restar hasta 0 deja la línea tachada y se puede recuperar',
+      (tester) async {
     final (container, ana) = await sesion();
     final (id, lineas) = await ventaConLineas(ana);
     await abrir(tester, container, ventaDe8200(id, ana));
 
     await tester.tap(find.byKey(const Key('boton_corregir')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(Key('restar_linea_${lineas[1].id}')));
+    final coca = lineas[1].id;
+    await tester.tap(find.byKey(Key('restar_linea_$coca')));
     await tester.pump();
 
-    expect(find.byKey(Key('cantidad_linea_${lineas[1].id}')), findsNothing);
+    expect(tester.widget<Text>(find.byKey(Key('cantidad_linea_$coca'))).data,
+        '0');
+    expect(
+        tester
+            .widget<Text>(find.byKey(Key('nombre_linea_$coca')))
+            .style
+            ?.decoration,
+        TextDecoration.lineThrough);
+    expect(
+        tester
+            .widget<IconButton>(find.byKey(Key('restar_linea_$coca')))
+            .onPressed,
+        isNull);
+    expect(find.byKey(Key('quitar_linea_$coca')), findsNothing);
     expect(
         find.descendant(
             of: find.byKey(const Key('total_correccion')),
             matching: find.text(r'$7.000')),
         findsOneWidget);
+
+    await tester.tap(find.byKey(Key('sumar_linea_$coca')));
+    await tester.pump();
+    expect(tester.widget<Text>(find.byKey(Key('cantidad_linea_$coca'))).data,
+        '1');
+    expect(guardarHabilitado(tester), isFalse);
   });
 
   testWidgets('sin cargar las líneas no se ofrece Corregir', (tester) async {
@@ -407,4 +429,78 @@ void main() {
     expect(find.byKey(const Key('boton_corregir')), findsNothing);
     expect(find.byKey(const Key('boton_anular')), findsOneWidget);
   });
+
+  testWidgets('un abono mayor que la deuda muestra el motivo', (tester) async {
+    final (container, ana) = await sesion();
+    final pedro = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
+    final fecha = DateTime.now();
+    await VentaRepository(db).registrarVenta(
+        monto: 5000,
+        esFiado: true,
+        clienteId: pedro,
+        usuarioId: ana.id,
+        fecha: fecha);
+    final id = await FiadoRepository(db).registrarPago(
+        clienteId: pedro, monto: 2000, usuarioId: ana.id, fecha: fecha);
+    await abrir(
+        tester,
+        container,
+        MovimientoEditable(
+            tipo: TipoMovimiento.abono,
+            id: id,
+            monto: 2000,
+            fecha: fecha,
+            usuarioId: ana.id,
+            clienteId: pedro));
+
+    await tester.tap(find.byKey(const Key('boton_corregir')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('tecla_monto_0'))); // 20.000
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(r'El abono no puede ser mayor que la deuda ($5.000)'),
+        findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
+  });
+
+  testWidgets('sin permiso al guardar lo dice claramente', (tester) async {
+    final container = await containerConSesion(db, overrides: [
+      correccionRepositoryProvider.overrideWithValue(_RepoSinPermiso(db)),
+    ]);
+    addTearDown(container.dispose);
+    final ana = container.read(sesionProvider).usuarioActivo!;
+    final id = await VentaRepository(db)
+        .registrarVenta(monto: 5000, esFiado: false, usuarioId: ana.id);
+    await abrir(tester, container, deVenta(id, ana));
+
+    await tester.tap(find.byKey(const Key('boton_corregir')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('tecla_monto_borrar')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ya no puedes corregir este movimiento'), findsOneWidget);
+  });
+}
+
+/// Siempre niega el permiso al corregir.
+class _RepoSinPermiso extends CorreccionRepository {
+  _RepoSinPermiso(super.db);
+
+  @override
+  Future<void> corregirVenta(
+    int id, {
+    required int monto,
+    required bool esFiado,
+    int? clienteId,
+    MedioPago medioPago = MedioPago.efectivo,
+    Map<int, int>? cantidades,
+    required Usuario por,
+  }) async =>
+      throw const PermisoDenegado();
 }

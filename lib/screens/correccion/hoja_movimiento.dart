@@ -7,6 +7,7 @@ import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../providers/ticket_provider.dart';
 import '../../providers/usuarios_providers.dart';
+import '../../repositories/correccion_repository.dart';
 import '../../repositories/fiado_repository.dart';
 import '../../repositories/historial_repository.dart';
 import '../../ui/avisos.dart';
@@ -217,6 +218,13 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
       (_lineas.isEmpty || _quedanLineas) &&
       (_m.tipo != TipoMovimiento.venta || !_esFiado || _clienteElegido != null);
 
+  /// Texto para el usuario según por qué falló guardar o anular.
+  String _motivo(Object error) => switch (error) {
+        PermisoDenegado() => 'Ya no puedes corregir este movimiento',
+        CorreccionInvalida(:final mensaje) => mensaje,
+        _ => 'No se pudo guardar, intenta de nuevo',
+      };
+
   Future<void> _guardar() async {
     if (_guardando) return;
     setState(() {
@@ -258,10 +266,8 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
       if (mounted) {
         Navigator.of(context).pop(_aviso(_m.tipo, anulado: false));
       }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _error = 'No se pudo guardar, intenta de nuevo');
-      }
+    } catch (e) {
+      if (mounted) setState(() => _error = _motivo(e));
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -305,10 +311,8 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
           await repo.anularGasto(_m.id, por: por);
       }
       if (mounted) Navigator.of(context).pop(_aviso(_m.tipo, anulado: true));
-    } catch (_) {
-      if (mounted) {
-        setState(() => _error = 'No se pudo guardar, intenta de nuevo');
-      }
+    } catch (e) {
+      if (mounted) setState(() => _error = _motivo(e));
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -409,18 +413,30 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
 
   Widget _filaLinea(LineaVenta linea) {
     final cantidad = _cantidad(linea);
+    final quitada = cantidad == 0;
     void cambiar(int nueva) => setState(() {
           _cantidades[linea.id] = nueva;
           _error = null;
         });
     return Row(
       children: [
-        Expanded(child: Text(linea.descripcion)),
+        Expanded(
+          child: Text(
+            linea.descripcion,
+            key: Key('nombre_linea_${linea.id}'),
+            style: quitada
+                ? const TextStyle(
+                    decoration: TextDecoration.lineThrough,
+                    color: ColoresApp.textoSecundario,
+                  )
+                : null,
+          ),
+        ),
         IconButton(
           key: Key('restar_linea_${linea.id}'),
           tooltip: 'Restar',
           icon: const Icon(Icons.remove_rounded),
-          onPressed: () => cambiar(cantidad - 1),
+          onPressed: quitada ? null : () => cambiar(cantidad - 1),
         ),
         Text('$cantidad', key: Key('cantidad_linea_${linea.id}')),
         IconButton(
@@ -429,16 +445,18 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
           icon: const Icon(Icons.add_rounded),
           onPressed: () => cambiar(cantidad + 1),
         ),
-        IconButton(
-          key: Key('quitar_linea_${linea.id}'),
-          tooltip: 'Quitar',
-          icon: const Icon(Icons.delete_outline_rounded),
-          color: ColoresApp.sale,
-          onPressed: () => cambiar(0),
-        ),
+        if (!quitada)
+          IconButton(
+            key: Key('quitar_linea_${linea.id}'),
+            tooltip: 'Quitar',
+            icon: const Icon(Icons.delete_outline_rounded),
+            color: ColoresApp.sale,
+            onPressed: () => cambiar(0),
+          ),
       ],
     );
   }
+
 
   Widget _selectorMedio() => SelectorSegmentado<MedioPago>(
         key: const Key('editar_medio_pago'),
@@ -495,7 +513,7 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
           ),
         ] else ...[
           for (final linea in _lineas)
-            if (_cantidad(linea) > 0) _filaLinea(linea),
+            _filaLinea(linea),
           const SizedBox(height: 8),
           Center(
             child: KeyedSubtree(
