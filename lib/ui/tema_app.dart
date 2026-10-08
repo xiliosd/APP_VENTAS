@@ -99,7 +99,7 @@ ThemeData temaApp() {
     ),
     navigationBarTheme: const NavigationBarThemeData(
       backgroundColor: ColoresApp.superficie,
-      indicatorColor: Color(0xFFDBE4FF),
+      indicatorColor: ColoresApp.primarioSuave,
       labelTextStyle: WidgetStatePropertyAll(
         TextStyle(
             fontFamily: _fuente, fontSize: 12, fontWeight: FontWeight.w600),

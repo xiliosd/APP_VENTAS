@@ -29,7 +29,7 @@ class EstadoVacio extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: const BoxDecoration(
-                color: Color(0xFFE8EDF8),
+                color: ColoresApp.primarioSuave,
                 shape: BoxShape.circle,
               ),
               child: Icon(icono, size: 32, color: ColoresApp.primario),

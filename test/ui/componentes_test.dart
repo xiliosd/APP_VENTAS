@@ -162,4 +162,19 @@ void main() {
     expect(texto.style!.decoration, TextDecoration.lineThrough);
     expect(texto.style!.color, ColoresApp.textoSecundario);
   });
+
+  testWidgets('el círculo del estado vacío usa el azul claro de marca',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+          body: EstadoVacio(icono: Icons.inbox_outlined, titulo: 'Nada')),
+    ));
+    final circulo = tester.widget<Container>(find
+        .ancestor(
+            of: find.byIcon(Icons.inbox_outlined),
+            matching: find.byType(Container))
+        .first);
+    expect((circulo.decoration! as BoxDecoration).color,
+        ColoresApp.primarioSuave);
+  });
 }

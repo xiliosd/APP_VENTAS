@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 abstract final class ColoresApp {
   static const primario = Color(0xFF1A539B);
 
+  /// Azul de marca al 15 % sobre blanco: fondos de selección y de íconos.
+  static const primarioSuave = Color(0xFFDDE5F0);
+
   /// Verde de la marca (logo, íconos, bordes, acentos). **Nunca para texto**:
   /// sobre blanco da 3.1:1; para texto y botones con texto blanco usar
   /// [entra].

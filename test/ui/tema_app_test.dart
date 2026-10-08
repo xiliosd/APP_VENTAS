@@ -99,4 +99,12 @@ void main() {
     expect(fuera, isEmpty,
         reason: 'Sin el eje wght la fuente variable sale con peso 200');
   });
+
+  test('los tonos claros salen del azul de marca', () {
+    expect(ColoresApp.primarioSuave, const Color(0xFFDDE5F0));
+    expect(temaApp().navigationBarTheme.indicatorColor,
+        ColoresApp.primarioSuave);
+    expect(contraste(ColoresApp.primario, ColoresApp.primarioSuave),
+        greaterThanOrEqualTo(4.5));
+  });
 }
