@@ -52,27 +52,33 @@ class MovimientoFiado {
   final Correccion? ultimaCorreccion;
 }
 
+/// Lo que debe [clienteId]: ventas fiadas no anuladas menos abonos no
+/// anulados. Compartido con CorreccionRepository sin construir repositorios.
+Future<int> saldoDeCliente(AppDatabase db, int clienteId) async {
+  final ventas = await (db.select(db.ventas)
+        ..where((v) =>
+            v.clienteId.equals(clienteId) &
+            v.esFiado.equals(true) &
+            v.anulado.equals(false)))
+      .get();
+  final totalVentas = ventas.fold<int>(0, (suma, v) => suma + v.monto);
+
+  final pagos = await (db.select(db.pagosFiado)
+        ..where((p) => p.clienteId.equals(clienteId) & p.anulado.equals(false)))
+      .get();
+  final totalPagos = pagos.fold<int>(0, (suma, p) => suma + p.monto);
+
+  return totalVentas - totalPagos;
+}
+
 class FiadoRepository {
-  FiadoRepository(this._db);
+  FiadoRepository(this._db, {CorreccionRepository? correcciones})
+      : _correcciones = correcciones ?? CorreccionRepository(_db);
 
   final AppDatabase _db;
+  final CorreccionRepository _correcciones;
 
-  Future<int> saldoCliente(int clienteId) async {
-    final ventas = await (_db.select(_db.ventas)
-          ..where((v) =>
-              v.clienteId.equals(clienteId) &
-              v.esFiado.equals(true) &
-              v.anulado.equals(false)))
-        .get();
-    final totalVentas = ventas.fold<int>(0, (suma, v) => suma + v.monto);
-
-    final pagos = await (_db.select(_db.pagosFiado)
-          ..where((p) => p.clienteId.equals(clienteId) & p.anulado.equals(false)))
-        .get();
-    final totalPagos = pagos.fold<int>(0, (suma, p) => suma + p.monto);
-
-    return totalVentas - totalPagos;
-  }
+  Future<int> saldoCliente(int clienteId) => saldoDeCliente(_db, clienteId);
 
   Future<List<ClienteConSaldo>> listaClientesConDeuda() async {
     final clientes = await _db.select(_db.clientes).get();
@@ -182,10 +188,9 @@ class FiadoRepository {
   Future<List<MovimientoFiado>> movimientosCliente(int clienteId) async {
     final ventas = await ventasFiadasCliente(clienteId, incluirAnulados: true);
     final pagos = await pagosCliente(clienteId, incluirAnulados: true);
-    final correcciones = CorreccionRepository(_db);
-    final correccionesVentas = await correcciones.ultimasCorrecciones(
+    final correccionesVentas = await _correcciones.ultimasCorrecciones(
         TipoMovimiento.venta, ventas.map((v) => v.id));
-    final correccionesPagos = await correcciones.ultimasCorrecciones(
+    final correccionesPagos = await _correcciones.ultimasCorrecciones(
         TipoMovimiento.abono, pagos.map((p) => p.id));
     return [
       for (final v in ventas)

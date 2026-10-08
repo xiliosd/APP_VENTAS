@@ -32,7 +32,10 @@ final ventaRepositoryProvider = Provider(
 );
 
 final fiadoRepositoryProvider = Provider(
-  (ref) => FiadoRepository(ref.watch(databaseProvider)),
+  (ref) => FiadoRepository(
+    ref.watch(databaseProvider),
+    correcciones: ref.watch(correccionRepositoryProvider),
+  ),
 );
 
 final gastoRepositoryProvider = Provider(

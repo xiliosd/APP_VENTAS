@@ -161,7 +161,7 @@ class CorreccionRepository {
       if (monto == pago.monto && medioPago == pago.medioPago) return;
       if (monto > pago.monto) {
         final maximo =
-            await FiadoRepository(_db).saldoCliente(pago.clienteId) + pago.monto;
+            await saldoDeCliente(_db, pago.clienteId) + pago.monto;
         if (monto > maximo) {
           throw CorreccionInvalida('El abono no puede ser mayor que la deuda '
               '(${formatoMoneda(maximo < 0 ? 0 : maximo)})');

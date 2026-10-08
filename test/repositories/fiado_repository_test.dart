@@ -313,4 +313,36 @@ void main() {
     expect(alDia.single.saldo, 0);
     expect(alDia.single.fechaDeudaMasAntigua, isNull);
   });
+
+  test('usa el repositorio de correcciones que recibe', () async {
+    final espia = _CorreccionesEspia(db);
+    final conEspia = FiadoRepository(db, correcciones: espia);
+    await conEspia.movimientosCliente(clienteId);
+    expect(espia.consultas, 2); // ventas y abonos
+  });
+
+  test('saldoDeCliente da ventas fiadas menos abonos', () async {
+    await db.into(db.ventas).insert(VentasCompanion.insert(
+        monto: 5000,
+        fecha: DateTime(2026, 10, 8),
+        usuarioId: usuarioId,
+        esFiado: const Value(true),
+        clienteId: Value(clienteId)));
+    await repo.registrarPago(
+        clienteId: clienteId, monto: 2000, usuarioId: usuarioId);
+    expect(await saldoDeCliente(db, clienteId), 3000);
+  });
+}
+
+class _CorreccionesEspia extends CorreccionRepository {
+  _CorreccionesEspia(super.db);
+
+  int consultas = 0;
+
+  @override
+  Future<Map<int, Correccion>> ultimasCorrecciones(
+      TipoMovimiento tipo, Iterable<int> ids) {
+    consultas++;
+    return super.ultimasCorrecciones(tipo, ids);
+  }
 }
