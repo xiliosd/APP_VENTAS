@@ -2,6 +2,7 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
 import 'package:app_ventas/screens/home/home_screen.dart';
 import 'package:app_ventas/screens/login/ingresar_pin_screen.dart';
+import 'package:app_ventas/screens/login/seleccionar_usuario_screen.dart';
 import 'package:app_ventas/screens/reportes/reportes_screen.dart';
 import 'package:app_ventas/screens/venta/registrar_venta_screen.dart';
 import 'package:app_ventas/ui/tema_app.dart';
@@ -60,6 +61,8 @@ void main() {
   testWidgets('Inicio y cada pestaña se dibujan en oscuro', (tester) async {
     await montarOscuro(tester, const HomeScreen());
     verificarOscuro(tester, find.byType(HomeScreen));
+    expect(find.byKey(const Key('mini_grafica')), findsOneWidget);
+    expect(find.byKey(const Key('barra_acciones_inicio')), findsOneWidget);
 
     for (final pestana in ['Fiado', 'Inventario', 'Historial', 'Ajustes']) {
       await tester.tap(find.descendant(
@@ -72,6 +75,20 @@ void main() {
   testWidgets('Nueva venta se dibuja en oscuro', (tester) async {
     await montarOscuro(tester, const RegistrarVentaScreen());
     verificarOscuro(tester, find.byType(RegistrarVentaScreen));
+
+    // La hoja "¿Cómo paga?" con el selector de cliente abierto.
+    await tester.tap(find.byKey(const Key('monto_rapido_5000')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pago_fiado')));
+    await tester.pumpAndSettle();
+    verificarOscuro(tester, find.byKey(const Key('hoja_como_paga')));
+  });
+
+  testWidgets('"¿Quién eres?" se dibuja en oscuro', (tester) async {
+    await montarOscuro(tester, const SeleccionarUsuarioScreen());
+    verificarOscuro(tester, find.byType(SeleccionarUsuarioScreen));
   });
 
   testWidgets('el PIN se dibuja en oscuro', (tester) async {

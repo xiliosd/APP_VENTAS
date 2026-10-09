@@ -1,7 +1,7 @@
 # Renovación de la interfaz — R2a: pantallas de demo renovadas
 
 **Fecha:** 2026-10-09
-**Estado:** Diseño aprobado en conversación; pendiente revisión de esta especificación
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con R1 (669e62a, 563 pruebas). Sistema visual de R1: `ColoresApp.of(context)`,
 `Movimiento`, `Vibracion`, `MontoAnimado`, `EntradaEscalonada`, radios de `tema_app.dart`.
 
