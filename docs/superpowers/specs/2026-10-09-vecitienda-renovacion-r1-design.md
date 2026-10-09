@@ -70,11 +70,17 @@ Los existentes se conservan con el mismo nombre; se agregan `tarjetaPrincipal`,
 | `sobreEntra` | Texto sobre `rellenoEntra` | `#FFFFFF` | `#052E16` |
 | `entraSuave` | Borde/fondo suave de ingresos | `#BBF7D0` | `#14532D` |
 | `sale` | Gastos, errores, destructivo | `#DC2626` | `#F87171` |
+| `sobreSale` | Texto sobre relleno `sale` (`onError` del tema) | `#FFFFFF` | `#450A0A` |
 | `saleSuave` | Borde/fondo suave de gastos | `#FECACA` | `#7F1D1D` |
 | `fiado` | Fiado, por cobrar (texto) | `#B45309` | `#FBBF24` |
 | `fiadoSuave` | Fondo de fiado | `#FEF3C7` | `#2A2010` |
 | `fondoAviso` | Fondo del aviso flotante | `#1E293B` | `#E2E8F0` |
 | `textoAviso` / `accionAviso` | Texto y acción del aviso | `#FFFFFF` / `#93C5FD` | `#0B1220` / `#1A539B` |
+
+Colores fijos que no cambian por tema (constantes estáticas en `colores_app.dart`):
+`ColoresApp.blancoMarca` (`#FFFFFF`: insignia del logo y fondo del código QR, que debe ser
+blanco para escanearse) y `ColoresApp.paletaAvatar` (los 6 colores de los avatares, con
+texto `blancoMarca`; los 6 tienen contraste ≥ 4,5:1 con blanco).
 
 Requisito: todo par texto/fondo usado cumple contraste **≥ 4,5:1** (texto ≥ 24 px o 19 px negrita:
 ≥ 3:1) en ambos modos. Si un valor de la tabla no lo cumple al probarlo, se ajusta su luminosidad
@@ -102,7 +108,7 @@ manteniendo el tono y se actualiza esta tabla.
 | Hojas inferiores | 20 arriba | 28 arriba |
 | Diálogos | 20 | 28 |
 | Aviso flotante | 12 | píldora |
-| Indicador de la barra de navegación | píldora (Material) | píldora; se desliza entre pestañas |
+| Indicador de la barra de navegación | píldora (Material) | píldora (animación propia de Material; no se reimplementa) |
 
 Botón presionado ("aplastar"): escala a **0,94** y radio a 18; al soltar vuelve con curva de
 resorte. Áreas de toque siguen ≥ 48 dp.
@@ -140,8 +146,9 @@ Usos en R1:
   en R2–R4.
 - **Transiciones entre pantallas**: `pageTransitionsTheme` con
   `FadeForwardsPageTransitionsBuilder` (Android) en el tema.
-- **Aviso** (`avisos.dart`): entra desde abajo con `resorte`.
-- **Barra de navegación**: el indicador se desliza con `enfatizada`.
+- **Aviso** (`avisos.dart`): forma de píldora y duración de entrada `larga` mediante
+  `snackBarAnimationStyle` (Flutter no permite cambiar la curva del `SnackBar`; el rebote
+  queda fuera).
 
 ## 5. Vibración
 
@@ -149,14 +156,13 @@ Nuevo `lib/ui/vibracion.dart`, con `HapticFeedback` de Flutter (sin paquete):
 
 | Función | Cuándo | Llamada |
 |---|---|---|
-| `Vibracion.toque()` | Tocar producto o monto rápido, tecla del PIN o teclado, cambiar de pestaña | `selectionClick` |
-| `Vibracion.exito()` | Cobrar, guardar, abonar, aviso de éxito | `mediumImpact` |
+| `Vibracion.toque()` | Tocar producto o monto rápido, tecla del PIN o teclado, botón principal, cambiar de pestaña | `selectionClick` |
+| `Vibracion.exito()` | Aviso de confirmación (`avisar`), que sale al cobrar, guardar, abonar | `mediumImpact` |
 | `Vibracion.error()` | PIN incorrecto, dato faltante, aviso de error | `heavyImpact` |
 
 Sin interruptor propio: el sistema operativo respeta la configuración de vibración del usuario.
-En R1 se conectan los componentes (`BotonPrincipal`, teclados, `MontoRapidoGrid`, navegación,
-`avisos.dart`); las pantallas que llamen directamente a avisos de éxito/error vibran a través de
-estos.
+En R1 se conectan los componentes (`BotonPrincipal`, teclados, `Mosaico` —productos y montos
+rápidos—, navegación, `avisos.dart`) y el error de PIN incorrecto en `ingresar_pin_screen.dart`.
 
 ## 6. Componentes afectados
 
@@ -164,9 +170,10 @@ estos.
 - `tema_app.dart` — `temaClaro()` y `temaOscuro()` desde un constructor común que recibe
   `ColoresApp`; formas, tipografía y transiciones de las secciones 2–4; registra la extensión.
 - `colores_app.dart` — sección 1.
-- `boton_principal.dart` — píldora, aplastar con resorte, `Vibracion.exito()` al confirmar.
+- `boton_principal.dart` — píldora, aplastar con resorte, `Vibracion.toque()` al presionar (la
+  vibración de éxito la da el aviso de confirmación, para no vibrar dos veces).
 - `tarjeta_monto.dart`, `monto.dart` — radios, `MontoAnimado`.
-- `avisos.dart` — píldora, rebote, vibración por tipo.
+- `avisos.dart` — píldora, duración de entrada, `Vibracion.exito()`.
 - `hoja_inferior.dart`, `dialogo_cantidad.dart`, `selector_segmentado.dart`,
   `teclado_monto.dart`, `mosaico.dart`, `estado_vacio.dart`, `avatar_inicial.dart`,
   `etiqueta_qr.dart`, `marca_app.dart`, `tipografia.dart` — colores del tema, formas,
@@ -199,7 +206,7 @@ escalonada fuera del Inicio.
 - **`MontoAnimado`:** tras el conteo muestra el valor nuevo; con `disableAnimations` muestra el
   valor nuevo en el primer cuadro.
 - **Entrada escalonada:** con `disableAnimations` no hay animación; no se repite al reconstruir.
-- **Vibración:** `BotonPrincipal`, teclado del PIN y avisos emiten la llamada esperada
+- **Vibración:** `BotonPrincipal`, teclado del PIN, PIN incorrecto y avisos emiten la llamada esperada
   (interceptando el canal `SystemChannels.platform`).
 - **Modo oscuro:** Inicio, Nueva venta, Fiado, Inventario, Historial, Ajustes y PIN se
   construyen en `temaOscuro` sin excepciones ni desbordes (vista de 800 dp, fuente Ahem).
