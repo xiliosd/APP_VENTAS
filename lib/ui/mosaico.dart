@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'colores_app.dart';
+import 'movimiento.dart';
 import 'tema_app.dart';
 import 'vibracion.dart';
 
@@ -82,7 +83,15 @@ class Mosaico extends StatelessWidget {
               Positioned(
                 top: 6,
                 right: 6,
-                child: Container(
+                // Rebota cada vez que cambia la cantidad.
+                child: TweenAnimationBuilder<double>(
+                  key: ValueKey(cantidad),
+                  tween: Tween(begin: 1.25, end: 1),
+                  duration: Movimiento.duracion(context, Movimiento.media),
+                  curve: Movimiento.resorte,
+                  builder: (_, escala, hijo) =>
+                      Transform.scale(scale: escala, child: hijo),
+                  child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 7,
                     vertical: 2,
@@ -99,6 +108,7 @@ class Mosaico extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                ),
                 ),
               ),
           ],

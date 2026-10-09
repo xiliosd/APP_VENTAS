@@ -13,13 +13,12 @@ import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
 import '../../ui/monto.dart';
 import '../../ui/mosaico.dart';
-import '../../ui/selector_segmentado.dart';
 import '../../ui/teclado_monto.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
 import '../../widgets/monto_rapido_grid.dart';
-import '../../widgets/selector_cliente.dart';
 import '../qr/cobro_qr_screen.dart';
+import 'hoja_como_paga.dart';
 
 class RegistrarVentaScreen extends ConsumerStatefulWidget {
   const RegistrarVentaScreen({super.key});
@@ -64,6 +63,26 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     titulo: 'Ticket',
     builder: (_) => const _HojaTicket(),
   );
+
+  /// Pregunta cómo paga y, si elige, fija la forma de pago en el ticket y
+  /// cobra. Cerrar la hoja sin elegir deja el ticket como estaba (contado).
+  Future<void> _alCobrar() async {
+    if (_cobrando) return;
+    final notifier = ref.read(ticketProvider.notifier);
+    final forma = await mostrarHojaComoPaga(context);
+    if (!mounted) return;
+    if (forma == null) {
+      notifier.cambiarFiado(false);
+      return;
+    }
+    if (forma != FormaPago.fiado) {
+      notifier.cambiarFiado(false);
+      notifier.cambiarMedioPago(forma == FormaPago.transferencia
+          ? MedioPago.transferencia
+          : MedioPago.efectivo);
+    }
+    await _cobrar();
+  }
 
   Future<void> _cobrar() async {
     if (_cobrando) return;
@@ -127,33 +146,6 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          SelectorSegmentado<bool>(
-            key: const Key('selector_tipo_venta'),
-            opciones: const {false: 'Contado', true: 'Fiado'},
-            valor: ticket.esFiado,
-            onCambio: notifier.cambiarFiado,
-          ),
-          if (ticket.esFiado) ...[
-            const SizedBox(height: 12),
-            SelectorCliente(
-              elegido: ticket.cliente,
-              onElegir: notifier.elegirCliente,
-              onEscribir: notifier.escribirCliente,
-              exigir: !ticket.estaVacio,
-            ),
-          ],
-          if (!ticket.esFiado) ...[
-            const SizedBox(height: 12),
-            SelectorSegmentado<MedioPago>(
-              key: const Key('selector_medio_pago'),
-              opciones: const {
-                MedioPago.efectivo: 'Efectivo',
-                MedioPago.transferencia: 'Transferencia',
-              },
-              valor: ticket.medioPago,
-              onCambio: notifier.cambiarMedioPago,
-            ),
-          ],
           const _Seccion('PRODUCTOS'),
           productosAsync.when(
             data: (productos) {
@@ -225,7 +217,7 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       bottomNavigationBar: _BarraCobro(
         ticket: ticket,
         cobrando: _cobrando,
-        onCobrar: _cobrar,
+        onCobrar: _alCobrar,
         onVerTicket: _verTicket,
         onVaciar: _vaciar,
       ),
@@ -272,30 +264,26 @@ class _BarraCobro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total = formatoMoneda(ticket.total);
-    final cliente = ticket.clienteParaCobrar;
-    final texto = !ticket.esFiado
-        ? (ticket.medioPago == MedioPago.transferencia
-              ? 'Cobrar $total por QR'
-              : 'Cobrar $total')
-        : cliente == null
-        ? 'Fiar $total'
-        : 'Fiar $total a ${cliente.nombre}';
-    final String? aviso = ticket.estaVacio
-        ? 'Agrega algo para cobrar'
-        : (ticket.esFiado && cliente == null)
-        ? 'Falta elegir el cliente'
-        : null;
+    final c = ColoresApp.of(context);
+    final texto = 'Cobrar ${formatoMoneda(ticket.total)}';
+    final String? aviso = ticket.estaVacio ? 'Agrega algo para cobrar' : null;
     final n = ticket.cantidadArticulos;
 
-    return Material(
-      color: ColoresApp.of(context).superficie,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: c.superficie,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: c.texto.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
       child: SafeArea(
         top: false,
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: ColoresApp.of(context).borde)),
-          ),
+        child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -352,7 +340,7 @@ class _BarraCobro extends StatelessWidget {
                 key: const Key('boton_cobrar'),
                 texto: texto,
                 variante: VarianteBoton.entra,
-                onPressed: ticket.puedeCobrar && !cobrando ? onCobrar : null,
+                onPressed: !ticket.estaVacio && !cobrando ? onCobrar : null,
               ),
             ],
           ),

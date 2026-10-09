@@ -42,6 +42,25 @@ void main() {
   BotonPrincipal botonCobrar(WidgetTester tester) =>
       tester.widget<BotonPrincipal>(find.byKey(const Key('boton_cobrar')));
 
+  BotonPrincipal botonFiar(WidgetTester tester) =>
+      tester.widget<BotonPrincipal>(find.byKey(const Key('boton_fiar')));
+
+  /// Toca Cobrar y elige la forma de pago en la hoja "¿Cómo paga?".
+  Future<void> cobrarCon(WidgetTester tester, String clave) async {
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key(clave)));
+    await tester.pumpAndSettle();
+  }
+
+  /// Toca Cobrar y escoge Fiado (el selector de cliente queda en la hoja).
+  Future<void> abrirFiado(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pago_fiado')));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('tocar montos suma al ticket y solo Cobrar registra la venta',
       (tester) async {
     await abrirVenta(tester);
@@ -55,8 +74,7 @@ void main() {
     expect(find.text(r'Cobrar $11.000'), findsOneWidget);
     expect(find.text('3 artículos'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('boton_cobrar')));
-    await tester.pumpAndSettle();
+    await cobrarCon(tester, 'pago_efectivo');
 
     final ventas = await db.select(db.ventas).get();
     expect(ventas.single.monto, 11000);
@@ -79,8 +97,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('monto_rapido_2000')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('boton_cobrar')));
-    await tester.pumpAndSettle();
+    await cobrarCon(tester, 'pago_efectivo');
     expect(await db.select(db.ventas).get(), hasLength(2));
 
     await tester.tap(find.text('Deshacer'));
@@ -94,12 +111,10 @@ void main() {
       (tester) async {
     await abrirVenta(tester);
 
-    await tester.tap(find.text('Fiado'));
-    await tester.pump();
     await tester.tap(find.byKey(const Key('monto_rapido_2000')));
     await tester.pump();
-    expect(botonCobrar(tester).onPressed, isNull);
-    expect(find.text('Falta elegir el cliente'), findsOneWidget);
+    await abrirFiado(tester);
+    expect(botonFiar(tester).onPressed, isNull);
 
     await tester.enterText(find.byKey(const Key('campo_cliente')), 'Don Pedro');
     await tester.pump();
@@ -107,7 +122,7 @@ void main() {
     await tester.pump();
     expect(find.text(r'Fiar $2.000 a Don Pedro'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.tap(find.byKey(const Key('boton_fiar')));
     await tester.pumpAndSettle();
 
     final ventas = await db.select(db.ventas).get();
@@ -124,15 +139,15 @@ void main() {
         .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
     await abrirVenta(tester);
 
-    await tester.tap(find.text('Fiado'));
-    await tester.pump();
     await tester.tap(find.byKey(const Key('monto_rapido_1000')));
+    await tester.pump();
+    await abrirFiado(tester);
     await tester.enterText(find.byKey(const Key('campo_cliente')), 'don pedro');
     await tester.pump();
     expect(find.byKey(const Key('boton_cliente_nuevo')), findsNothing);
     await tester.tap(find.byKey(Key('cliente_sugerido_$pedro')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.tap(find.byKey(const Key('boton_fiar')));
     await tester.pumpAndSettle();
 
     expect(await db.select(db.clientes).get(), hasLength(1));
@@ -149,8 +164,7 @@ void main() {
     await tester.tap(find.byKey(Key('producto_$arepa')));
     await tester.tap(find.byKey(Key('producto_$arepa')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('boton_cobrar')));
-    await tester.pumpAndSettle();
+    await cobrarCon(tester, 'pago_efectivo');
 
     final venta = (await db.select(db.ventas).get()).single;
     expect(venta.monto, 7000);
@@ -215,14 +229,14 @@ void main() {
         .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
     await abrirVenta(tester);
 
-    await tester.tap(find.text('Fiado'));
-    await tester.pump();
     await tester.tap(find.byKey(const Key('monto_rapido_1000')));
+    await tester.pump();
+    await abrirFiado(tester);
     await tester.enterText(find.byKey(const Key('campo_cliente')), 'don pedro ');
     await tester.pump();
     expect(find.text(r'Fiar $1.000 a don pedro'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.tap(find.byKey(const Key('boton_fiar')));
     await tester.pumpAndSettle();
 
     expect(await db.select(db.clientes).get(), hasLength(1));
@@ -265,12 +279,8 @@ void main() {
     await ConfiguracionRepository(db).guardarImagenQr(pngDePrueba);
     await abrirVenta(tester);
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
-    await tester.tap(find.text('Transferencia'));
     await tester.pump();
-    expect(find.text(r'Cobrar $5.000 por QR'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('boton_cobrar')));
-    await tester.pumpAndSettle();
+    await cobrarCon(tester, 'pago_transferencia');
     expect(find.byKey(const Key('imagen_qr')), findsOneWidget);
     expect(await db.select(db.ventas).get(), isEmpty);
 
@@ -287,41 +297,35 @@ void main() {
       (tester) async {
     await abrirVenta(tester);
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
-    await tester.tap(find.text('Transferencia'));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('boton_cobrar')));
-    await tester.pumpAndSettle();
+    await cobrarCon(tester, 'pago_transferencia');
 
     await tester.tap(find.byKey(const Key('boton_qr_cancelar')));
     await tester.pumpAndSettle();
 
     expect(await db.select(db.ventas).get(), isEmpty);
-    expect(find.text(r'Cobrar $5.000 por QR'), findsOneWidget);
+    expect(find.text(r'Cobrar $5.000'), findsOneWidget);
   });
 
   testWidgets('volver atrás desde el QR no guarda y deja el ticket igual',
       (tester) async {
     await abrirVenta(tester);
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
-    await tester.tap(find.text('Transferencia'));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('boton_cobrar')));
-    await tester.pumpAndSettle();
+    await cobrarCon(tester, 'pago_transferencia');
 
     await tester.pageBack();
     await tester.pumpAndSettle();
 
     expect(await db.select(db.ventas).get(), isEmpty);
-    expect(find.text(r'Cobrar $5.000 por QR'), findsOneWidget);
+    expect(find.text(r'Cobrar $5.000'), findsOneWidget);
     expect(find.byKey(const Key('boton_cobrar')), findsOneWidget);
   });
 
-  testWidgets('con Fiado no aparece el selector de medio de pago',
+  testWidgets('Nueva venta ya no muestra selectores de pago arriba',
       (tester) async {
     await abrirVenta(tester);
-    expect(find.byKey(const Key('selector_medio_pago')), findsOneWidget);
-    await tester.tap(find.text('Fiado'));
-    await tester.pump();
+    expect(find.byKey(const Key('selector_tipo_venta')), findsNothing);
     expect(find.byKey(const Key('selector_medio_pago')), findsNothing);
   });
 
@@ -329,8 +333,7 @@ void main() {
     await abrirVenta(tester);
     await tester.tap(find.byKey(const Key('monto_rapido_1000')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('boton_cobrar')));
-    await tester.pumpAndSettle();
+    await cobrarCon(tester, 'pago_efectivo');
 
     expect((await db.select(db.ventas).get()).single.medioPago,
         MedioPago.efectivo);
@@ -347,8 +350,7 @@ void main() {
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('boton_cobrar')));
-    await tester.pumpAndSettle();
+    await cobrarCon(tester, 'pago_efectivo');
 
     final venta = (await db.select(db.ventas).get()).single;
     expect(venta.monto, 13500);
@@ -371,8 +373,7 @@ void main() {
 
     await tester.tap(find.byKey(Key('producto_$arepa')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('boton_cobrar')));
-    await tester.pumpAndSettle();
+    await cobrarCon(tester, 'pago_efectivo');
     expect(await db.select(db.lineasVenta).get(), hasLength(1));
 
     await tester.tap(find.text('Deshacer'));
@@ -428,5 +429,50 @@ void main() {
     await crearProductos(['Pan', 'Leche', 'Arroz']);
     await abrirVenta(tester);
     expect(find.byKey(const Key('buscador_productos')), findsNothing);
+  });
+
+  testWidgets('la hoja ofrece Efectivo, Transferencia y Fiado con el total',
+      (tester) async {
+    await abrirVenta(tester);
+    await tester.tap(find.byKey(const Key('monto_rapido_5000')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('hoja_como_paga')), findsOneWidget);
+    // Título de la hoja + botón de la barra.
+    expect(find.text(r'Cobrar $5.000'), findsNWidgets(2));
+    for (final k in ['pago_efectivo', 'pago_transferencia', 'pago_fiado']) {
+      expect(find.byKey(Key(k)), findsOneWidget);
+    }
+  });
+
+  testWidgets('cerrar la hoja tras escoger Fiado deja el ticket de contado',
+      (tester) async {
+    await abrirVenta(tester);
+    await tester.tap(find.byKey(const Key('monto_rapido_5000')));
+    await tester.pump();
+    await abrirFiado(tester);
+    await tester.enterText(find.byKey(const Key('campo_cliente')), 'Don Pedro');
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(10, 10)); // fuera de la hoja
+    await tester.pumpAndSettle();
+    expect(await db.select(db.ventas).get(), isEmpty);
+
+    await cobrarCon(tester, 'pago_efectivo');
+    final venta = (await db.select(db.ventas).get()).single;
+    expect(venta.esFiado, isFalse);
+    expect(venta.clienteId, isNull);
+  });
+
+  testWidgets('doble toque en Efectivo registra una sola venta', (tester) async {
+    await abrirVenta(tester);
+    await tester.tap(find.byKey(const Key('monto_rapido_5000')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pago_efectivo')));
+    await tester.tap(find.byKey(const Key('pago_efectivo')), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(await db.select(db.ventas).get(), hasLength(1));
   });
 }
