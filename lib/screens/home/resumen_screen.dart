@@ -10,6 +10,7 @@ import '../../ui/colores_app.dart';
 import '../../ui/tipografia.dart';
 import '../../ui/monto.dart';
 import '../../ui/tarjeta_monto.dart';
+import '../../ui/tema_app.dart';
 import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
@@ -142,7 +143,7 @@ class _Tarjetas extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: ColoresApp.of(context).tarjetaPrincipal,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(radioTarjetaPrincipal),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,7 +151,7 @@ class _Tarjetas extends StatelessWidget {
               Text('Ventas del día',
                   style: estiloTitulo(tamano: 14, color: suave)),
               const SizedBox(height: 4),
-              Monto(resumen.totalVendido, tamano: 32, tono: TonoMonto.claro),
+              Monto(resumen.totalVendido, tamano: 36, tono: TonoMonto.claro),
               const SizedBox(height: 4),
               Text(
                 '${plural(resumen.cantidadVentas, 'venta', 'ventas')} · '

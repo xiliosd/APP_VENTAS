@@ -112,11 +112,31 @@ void main() {
     expect(File('pubspec.yaml').readAsStringSync(), contains('family: Nunito'));
   });
 
-  test('los botones principales tienen radio 16', () {
-    final forma = temaClaro().filledButtonTheme.style!.shape!.resolve({})!
-        as RoundedRectangleBorder;
-    expect(forma.borderRadius, BorderRadius.circular(16));
-  });
+  for (final (nombre, tema) in [
+    ('claro', temaClaro()),
+    ('oscuro', temaOscuro()),
+  ]) {
+    test('modo $nombre: formas Expressive', () {
+      expect(tema.filledButtonTheme.style!.shape!.resolve({}),
+          isA<StadiumBorder>());
+      expect(tema.outlinedButtonTheme.style!.shape!.resolve({}),
+          isA<StadiumBorder>());
+      final tarjeta = tema.cardTheme.shape! as RoundedRectangleBorder;
+      expect(tarjeta.borderRadius, BorderRadius.circular(radioTarjeta));
+      expect(tarjeta.side, BorderSide.none);
+      final hoja = tema.bottomSheetTheme.shape! as RoundedRectangleBorder;
+      expect(hoja.borderRadius,
+          const BorderRadius.vertical(top: Radius.circular(radioHoja)));
+      final dialogo = tema.dialogTheme.shape! as RoundedRectangleBorder;
+      expect(dialogo.borderRadius, BorderRadius.circular(radioHoja));
+      expect(tema.snackBarTheme.shape, isA<StadiumBorder>());
+      final campo = tema.inputDecorationTheme.border! as OutlineInputBorder;
+      expect(campo.borderRadius, BorderRadius.circular(radioCampo));
+      expect(tema.appBarTheme.titleTextStyle!.fontSize, 22);
+      expect(tema.pageTransitionsTheme.builders[TargetPlatform.android],
+          isA<FadeForwardsPageTransitionsBuilder>());
+    });
+  }
 
   test('Nunito solo se usa a través de estiloTitulo', () {
     final fuera = <String>[];

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'colores_app.dart';
 import 'monto.dart';
+import 'tema_app.dart';
 
 /// Tarjeta con una etiqueta, una cifra y un detalle opcional.
 class TarjetaMonto extends StatelessWidget {
@@ -25,7 +26,8 @@ class TarjetaMonto extends StatelessWidget {
   final Color? fondo;
   final double tamano;
 
-  /// Color del borde (por defecto el gris de [ColoresApp.of(context).borde]).
+  /// Color del borde; sin él la tarjeta no tiene borde (la distingue su
+  /// color de superficie).
   final Color? colorBorde;
 
   @override
@@ -38,17 +40,14 @@ class TarjetaMonto extends StatelessWidget {
     return Material(
       color: fondo ?? ColoresApp.of(context).superficie,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: fondo == null
-            ? BorderSide(
-                color: colorBorde ?? ColoresApp.of(context).borde,
-                width: colorBorde == null ? 1 : 1.5,
-              )
-            : BorderSide.none,
+        borderRadius: BorderRadius.circular(radioTarjeta),
+        side: colorBorde == null || fondo != null
+            ? BorderSide.none
+            : BorderSide(color: colorBorde!, width: 1.5),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(radioTarjeta),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(

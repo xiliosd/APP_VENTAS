@@ -1,9 +1,16 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
 import 'colores_app.dart';
 import 'tipografia.dart';
 
 const _fuente = 'Inter';
+
+/// Radios de las formas (Material 3 Expressive).
+const radioTarjeta = 18.0;
+const radioTarjetaPrincipal = 24.0;
+const radioCampo = 14.0;
+const radioHoja = 28.0;
 
 /// Temas de la app; todas las pantallas los heredan de MaterialApp.
 ThemeData temaClaro() => _tema(ColoresApp.claro, Brightness.light);
@@ -25,14 +32,13 @@ ThemeData _tema(ColoresApp c, Brightness brillo) {
     outline: c.borde,
     outlineVariant: c.borde,
   );
-  final redondeado =
-      RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
-  final redondeadoBoton =
-      RoundedRectangleBorder(borderRadius: BorderRadius.circular(16));
+  final redondeadoCampo =
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(radioCampo));
+  const pildora = StadiumBorder();
   const textoBoton = TextStyle(
       fontFamily: _fuente, fontSize: 16, fontWeight: FontWeight.w700);
   final bordeCampo = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
+    borderRadius: BorderRadius.circular(radioCampo),
     borderSide: BorderSide(color: c.borde),
   );
 
@@ -49,29 +55,29 @@ ThemeData _tema(ColoresApp c, Brightness brillo) {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      titleTextStyle: estiloTitulo(tamano: 20, color: c.texto),
+      titleTextStyle: estiloTitulo(tamano: 22, color: c.texto),
       shape: Border(bottom: BorderSide(color: c.borde)),
     ),
     cardTheme: CardThemeData(
       color: c.superficie,
       elevation: 0,
       margin: EdgeInsets.zero,
+      // Sin borde: la superficie se distingue del fondo por su color.
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: c.borde),
+        borderRadius: BorderRadius.circular(radioTarjeta),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size(64, 52),
-        shape: redondeadoBoton,
+        shape: pildora,
         textStyle: textoBoton,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(64, 52),
-        shape: redondeadoBoton,
+        shape: pildora,
         textStyle: textoBoton,
         side: BorderSide(color: c.borde),
       ),
@@ -79,7 +85,7 @@ ThemeData _tema(ColoresApp c, Brightness brillo) {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(48, 48),
-        shape: redondeado,
+        shape: redondeadoCampo,
         elevation: 0,
         backgroundColor: c.superficie,
         foregroundColor: c.primario,
@@ -106,7 +112,7 @@ ThemeData _tema(ColoresApp c, Brightness brillo) {
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: c.superficie,
       indicatorColor: c.primarioSuave,
-      labelTextStyle: WidgetStatePropertyAll(
+      labelTextStyle: const WidgetStatePropertyAll(
         TextStyle(
             fontFamily: _fuente, fontSize: 12, fontWeight: FontWeight.w600),
       ),
@@ -117,28 +123,34 @@ ThemeData _tema(ColoresApp c, Brightness brillo) {
       contentTextStyle: TextStyle(
           fontFamily: _fuente, fontSize: 15, color: c.textoAviso),
       actionTextColor: c.accionAviso,
-      shape: redondeado,
+      shape: pildora,
     ),
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: c.superficie,
       showDragHandle: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(radioHoja)),
       ),
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: c.superficie,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radioHoja)),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: c.primario,
       foregroundColor: c.sobrePrimario,
-      shape: redondeado,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radioTarjeta)),
     ),
     listTileTheme: ListTileThemeData(
       iconColor: c.textoSecundario,
       minVerticalPadding: 12,
     ),
     dividerTheme: DividerThemeData(color: c.borde, space: 1),
+    pageTransitionsTheme: const PageTransitionsTheme(builders: {
+      TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+    }),
   );
 }

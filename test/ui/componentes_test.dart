@@ -22,6 +22,19 @@ void main() {
     expect(texto.style!.color, ColoresApp.claro.sale);
   });
 
+  testWidgets('TarjetaMonto sin color de borde no dibuja borde y usa radio 18',
+      (tester) async {
+    await tester
+        .pumpWidget(_app(const TarjetaMonto(etiqueta: 'Gastos', valor: 1)));
+    final material = tester.widget<Material>(find
+        .descendant(
+            of: find.byType(TarjetaMonto), matching: find.byType(Material))
+        .first);
+    final forma = material.shape! as RoundedRectangleBorder;
+    expect(forma.side, BorderSide.none);
+    expect(forma.borderRadius, BorderRadius.circular(radioTarjeta));
+  });
+
   testWidgets('Monto grande no desborda en un espacio angosto', (tester) async {
     await tester.pumpWidget(_app(const SizedBox(
       width: 120,

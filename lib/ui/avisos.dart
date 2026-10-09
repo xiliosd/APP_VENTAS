@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'movimiento.dart';
+
 /// Aviso de confirmación abajo de la pantalla. Con [onDeshacer] agrega la
 /// acción "Deshacer" y dura 5 s; sin ella dura 3 s.
 void avisar(BuildContext context, String texto, {VoidCallback? onDeshacer}) {
@@ -16,5 +18,6 @@ void avisar(BuildContext context, String texto, {VoidCallback? onDeshacer}) {
           ? null
           : SnackBarAction(label: 'Deshacer', onPressed: onDeshacer),
     ),
+    snackBarAnimationStyle: const AnimationStyle(duration: Movimiento.larga),
   );
 }
