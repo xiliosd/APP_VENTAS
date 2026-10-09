@@ -381,4 +381,52 @@ void main() {
     expect(await db.select(db.ventas).get(), isEmpty);
     expect(await db.select(db.lineasVenta).get(), isEmpty);
   });
+
+  Future<void> crearProductos(List<String> nombres) async {
+    for (final n in nombres) {
+      await db
+          .into(db.productos)
+          .insert(ProductosCompanion.insert(nombre: n, precio: 1000));
+    }
+  }
+
+  const siete = ['Café', 'Pan', 'Leche', 'Arroz', 'Huevos', 'Azúcar', 'Sal'];
+
+  testWidgets('el buscador filtra sin importar tildes y mayúsculas',
+      (tester) async {
+    await crearProductos(siete);
+    await abrirVenta(tester);
+    await tester.enterText(find.byKey(const Key('buscador_productos')), 'CAFE');
+    await tester.pump();
+    expect(find.text('Café'), findsOneWidget);
+    expect(find.text('Pan'), findsNothing);
+    expect(find.byKey(const Key('boton_otro_monto')), findsOneWidget);
+  });
+
+  testWidgets('sin coincidencias muestra Sin resultados', (tester) async {
+    await crearProductos(siete);
+    await abrirVenta(tester);
+    await tester.enterText(find.byKey(const Key('buscador_productos')), 'zzz');
+    await tester.pump();
+    expect(find.byKey(const Key('texto_sin_resultados')), findsOneWidget);
+    expect(find.byKey(const Key('boton_otro_monto')), findsOneWidget);
+  });
+
+  testWidgets('vaciar el ticket limpia la búsqueda', (tester) async {
+    await crearProductos(siete);
+    await abrirVenta(tester);
+    await tester.tap(find.text('Pan'));
+    await tester.enterText(find.byKey(const Key('buscador_productos')), 'caf');
+    await tester.pump();
+    expect(find.text('Pan'), findsNothing);
+    await tester.tap(find.byKey(const Key('boton_vaciar')));
+    await tester.pump();
+    expect(find.text('Pan'), findsOneWidget);
+  });
+
+  testWidgets('con 6 productos o menos no hay buscador', (tester) async {
+    await crearProductos(['Pan', 'Leche', 'Arroz']);
+    await abrirVenta(tester);
+    expect(find.byKey(const Key('buscador_productos')), findsNothing);
+  });
 }

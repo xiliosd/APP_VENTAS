@@ -16,6 +16,7 @@ import '../../ui/mosaico.dart';
 import '../../ui/selector_segmentado.dart';
 import '../../ui/teclado_monto.dart';
 import '../../util/formato_moneda.dart';
+import '../../util/texto_util.dart';
 import '../../widgets/monto_rapido_grid.dart';
 import '../../widgets/selector_cliente.dart';
 import '../qr/cobro_qr_screen.dart';
@@ -31,6 +32,23 @@ class RegistrarVentaScreen extends ConsumerStatefulWidget {
 class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
   /// Evita registrar dos veces el mismo ticket con un doble toque.
   bool _cobrando = false;
+
+  /// Con más de estos productos aparece el buscador.
+  static const _productosSinBuscador = 6;
+  final _busqueda = TextEditingController();
+  String _filtro = '';
+
+  @override
+  void dispose() {
+    _busqueda.dispose();
+    super.dispose();
+  }
+
+  void _vaciar() {
+    ref.read(ticketProvider.notifier).vaciar();
+    _busqueda.clear();
+    setState(() => _filtro = '');
+  }
 
   Future<void> _otroMonto() async {
     final monto = await mostrarHojaInferior<int>(
@@ -138,10 +156,43 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
           ],
           const _Seccion('PRODUCTOS'),
           productosAsync.when(
-            data: (productos) => GrillaMosaicos(
+            data: (productos) {
+              final visibles = [
+                for (final p in productos)
+                  if (_filtro.isEmpty || sinTildes(p.nombre).contains(_filtro))
+                    p,
+              ];
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (productos.length > _productosSinBuscador) ...[
+                    TextField(
+                      key: const Key('buscador_productos'),
+                      controller: _busqueda,
+                      decoration: const InputDecoration(
+                        hintText: 'Buscar producto…',
+                        prefixIcon: Icon(Icons.search_rounded),
+                      ),
+                      onChanged: (t) =>
+                          setState(() => _filtro = sinTildes(t.trim())),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (_filtro.isNotEmpty && visibles.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        'Sin resultados',
+                        key: const Key('texto_sin_resultados'),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: ColoresApp.of(context).textoSecundario),
+                      ),
+                    ),
+                  GrillaMosaicos(
               conSubtitulo: true,
               children: [
-                for (final p in productos)
+                for (final p in visibles)
                   Mosaico(
                     key: Key('producto_${p.id}'),
                     titulo: p.nombre,
@@ -157,7 +208,10 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
                   onTap: _otroMonto,
                 ),
               ],
-            ),
+                  ),
+                ],
+              );
+            },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, st) => Text('Error: $e'),
           ),
@@ -173,7 +227,7 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
         cobrando: _cobrando,
         onCobrar: _cobrar,
         onVerTicket: _verTicket,
-        onVaciar: notifier.vaciar,
+        onVaciar: _vaciar,
       ),
     );
   }

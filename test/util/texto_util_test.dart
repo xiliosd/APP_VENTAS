@@ -7,4 +7,8 @@ void main() {
     expect(plural(0, 'venta', 'ventas'), '0 ventas');
     expect(plural(3, 'cliente', 'clientes'), '3 clientes');
   });
+
+  test('sinTildes quita tildes y mayúsculas pero conserva la ñ', () {
+    expect(sinTildes('Café ÁRBOL Pingüino Ñame'), 'cafe arbol pinguino ñame');
+  });
 }
