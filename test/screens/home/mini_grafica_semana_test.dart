@@ -2,6 +2,7 @@ import 'package:app_ventas/screens/home/mini_grafica_semana.dart';
 import 'package:app_ventas/ui/colores_app.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget _app(Widget hijo) => MaterialApp(
@@ -59,5 +60,8 @@ void main() {
     expect(tocada, isTrue);
     expect(find.bySemanticsLabel(RegExp('Ventas de los últimos 7 días')),
         findsOneWidget);
+    // Con TalkBack el doble toque también abre Reportes.
+    final nodo = tester.getSemantics(find.byType(MiniGraficaSemana));
+    expect(nodo.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
   });
 }

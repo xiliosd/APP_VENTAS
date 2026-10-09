@@ -61,7 +61,7 @@ botones fijos).
 4. **Mosaicos** (`TarjetaMonto`): Ganancia y Gastos lado a lado; **Por cobrar** a todo el ancho
    con fondo `fiadoSuave` y `onTap` → pestaña Fiado (como hoy).
 5. **Por vendedor** en una tarjeta con título y enlace "Ver reportes ›" a la derecha. Misma
-   visibilidad que hoy (solo administrador).
+   visibilidad que hoy: la tarjeta la ven todos; el enlace, solo el administrador.
 6. Se quitan de la lista los botones "+ Venta", "− Gasto" y "Ver reportes" (pasan a 7 y al
    enlace de 5).
 7. **Botones fijos abajo** (solo en la pestaña Inicio): barra sobre la `NavigationBar` con
@@ -109,7 +109,7 @@ Al tocar Cobrar se abre una hoja inferior (`hoja_como_paga`) con título "Cobrar
 |---|---|---|
 | Efectivo | `pago_efectivo` | `cambiarFiado(false)`, `cambiarMedioPago(efectivo)`, cierra la hoja y registra (flujo `_cobrar` actual). |
 | Transferencia (mostrar QR) | `pago_transferencia` | `cambiarFiado(false)`, `cambiarMedioPago(transferencia)`, cierra la hoja y sigue el flujo actual con `abrirCobroQr` (con "Recibido" registra como transferencia; sin QR, igual que hoy). |
-| Fiado | `pago_fiado` | Expande dentro de la hoja el `SelectorCliente` existente (`exigir: true`) y un botón "Fiar $ X a {cliente}" (`boton_fiar`), deshabilitado sin cliente. Al tocarlo: `cambiarFiado(true)` + cliente, cierra la hoja y registra. |
+| Fiado | `pago_fiado` | Oculta Efectivo y Transferencia y expande dentro de la hoja el `SelectorCliente` existente (`exigir: true`) y un botón "Fiar $ X a {cliente}" (`boton_fiar`), deshabilitado sin cliente. Al tocarlo: `cambiarFiado(true)` + cliente, cierra la hoja y registra. |
 
 Cerrar la hoja sin elegir no cambia el ticket. El aviso con "Deshacer" y el regreso al Inicio
 son los de hoy. `TicketNotifier` conserva su API; `esFiado`/`medioPago` se fijan desde la hoja
@@ -138,7 +138,7 @@ Archivo: `lib/screens/login/ingresar_pin_screen.dart` y `lib/widgets/teclado_num
 - `AvatarInicial` radio 44 dentro de `Hero(tag: 'avatar_{id}')`; "Hola, {nombre}" (Nunito) y
   el nombre de la tienda.
 - **Indicadores** (`IndicadoresPin`, nuevo en `lib/widgets/indicadores_pin.dart`): 4 círculos
-  de 16 px; lleno = `primario`, vacío = borde `borde`. Al llenarse uno, rebote (escala
+  de 16 px; lleno = `primario`, vacío = aro `textoSecundario` (con `borde` el contraste era 1,2:1). Al llenarse uno, rebote (escala
   1,3 → 1, `resorte`, `Movimiento.media`).
 - **PIN incorrecto:** los indicadores se sacuden horizontalmente (desplazamientos ±12, ±8, ±4,
   0 px en ~400 ms), se pintan de `sale` durante la sacudida y vuelven a vacío; vibra

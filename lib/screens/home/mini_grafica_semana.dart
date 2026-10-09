@@ -34,6 +34,7 @@ class MiniGraficaSemana extends StatelessWidget {
     return Semantics(
       label: 'Ventas de los últimos 7 días: $descripcion',
       button: onTap != null,
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         onTap: onTap,

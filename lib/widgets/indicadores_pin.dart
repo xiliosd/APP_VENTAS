@@ -82,7 +82,12 @@ class _IndicadoresPinState extends State<IndicadoresPin>
                             ? c.primario
                             : c.superficie,
                     border: Border.all(
-                        color: _enError ? c.sale : (i < widget.llenos ? c.primario : c.borde),
+                        // Vacío: aro textoSecundario (≥ 3:1 sobre el fondo).
+                        color: _enError
+                            ? c.sale
+                            : (i < widget.llenos
+                                ? c.primario
+                                : c.textoSecundario),
                         width: 2),
                   ),
                 ),

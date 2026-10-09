@@ -53,6 +53,9 @@ class _ComoPagaState extends ConsumerState<_ComoPaga> {
           style: TextStyle(color: c.textoSecundario),
         ),
         const SizedBox(height: 12),
+        // Con Fiado escogido quedan solo el cliente y Fiar, para que con el
+        // teclado abierto quepan en celulares pequeños.
+        if (!_fiado) ...[
         _Opcion(
           key: const Key('pago_efectivo'),
           icono: Icons.payments_rounded,
@@ -67,6 +70,7 @@ class _ComoPagaState extends ConsumerState<_ComoPaga> {
           color: c.primario,
           onTap: () => _elegir(FormaPago.transferencia),
         ),
+        ],
         _Opcion(
           key: const Key('pago_fiado'),
           icono: Icons.edit_note_rounded,

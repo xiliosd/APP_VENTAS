@@ -475,4 +475,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(await db.select(db.ventas).get(), hasLength(1));
   });
+
+  testWidgets('al escoger Fiado la hoja deja solo el cliente y Fiar',
+      (tester) async {
+    await abrirVenta(tester);
+    await tester.tap(find.byKey(const Key('monto_rapido_5000')));
+    await tester.pump();
+    await abrirFiado(tester);
+    expect(find.byKey(const Key('pago_efectivo')), findsNothing);
+    expect(find.byKey(const Key('pago_transferencia')), findsNothing);
+    expect(find.byKey(const Key('campo_cliente')), findsOneWidget);
+    expect(find.byKey(const Key('boton_fiar')), findsOneWidget);
+  });
 }

@@ -26,6 +26,17 @@ void main() {
     expect(colorDe(tester, 3), isNot(ColoresApp.claro.primario));
   });
 
+  testWidgets('los vacíos tienen un aro visible (textoSecundario)',
+      (tester) async {
+    await tester.pumpWidget(_app(const IndicadoresPin(llenos: 0)));
+    await tester.pumpAndSettle();
+    final borde = (tester
+                .widget<Container>(find.byKey(const Key('indicador_pin_0')))
+                .decoration! as BoxDecoration)
+        .border! as Border;
+    expect(borde.top.color, ColoresApp.claro.textoSecundario);
+  });
+
   testWidgets('un error sacude y pinta de rojo, y se repite con el siguiente',
       (tester) async {
     await tester.pumpWidget(_app(const IndicadoresPin(llenos: 0)));
