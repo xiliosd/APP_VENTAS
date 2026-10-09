@@ -1,7 +1,7 @@
 # Renovación de la interfaz — R1: base (modo oscuro y estilo Expressive)
 
 **Fecha:** 2026-10-09
-**Estado:** Diseño aprobado en conversación; pendiente revisión de esta especificación
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con el pulido completo (df205ac, 530 pruebas).
 
 ## Contexto
