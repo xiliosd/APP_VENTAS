@@ -7,6 +7,7 @@ import '../../repositories/resumen_repository.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/entrada_escalonada.dart';
 import '../../ui/tipografia.dart';
 import '../../ui/monto.dart';
 import '../../ui/tarjeta_monto.dart';
@@ -137,72 +138,82 @@ class _Tarjetas extends StatelessWidget {
         ColoresApp.of(context).sobreTarjetaPrincipal.withValues(alpha: 0.75);
     return Column(
       children: [
-        Container(
-          key: const Key('tarjeta_ventas'),
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: ColoresApp.of(context).tarjetaPrincipal,
-            borderRadius: BorderRadius.circular(radioTarjetaPrincipal),
+        EntradaEscalonada(
+          indice: 0,
+          child: Container(
+            key: const Key('tarjeta_ventas'),
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: ColoresApp.of(context).tarjetaPrincipal,
+              borderRadius: BorderRadius.circular(radioTarjetaPrincipal),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Ventas del día',
+                    style: estiloTitulo(tamano: 14, color: suave)),
+                const SizedBox(height: 4),
+                Monto(resumen.totalVendido,
+                    tamano: 36, tono: TonoMonto.claro, animado: true),
+                const SizedBox(height: 4),
+                Text(
+                  '${plural(resumen.cantidadVentas, 'venta', 'ventas')} · '
+                  '${plural(resumen.cantidadFiadas, 'fiada', 'fiadas')}',
+                  style: TextStyle(color: suave, fontSize: 12),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Recibido: efectivo ${formatoMoneda(resumen.recibidoEfectivo)}'
+                  ' · transferencias '
+                  '${formatoMoneda(resumen.recibidoTransferencia)}',
+                  key: const Key('texto_recibido'),
+                  style: TextStyle(color: suave, fontSize: 12),
+                ),
+              ],
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        const SizedBox(height: 12),
+        EntradaEscalonada(
+          indice: 1,
+          child: Row(
             children: [
-              Text('Ventas del día',
-                  style: estiloTitulo(tamano: 14, color: suave)),
-              const SizedBox(height: 4),
-              Monto(resumen.totalVendido, tamano: 36, tono: TonoMonto.claro),
-              const SizedBox(height: 4),
-              Text(
-                '${plural(resumen.cantidadVentas, 'venta', 'ventas')} · '
-                '${plural(resumen.cantidadFiadas, 'fiada', 'fiadas')}',
-                style: TextStyle(color: suave, fontSize: 12),
+              Expanded(
+                child: TarjetaMonto(
+                  key: const Key('tarjeta_gastos'),
+                  etiqueta: 'Gastos',
+                  valor: resumen.totalGastado,
+                  tono: TonoMonto.sale,
+                  colorBorde: ColoresApp.of(context).saleSuave,
+                ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Recibido: efectivo ${formatoMoneda(resumen.recibidoEfectivo)}'
-                ' · transferencias '
-                '${formatoMoneda(resumen.recibidoTransferencia)}',
-                key: const Key('texto_recibido'),
-                style: TextStyle(color: suave, fontSize: 12),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TarjetaMonto(
+                  key: const Key('tarjeta_ganancia'),
+                  etiqueta: 'Ganancia',
+                  valor: ganancia,
+                  tono: ganancia >= 0 ? TonoMonto.entra : TonoMonto.sale,
+                  colorBorde:
+                      ganancia >= 0 ? ColoresApp.of(context).entraSuave : ColoresApp.of(context).saleSuave,
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: TarjetaMonto(
-                key: const Key('tarjeta_gastos'),
-                etiqueta: 'Gastos',
-                valor: resumen.totalGastado,
-                tono: TonoMonto.sale,
-                colorBorde: ColoresApp.of(context).saleSuave,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TarjetaMonto(
-                key: const Key('tarjeta_ganancia'),
-                etiqueta: 'Ganancia',
-                valor: ganancia,
-                tono: ganancia >= 0 ? TonoMonto.entra : TonoMonto.sale,
-                colorBorde:
-                    ganancia >= 0 ? ColoresApp.of(context).entraSuave : ColoresApp.of(context).saleSuave,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        TarjetaMonto(
-          key: const Key('tarjeta_por_cobrar'),
-          etiqueta: 'Por cobrar',
-          valor: resumen.totalPorCobrar,
-          tono: TonoMonto.fiado,
-          fondo: ColoresApp.of(context).fiadoSuave,
-          detalle: plural(resumen.clientesConDeuda, 'cliente', 'clientes'),
-          onTap: onVerFiado,
+        EntradaEscalonada(
+          indice: 2,
+          child: TarjetaMonto(
+            key: const Key('tarjeta_por_cobrar'),
+            etiqueta: 'Por cobrar',
+            valor: resumen.totalPorCobrar,
+            tono: TonoMonto.fiado,
+            fondo: ColoresApp.of(context).fiadoSuave,
+            detalle: plural(resumen.clientesConDeuda, 'cliente', 'clientes'),
+            onTap: onVerFiado,
+          ),
         ),
       ],
     );

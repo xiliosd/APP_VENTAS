@@ -65,7 +65,7 @@ class TarjetaMonto extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              Monto(valor, tamano: tamano, tono: tono),
+              Monto(valor, tamano: tamano, tono: tono, animado: true),
               if (detalle != null) ...[
                 const SizedBox(height: 2),
                 Text(detalle!,

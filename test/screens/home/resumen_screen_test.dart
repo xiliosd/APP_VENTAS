@@ -83,7 +83,7 @@ void main() {
 
     final monto = tester.widget<Monto>(find.descendant(
         of: find.byKey(const Key('tarjeta_ganancia')),
-        matching: find.byType(Monto)));
+        matching: find.byType(Monto)).first);
     expect(monto.valor, -3000);
     expect(monto.tono, TonoMonto.sale);
   });

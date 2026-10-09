@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../util/formato_moneda.dart';
 import 'colores_app.dart';
+import 'monto_animado.dart';
 
 /// Qué representa una cifra, para darle su color.
 enum TonoMonto { neutro, entra, sale, fiado, claro }
@@ -15,6 +16,7 @@ class Monto extends StatelessWidget {
     this.tamano = 18,
     this.tono = TonoMonto.neutro,
     this.tachado = false,
+    this.animado = false,
   });
 
   final int valor;
@@ -23,6 +25,9 @@ class Monto extends StatelessWidget {
 
   /// Anulado: tachado y en gris, sin importar el tono.
   final bool tachado;
+
+  /// Al cambiar el valor, cuenta desde el anterior ([MontoAnimado]).
+  final bool animado;
 
   static Color colorDe(TonoMonto tono, ColoresApp c) => switch (tono) {
         TonoMonto.neutro => c.texto,
@@ -34,6 +39,9 @@ class Monto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (animado) {
+      return MontoAnimado(valor, tamano: tamano, tono: tono, tachado: tachado);
+    }
     final c = ColoresApp.of(context);
     return FittedBox(
       fit: BoxFit.scaleDown,

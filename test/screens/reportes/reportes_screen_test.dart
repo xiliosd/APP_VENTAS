@@ -124,7 +124,7 @@ void main() {
     expect(en('reporte_ganancia', r'-$3.000'), findsOneWidget);
     final ganancia = tester.widget<Monto>(find.descendant(
         of: find.byKey(const Key('reporte_ganancia')),
-        matching: find.byType(Monto)));
+        matching: find.byType(Monto)).first);
     expect(ganancia.tono, TonoMonto.sale);
     expect(tester.takeException(), isNull);
   });
