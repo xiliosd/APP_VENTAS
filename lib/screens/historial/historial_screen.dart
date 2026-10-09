@@ -160,7 +160,7 @@ class _MovimientoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final esGasto = movimiento.tipo == TipoMovimientoHistorial.gasto;
-    final color = esGasto ? ColoresApp.sale : ColoresApp.entra;
+    final color = esGasto ? ColoresApp.of(context).sale : ColoresApp.of(context).entra;
     final descripcion = movimiento.descripcion?.trim() ?? '';
     final detalle = esGasto
         ? (descripcion.isEmpty ? 'Gasto' : descripcion)
@@ -199,13 +199,13 @@ class _MovimientoTile extends StatelessWidget {
           if (correccion != null)
             Text(
               textoCorreccion(correccion, nombres[correccion.usuarioId] ?? ''),
-              style: const TextStyle(
-                  fontSize: 12, color: ColoresApp.textoSecundario),
+              style: TextStyle(
+                  fontSize: 12, color: ColoresApp.of(context).textoSecundario),
             ),
         ],
       ),
       trailing: Text(formatoHora(movimiento.fecha),
-          style: const TextStyle(color: ColoresApp.textoSecundario)),
+          style: TextStyle(color: ColoresApp.of(context).textoSecundario)),
     );
   }
 }

@@ -115,8 +115,8 @@ void main() {
     await montar(tester);
     AppBar barra() => tester.widget<AppBar>(find.byType(AppBar).first);
 
-    expect(barra().backgroundColor, ColoresApp.primario);
-    expect(barra().foregroundColor, Colors.white);
+    expect(barra().backgroundColor, ColoresApp.claro.tarjetaPrincipal);
+    expect(barra().foregroundColor, ColoresApp.claro.sobreTarjetaPrincipal);
     expect(find.byKey(const Key('insignia_marca')), findsOneWidget);
 
     await tester.tap(find.text('Ajustes'));

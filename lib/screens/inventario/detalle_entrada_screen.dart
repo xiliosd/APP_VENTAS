@@ -30,7 +30,7 @@ class DetalleEntradaScreen extends ConsumerWidget {
           ),
           TextButton(
             key: const Key('confirmar_anular_entrada'),
-            style: TextButton.styleFrom(foregroundColor: ColoresApp.sale),
+            style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
             onPressed: () => Navigator.pop(contexto, true),
             child: const Text('Anular'),
           ),
@@ -69,7 +69,7 @@ class DetalleEntradaScreen extends ConsumerWidget {
         children: [
           Text(
             '${formatoFechaHora(entrada.fecha)} · ${detalle.resumen.usuario}',
-            style: const TextStyle(color: ColoresApp.textoSecundario),
+            style: TextStyle(color: ColoresApp.of(context).textoSecundario),
           ),
           const SizedBox(height: 12),
           for (final l in detalle.lineas)
@@ -91,14 +91,14 @@ class DetalleEntradaScreen extends ConsumerWidget {
           ],
           const SizedBox(height: 24),
           if (entrada.anulada)
-            const Text(
+            Text(
               'Entrada anulada',
-              style: TextStyle(color: ColoresApp.sale),
+              style: TextStyle(color: ColoresApp.of(context).sale),
             )
           else
             TextButton(
               key: const Key('boton_anular_entrada'),
-              style: TextButton.styleFrom(foregroundColor: ColoresApp.sale),
+              style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
               onPressed: () => _anular(context, ref),
               child: const Text('Anular entrada'),
             ),

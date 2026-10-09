@@ -69,7 +69,7 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
         ref.watch(entradasRecientesProvider).valueOrNull ?? const [];
     final nPorPedir = grupos.fold<int>(0, (s, g) => s + g.productos.length);
     final vista = _vista ?? (nPorPedir > 0 ? _Vista.porPedir : _Vista.todos);
-    const gris = TextStyle(color: ColoresApp.textoSecundario);
+    final gris = TextStyle(color: ColoresApp.of(context).textoSecundario);
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -119,8 +119,8 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           color: c.existencias <= c.producto.minimo
-                              ? ColoresApp.sale
-                              : ColoresApp.texto,
+                              ? ColoresApp.of(context).sale
+                              : ColoresApp.of(context).texto,
                         ),
                       ),
                       onTap: () => _abrir(
@@ -131,9 +131,9 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
               ),
             )
           else if (grupos.isEmpty)
-            const Text(
+            Text(
               'Nada por pedir',
-              key: Key('texto_nada_por_pedir'),
+              key: const Key('texto_nada_por_pedir'),
               style: gris,
             )
           else
@@ -199,7 +199,7 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                             ? TextDecoration.lineThrough
                             : null,
                         color: e.entrada.anulada
-                            ? ColoresApp.textoSecundario
+                            ? ColoresApp.of(context).textoSecundario
                             : null,
                       ),
                     ),

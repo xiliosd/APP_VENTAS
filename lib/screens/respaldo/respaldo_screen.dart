@@ -86,9 +86,9 @@ class _Activo extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.cloud_done_rounded, color: ColoresApp.entra),
+                    Icon(Icons.cloud_done_rounded, color: ColoresApp.of(context).entra),
                     SizedBox(width: 8),
                     Text('Respaldo activo',
                         style: TextStyle(
@@ -103,7 +103,7 @@ class _Activo extends ConsumerWidget {
                 Text(
                   textoEstado,
                   key: const Key('texto_ultimo_respaldo'),
-                  style: const TextStyle(color: ColoresApp.textoSecundario),
+                  style: TextStyle(color: ColoresApp.of(context).textoSecundario),
                 ),
               ],
             ),

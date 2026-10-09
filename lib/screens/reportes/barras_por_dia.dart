@@ -145,7 +145,7 @@ class Barra extends StatelessWidget {
                 child: Container(
                   height: 14,
                   decoration: BoxDecoration(
-                    color: resaltada ? ColoresApp.entra : ColoresApp.entraSuave,
+                    color: resaltada ? ColoresApp.of(context).entra : ColoresApp.of(context).entraSuave,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

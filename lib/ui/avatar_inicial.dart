@@ -2,15 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'colores_app.dart';
 
-const _paleta = [
-  ColoresApp.primario,
-  Color(0xFF0F766E),
-  Color(0xFF7C3AED),
-  ColoresApp.fiado,
-  Color(0xFFBE185D),
-  ColoresApp.entra,
-];
-
 /// Círculo de color con la inicial del nombre; el color sale del id.
 class AvatarInicial extends StatelessWidget {
   const AvatarInicial({
@@ -33,11 +24,12 @@ class AvatarInicial extends StatelessWidget {
     final limpio = nombre.trim();
     final avatar = CircleAvatar(
       radius: radio,
-      backgroundColor: _paleta[id % _paleta.length],
+      backgroundColor:
+          ColoresApp.paletaAvatar[id % ColoresApp.paletaAvatar.length],
       child: Text(
         limpio.isEmpty ? '?' : limpio[0].toUpperCase(),
         style: TextStyle(
-          color: Colors.white,
+          color: ColoresApp.blancoMarca,
           fontWeight: FontWeight.w700,
           fontSize: radio * 0.9,
         ),

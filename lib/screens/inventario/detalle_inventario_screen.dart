@@ -65,13 +65,13 @@ class DetalleInventarioScreen extends ConsumerWidget {
               fontSize: 36,
               fontWeight: FontWeight.w800,
               color: item.existencias <= item.producto.minimo
-                  ? ColoresApp.sale
-                  : ColoresApp.texto,
+                  ? ColoresApp.of(context).sale
+                  : ColoresApp.of(context).texto,
             ),
           ),
           Text(
             'mín. ${item.producto.minimo}',
-            style: const TextStyle(color: ColoresApp.textoSecundario),
+            style: TextStyle(color: ColoresApp.of(context).textoSecundario),
           ),
           const SizedBox(height: 16),
           BotonPrincipal(

@@ -59,7 +59,7 @@ class DetalleClienteScreen extends ConsumerWidget {
             key: const Key('tarjeta_saldo_cliente'),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: ColoresApp.fiadoSuave,
+              color: ColoresApp.of(context).fiadoSuave,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
@@ -72,7 +72,7 @@ class DetalleClienteScreen extends ConsumerWidget {
                             ? 'Al día'
                             : 'Saldo a favor',
                     style:
-                        const TextStyle(fontSize: 13, color: ColoresApp.fiado)),
+                        TextStyle(fontSize: 13, color: ColoresApp.of(context).fiado)),
                 const SizedBox(height: 4),
                 Monto(saldo.abs(), tamano: 32, tono: TonoMonto.fiado),
               ],
@@ -132,7 +132,7 @@ class _FilaMovimiento extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final esAbono = movimiento.tipo == TipoMovimientoFiado.abono;
-    final color = esAbono ? ColoresApp.entra : ColoresApp.fiado;
+    final color = esAbono ? ColoresApp.of(context).entra : ColoresApp.of(context).fiado;
     final correccion = movimiento.ultimaCorreccion;
     return ListTile(
       key: Key('movimiento_fiado_${movimiento.tipo.name}_${movimiento.id}'),
@@ -165,8 +165,8 @@ class _FilaMovimiento extends StatelessWidget {
           if (correccion != null)
             Text(
               textoCorreccion(correccion, nombres[correccion.usuarioId] ?? ''),
-              style: const TextStyle(
-                  fontSize: 12, color: ColoresApp.textoSecundario),
+              style: TextStyle(
+                  fontSize: 12, color: ColoresApp.of(context).textoSecundario),
             ),
         ],
       ),
@@ -251,7 +251,7 @@ class _HojaAbonoState extends ConsumerState<_HojaAbono> {
             child: Text(
               _error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: ColoresApp.sale),
+              style: TextStyle(color: ColoresApp.of(context).sale),
             ),
           ),
         const SizedBox(height: 12),

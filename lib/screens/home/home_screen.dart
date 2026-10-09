@@ -75,10 +75,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         // Sin la línea gris del tema bajo el azul.
         shape: esInicio ? const Border() : null,
         // Header de marca solo en Inicio; las demás pestañas, barra blanca.
-        backgroundColor: esInicio ? ColoresApp.primario : null,
-        foregroundColor: esInicio ? Colors.white : null,
+        backgroundColor:
+            esInicio ? ColoresApp.of(context).tarjetaPrincipal : null,
+        foregroundColor:
+            esInicio ? ColoresApp.of(context).sobreTarjetaPrincipal : null,
         titleTextStyle:
-            esInicio ? estiloTitulo(tamano: 20, color: Colors.white) : null,
+            esInicio ? estiloTitulo(
+                tamano: 20, color: ColoresApp.of(context).sobreTarjetaPrincipal) : null,
         title: esInicio
             ? Row(
                 children: [
@@ -94,11 +97,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const NombreTienda(
+                        NombreTienda(
                           estilo: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: Colors.white70),
+                              color: ColoresApp.of(context)
+                                  .sobreTarjetaPrincipal
+                                  .withValues(alpha: 0.75)),
                         ),
                       ],
                     ),
@@ -152,7 +157,9 @@ class _MenuCuenta extends ConsumerWidget {
         id: usuario.id,
         nombre: usuario.nombre,
         radio: 16,
-        colorAnillo: enBarraAzul ? Colors.white : null,
+        colorAnillo: enBarraAzul
+            ? ColoresApp.of(context).sobreTarjetaPrincipal
+            : null,
       ),
       onSelected: (_) => ref.read(sesionProvider.notifier).cerrarSesion(),
       itemBuilder: (_) => [
@@ -187,7 +194,7 @@ class _InsigniaMarca extends StatelessWidget {
       height: 36,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ColoresApp.blancoMarca,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Image.asset('assets/marca/isotipo.png',

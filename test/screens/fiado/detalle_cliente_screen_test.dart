@@ -56,7 +56,7 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
-          theme: temaApp(),
+          theme: temaClaro(),
           home: DetalleClienteScreen(
             clienteConSaldo: ClienteConSaldo(
               cliente: cliente,

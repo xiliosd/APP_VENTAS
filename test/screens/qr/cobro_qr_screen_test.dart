@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
 import 'package:app_ventas/screens/qr/cobro_qr_screen.dart';
+import 'package:app_ventas/ui/colores_app.dart';
+import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,10 +20,12 @@ void main() {
   tearDown(() => db.close());
 
   /// Abre el cobro por $12.000 encima de "Inicio" y guarda lo que devuelve.
-  Future<List<bool>> abrir(WidgetTester tester, {String rol = 'admin'}) async {
+  Future<List<bool>> abrir(WidgetTester tester,
+      {String rol = 'admin', ThemeData? tema}) async {
     final container = await containerConSesion(db, rol: rol);
     addTearDown(container.dispose);
-    await tester.pumpWidget(appDePrueba(container, navegador: navegador));
+    await tester.pumpWidget(
+        appDePrueba(container, navegador: navegador, tema: tema));
     final resultados = <bool>[];
     abrirCobroQr(navegador.currentContext!, monto: 12000)
         .then(resultados.add);
@@ -38,6 +42,20 @@ void main() {
     expect(find.text('Pide al cliente que escanee y digite este valor'),
         findsOneWidget);
     expect(find.byKey(const Key('imagen_qr')), findsOneWidget);
+  });
+
+  testWidgets('en modo oscuro el QR sigue sobre fondo blanco y el título se lee',
+      (tester) async {
+    await ConfiguracionRepository(db).guardarImagenQr(pngDePrueba);
+    await abrir(tester, tema: temaOscuro());
+
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).last);
+    expect(scaffold.backgroundColor, ColoresApp.blancoMarca);
+    final titulo = tester.widget<Text>(find.text('Cobro por QR'));
+    final estilo = DefaultTextStyle.of(tester.element(find.text('Cobro por QR')))
+        .style
+        .merge(titulo.style);
+    expect(estilo.color, ColoresApp.claro.texto);
   });
 
   testWidgets('Recibido devuelve true y Cancelar devuelve false',

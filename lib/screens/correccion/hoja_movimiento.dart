@@ -281,7 +281,7 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
           ),
           TextButton(
             key: const Key('confirmar_anular'),
-            style: TextButton.styleFrom(foregroundColor: ColoresApp.sale),
+            style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
             onPressed: () => Navigator.pop(contexto, true),
             child: const Text('Anular'),
           ),
@@ -329,7 +329,7 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
           child: Text(
             _error!,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: ColoresApp.sale),
+            style: TextStyle(color: ColoresApp.of(context).sale),
           ),
         );
 
@@ -372,14 +372,14 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
           ),
         Text(
           '${nombres[_m.usuarioId] ?? ''} · ${formatoFechaHora(_m.fecha)}',
-          style: const TextStyle(color: ColoresApp.textoSecundario),
+          style: TextStyle(color: ColoresApp.of(context).textoSecundario),
         ),
         if (correccion != null) ...[
           const SizedBox(height: 8),
           Text(
             textoCorreccion(correccion, nombres[correccion.usuarioId] ?? ''),
             key: const Key('texto_correccion'),
-            style: const TextStyle(color: ColoresApp.textoSecundario),
+            style: TextStyle(color: ColoresApp.of(context).textoSecundario),
           ),
         ],
         ?error,
@@ -396,7 +396,7 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
           const SizedBox(height: 8),
           TextButton(
             key: const Key('boton_anular'),
-            style: TextButton.styleFrom(foregroundColor: ColoresApp.sale),
+            style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
             onPressed: _guardando ? null : _anular,
             child: const Text('Anular'),
           ),
@@ -419,9 +419,9 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
             linea.descripcion,
             key: Key('nombre_linea_${linea.id}'),
             style: quitada
-                ? const TextStyle(
+                ? TextStyle(
                     decoration: TextDecoration.lineThrough,
-                    color: ColoresApp.textoSecundario,
+                    color: ColoresApp.of(context).textoSecundario,
                   )
                 : null,
           ),
@@ -444,7 +444,7 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
             key: Key('quitar_linea_${linea.id}'),
             tooltip: 'Quitar',
             icon: const Icon(Icons.delete_outline_rounded),
-            color: ColoresApp.sale,
+            color: ColoresApp.of(context).sale,
             onPressed: () => cambiar(0),
           ),
       ],
@@ -516,13 +516,13 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
             ),
           ),
           if (!_quedanLineas)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(top: 4),
               child: Text(
                 'Para quitar todo, anula la venta',
                 key: Key('texto_sin_lineas'),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: ColoresApp.sale),
+                style: TextStyle(color: ColoresApp.of(context).sale),
               ),
             ),
           ?error,

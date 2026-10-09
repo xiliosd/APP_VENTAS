@@ -245,7 +245,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
             ),
             TextButton(
               key: const Key('confirmar_dejar_de_controlar'),
-              style: TextButton.styleFrom(foregroundColor: ColoresApp.sale),
+              style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
               onPressed: () => Navigator.pop(contexto, true),
               child: const Text('Dejar de controlar'),
             ),
@@ -261,10 +261,10 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     final precio = parsearMonto(_precio.text);
     final preferido = _filas.where((f) => f.preferido).firstOrNull;
     if (preferido == null) {
-      return const Text(
+      return Text(
         'Sin costo: agrega un proveedor para ver la ganancia',
         key: Key('texto_resumen_costo'),
-        style: TextStyle(color: ColoresApp.textoSecundario),
+        style: TextStyle(color: ColoresApp.of(context).textoSecundario),
       );
     }
     final costo = preferido.precioCompra;
@@ -276,10 +276,10 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     }
     final ganancia = precio - costo;
     if (ganancia < 0) {
-      return const Text(
+      return Text(
         'Este producto se vende con pérdida',
         key: Key('texto_resumen_costo'),
-        style: TextStyle(color: ColoresApp.sale, fontWeight: FontWeight.w600),
+        style: TextStyle(color: ColoresApp.of(context).sale, fontWeight: FontWeight.w600),
       );
     }
     final porcentaje = (ganancia * 100 / precio).round();
@@ -345,7 +345,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
                               style: TextStyle(
                                 color: f.activo
                                     ? null
-                                    : ColoresApp.textoSecundario,
+                                    : ColoresApp.of(context).textoSecundario,
                               ),
                             ),
                           ),
@@ -362,7 +362,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
                     f.preferido
                         ? Icons.star_rounded
                         : Icons.star_border_rounded,
-                    color: f.preferido ? ColoresApp.fiado : null,
+                    color: f.preferido ? ColoresApp.of(context).fiado : null,
                   ),
                   onPressed: () => _marcarPreferido(f),
                 ),
@@ -441,7 +441,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
               padding: const EdgeInsets.only(top: 8),
               child: Text(
                 _error!,
-                style: const TextStyle(color: ColoresApp.sale),
+                style: TextStyle(color: ColoresApp.of(context).sale),
               ),
             ),
           const SizedBox(height: 24),

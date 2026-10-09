@@ -87,13 +87,13 @@ class ProveedoresScreen extends ConsumerWidget {
                   ),
                 ),
               if (inactivos.isNotEmpty) ...[
-                const Padding(
+                Padding(
                   padding: EdgeInsets.fromLTRB(4, 24, 4, 8),
                   child: Text(
                     'Inactivos',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: ColoresApp.textoSecundario,
+                      color: ColoresApp.of(context).textoSecundario,
                     ),
                   ),
                 ),
@@ -105,8 +105,8 @@ class ProveedoresScreen extends ConsumerWidget {
                           key: Key('proveedor_inactivo_${p.id}'),
                           title: Text(
                             p.nombre,
-                            style: const TextStyle(
-                              color: ColoresApp.textoSecundario,
+                            style: TextStyle(
+                              color: ColoresApp.of(context).textoSecundario,
                             ),
                           ),
                           trailing: TextButton(

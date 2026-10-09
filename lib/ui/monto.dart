@@ -24,16 +24,17 @@ class Monto extends StatelessWidget {
   /// Anulado: tachado y en gris, sin importar el tono.
   final bool tachado;
 
-  static Color colorDe(TonoMonto tono) => switch (tono) {
-        TonoMonto.neutro => ColoresApp.texto,
-        TonoMonto.entra => ColoresApp.entra,
-        TonoMonto.sale => ColoresApp.sale,
-        TonoMonto.fiado => ColoresApp.fiado,
-        TonoMonto.claro => Colors.white,
+  static Color colorDe(TonoMonto tono, ColoresApp c) => switch (tono) {
+        TonoMonto.neutro => c.texto,
+        TonoMonto.entra => c.entra,
+        TonoMonto.sale => c.sale,
+        TonoMonto.fiado => c.fiado,
+        TonoMonto.claro => c.sobreTarjetaPrincipal,
       };
 
   @override
   Widget build(BuildContext context) {
+    final c = ColoresApp.of(context);
     return FittedBox(
       fit: BoxFit.scaleDown,
       alignment: Alignment.centerLeft,
@@ -43,7 +44,7 @@ class Monto extends StatelessWidget {
         style: TextStyle(
           fontSize: tamano,
           fontWeight: FontWeight.w800,
-          color: tachado ? ColoresApp.textoSecundario : colorDe(tono),
+          color: tachado ? c.textoSecundario : colorDe(tono, c),
           decoration: tachado ? TextDecoration.lineThrough : null,
           fontFeatures: const [FontFeature.tabularFigures()],
         ),

@@ -67,9 +67,9 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
               child: IntrinsicHeight(
                 child: Column(
                   children: [
-                    const NombreTienda(
+                    NombreTienda(
                       estilo: TextStyle(
-                          color: ColoresApp.textoSecundario,
+                          color: ColoresApp.of(context).textoSecundario,
                           fontWeight: FontWeight.w600),
                       espacioAbajo: 12,
                     ),
@@ -84,9 +84,9 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
                       style: estiloTitulo(tamano: 22),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'Ingresa tu PIN',
-                      style: TextStyle(color: ColoresApp.textoSecundario),
+                      style: TextStyle(color: ColoresApp.of(context).textoSecundario),
                     ),
                     const SizedBox(height: 24),
                     Row(
@@ -100,10 +100,10 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: i < _pin.length
-                                  ? ColoresApp.primario
+                                  ? ColoresApp.of(context).primario
                                   : Colors.transparent,
                               border: Border.all(
-                                color: ColoresApp.primario,
+                                color: ColoresApp.of(context).primario,
                                 width: 2,
                               ),
                             ),
@@ -117,7 +117,7 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
                           : Center(
                               child: Text(
                                 _error!,
-                                style: const TextStyle(color: ColoresApp.sale),
+                                style: TextStyle(color: ColoresApp.of(context).sale),
                               ),
                             ),
                     ),

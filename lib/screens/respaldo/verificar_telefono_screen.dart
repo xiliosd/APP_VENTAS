@@ -284,10 +284,10 @@ class _VerificarTelefonoScreenState
               ),
             ),
           if (_ocupado)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(top: 16),
               child: Center(
-                child: CircularProgressIndicator(color: ColoresApp.primario),
+                child: CircularProgressIndicator(color: ColoresApp.of(context).primario),
               ),
             ),
         ],

@@ -28,11 +28,11 @@ class EstadoVacio extends StatelessWidget {
             Container(
               width: 64,
               height: 64,
-              decoration: const BoxDecoration(
-                color: ColoresApp.primarioSuave,
+              decoration: BoxDecoration(
+                color: ColoresApp.of(context).primarioSuave,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icono, size: 32, color: ColoresApp.primario),
+              child: Icon(icono, size: 32, color: ColoresApp.of(context).primario),
             ),
             const SizedBox(height: 16),
             Text(
@@ -45,7 +45,7 @@ class EstadoVacio extends StatelessWidget {
               Text(
                 mensaje!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: ColoresApp.textoSecundario),
+                style: TextStyle(color: ColoresApp.of(context).textoSecundario),
               ),
             ],
             if (accion != null) ...[const SizedBox(height: 16), accion!],

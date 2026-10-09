@@ -23,17 +23,17 @@ class SeleccionarUsuarioScreen extends ConsumerWidget {
             children: [
               const MarcaApp(),
               const SizedBox(height: 32),
-              const NombreTienda(
+              NombreTienda(
                 estilo: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: ColoresApp.primario),
+                    color: ColoresApp.of(context).primario),
               ),
               const SizedBox(height: 4),
               Text('¿Quién eres?', style: estiloTitulo()),
               const SizedBox(height: 4),
-              const Text('Toca tu nombre para entrar',
-                  style: TextStyle(color: ColoresApp.textoSecundario)),
+              Text('Toca tu nombre para entrar',
+                  style: TextStyle(color: ColoresApp.of(context).textoSecundario)),
               const SizedBox(height: 16),
               for (final usuario in usuarios)
                 Padding(

@@ -8,13 +8,14 @@ import '../../providers/sesion_provider.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/monto.dart';
+import '../../ui/tema_app.dart';
 import 'configurar_qr_screen.dart';
 
 /// Abre el cobro por QR de [monto]. true solo si el tendero tocó "Recibido".
 Future<bool> abrirCobroQr(BuildContext context, {required int monto}) async {
-  final recibido = await Navigator.of(context).push<bool>(
-    MaterialPageRoute(builder: (_) => CobroQrScreen(monto: monto)),
-  );
+  final recibido = await Navigator.of(
+    context,
+  ).push<bool>(MaterialPageRoute(builder: (_) => CobroQrScreen(monto: monto)));
   return recibido == true;
 }
 
@@ -42,51 +43,57 @@ class _CobroQrScreenState extends ConsumerState<CobroQrScreen> {
     final imagen = ref.watch(imagenQrProvider);
     final esAdmin = ref.watch(sesionProvider).esAdmin;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Cobro por QR'),
-        backgroundColor: Colors.white,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(child: Monto(widget.monto, tamano: 44)),
-              const SizedBox(height: 4),
-              const Text(
-                'Pide al cliente que escanee y digite este valor',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: ColoresApp.textoSecundario),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: imagen.when(
-                  data: (bytes) => bytes == null
-                      ? _SinQr(esAdmin: esAdmin)
-                      : _ImagenQr(bytes),
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (_, _) => const _QrIlegible(),
+    // Siempre en claro: el código debe verse sobre blanco para escanearse.
+    return Theme(
+      data: temaClaro(),
+      child: Scaffold(
+        backgroundColor: ColoresApp.blancoMarca,
+        appBar: AppBar(
+          title: const Text('Cobro por QR'),
+          backgroundColor: ColoresApp.blancoMarca,
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(child: Monto(widget.monto, tamano: 44)),
+                const SizedBox(height: 4),
+                Text(
+                  'Pide al cliente que escanee y digite este valor',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: ColoresApp.of(context).textoSecundario,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              BotonPrincipal(
-                key: const Key('boton_qr_recibido'),
-                texto: 'Recibido',
-                variante: VarianteBoton.entra,
-                onPressed: () => _cerrar(true),
-              ),
-              const SizedBox(height: 8),
-              BotonPrincipal(
-                key: const Key('boton_qr_cancelar'),
-                texto: 'Cancelar',
-                variante: VarianteBoton.contorno,
-                onPressed: () => _cerrar(false),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Expanded(
+                  child: imagen.when(
+                    data: (bytes) => bytes == null
+                        ? _SinQr(esAdmin: esAdmin)
+                        : _ImagenQr(bytes),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (_, _) => const _QrIlegible(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                BotonPrincipal(
+                  key: const Key('boton_qr_recibido'),
+                  texto: 'Recibido',
+                  variante: VarianteBoton.entra,
+                  onPressed: () => _cerrar(true),
+                ),
+                const SizedBox(height: 8),
+                BotonPrincipal(
+                  key: const Key('boton_qr_cancelar'),
+                  texto: 'Cancelar',
+                  variante: VarianteBoton.contorno,
+                  onPressed: () => _cerrar(false),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -118,11 +125,11 @@ class _QrIlegible extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Text(
         'No se pudo mostrar el QR',
         textAlign: TextAlign.center,
-        style: TextStyle(color: ColoresApp.textoSecundario),
+        style: TextStyle(color: ColoresApp.of(context).textoSecundario),
       ),
     );
   }
@@ -140,19 +147,23 @@ class _SinQr extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.qr_code_2_rounded,
-                size: 64, color: ColoresApp.textoSecundario),
+            Icon(
+              Icons.qr_code_2_rounded,
+              size: 64,
+              color: ColoresApp.of(context).textoSecundario,
+            ),
             const SizedBox(height: 8),
-            const Text('Aún no has cargado tu QR',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const Text(
+              'Aún no has cargado tu QR',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
             if (esAdmin) ...[
               const SizedBox(height: 8),
               TextButton(
                 key: const Key('boton_configurar_qr'),
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const ConfigurarQrScreen()),
+                  MaterialPageRoute(builder: (_) => const ConfigurarQrScreen()),
                 ),
                 child: const Text('Configurar QR'),
               ),

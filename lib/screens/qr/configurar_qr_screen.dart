@@ -66,7 +66,7 @@ class _ConfigurarQrScreenState extends ConsumerState<ConfigurarQrScreen> {
           ),
           TextButton(
             key: const Key('confirmar_quitar_qr'),
-            style: TextButton.styleFrom(foregroundColor: ColoresApp.sale),
+            style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
             onPressed: () => Navigator.pop(contexto, true),
             child: const Text('Quitar'),
           ),
@@ -87,10 +87,10 @@ class _ConfigurarQrScreenState extends ConsumerState<ConfigurarQrScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text(
+          Text(
             'Descarga tu QR desde la app de Nequi, Daviplata o tu banco y '
             'cárgalo aquí.',
-            style: TextStyle(color: ColoresApp.textoSecundario),
+            style: TextStyle(color: ColoresApp.of(context).textoSecundario),
           ),
           const SizedBox(height: 16),
           if (bytes == null)
@@ -120,7 +120,7 @@ class _ConfigurarQrScreenState extends ConsumerState<ConfigurarQrScreen> {
             const SizedBox(height: 8),
             TextButton(
               key: const Key('boton_quitar_qr'),
-              style: TextButton.styleFrom(foregroundColor: ColoresApp.sale),
+              style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
               onPressed: _quitar,
               child: const Text('Quitar QR'),
             ),

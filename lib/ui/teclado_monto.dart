@@ -46,7 +46,7 @@ class TecladoMonto extends StatelessWidget {
                           key: Key('tecla_monto_$tecla'),
                           onPressed: () => onTecla(tecla),
                           style: ElevatedButton.styleFrom(
-                            foregroundColor: ColoresApp.texto,
+                            foregroundColor: ColoresApp.of(context).texto,
                           ),
                           child: tecla == 'borrar'
                               ? const Icon(Icons.backspace_outlined,

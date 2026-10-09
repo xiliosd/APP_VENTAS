@@ -48,7 +48,7 @@ class ListaFiadoScreen extends ConsumerWidget {
                   etiqueta: 'Te deben',
                   valor: total,
                   tono: TonoMonto.fiado,
-                  fondo: ColoresApp.fiadoSuave,
+                  fondo: ColoresApp.of(context).fiadoSuave,
                   tamano: 28,
                   detalle: plural(clientes.length, 'cliente', 'clientes'),
                 ),
@@ -76,14 +76,14 @@ class ListaFiadoScreen extends ConsumerWidget {
               // Quienes ya no deben siguen aquí para poder corregir sus
               // ventas fiadas y abonos.
               if (alDia.isNotEmpty) ...[
-                const Padding(
+                Padding(
                   padding: EdgeInsets.fromLTRB(4, 16, 4, 8),
                   child: Text(
                     'AL DÍA',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: ColoresApp.textoSecundario,
+                      color: ColoresApp.of(context).textoSecundario,
                     ),
                   ),
                 ),

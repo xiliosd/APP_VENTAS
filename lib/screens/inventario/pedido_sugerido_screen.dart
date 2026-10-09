@@ -61,7 +61,7 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
       (s, l) => s + (l.precio == null ? 0 : _cantidad(l) * l.precio!),
     );
     final hayAlgo = lineas.any((l) => _cantidad(l) > 0);
-    const gris = TextStyle(color: ColoresApp.textoSecundario);
+    final gris = TextStyle(color: ColoresApp.of(context).textoSecundario);
 
     return Scaffold(
       appBar: AppBar(

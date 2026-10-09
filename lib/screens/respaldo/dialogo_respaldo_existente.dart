@@ -37,7 +37,7 @@ class DialogoRespaldoExistente extends StatelessWidget {
         ),
         TextButton(
           key: const Key('boton_cancelar_existente'),
-          style: TextButton.styleFrom(foregroundColor: ColoresApp.sale),
+          style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
           onPressed: () => elegir(EleccionRespaldoExistente.cancelar),
           child: const Text('Cancelar'),
         ),

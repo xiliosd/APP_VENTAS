@@ -23,11 +23,11 @@ class Mosaico extends StatelessWidget {
   Widget build(BuildContext context) {
     final elegido = cantidad > 0;
     return Material(
-      color: ColoresApp.superficie,
+      color: ColoresApp.of(context).superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: elegido ? ColoresApp.primario : ColoresApp.borde,
+          color: elegido ? ColoresApp.of(context).primario : ColoresApp.of(context).borde,
           width: elegido ? 2 : 1,
         ),
       ),
@@ -51,8 +51,8 @@ class Mosaico extends StatelessWidget {
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: destacado
-                            ? ColoresApp.primario
-                            : ColoresApp.texto,
+                            ? ColoresApp.of(context).primario
+                            : ColoresApp.of(context).texto,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -62,9 +62,9 @@ class Mosaico extends StatelessWidget {
                         child: Text(
                           subtitulo!,
                           maxLines: 1,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
-                            color: ColoresApp.textoSecundario,
+                            color: ColoresApp.of(context).textoSecundario,
                             fontFeatures: [FontFeature.tabularFigures()],
                           ),
                         ),
@@ -83,13 +83,13 @@ class Mosaico extends StatelessWidget {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: ColoresApp.primario,
+                    color: ColoresApp.of(context).primario,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     '$cantidad',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: ColoresApp.of(context).sobrePrimario,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),

@@ -5,21 +5,25 @@ import 'tipografia.dart';
 
 const _fuente = 'Inter';
 
-/// Tema central de la app; todas las pantallas lo heredan de MaterialApp.
-ThemeData temaApp() {
+/// Temas de la app; todas las pantallas los heredan de MaterialApp.
+ThemeData temaClaro() => _tema(ColoresApp.claro, Brightness.light);
+ThemeData temaOscuro() => _tema(ColoresApp.oscuro, Brightness.dark);
+
+ThemeData _tema(ColoresApp c, Brightness brillo) {
   final esquema = ColorScheme.fromSeed(
-    seedColor: ColoresApp.primario,
-    primary: ColoresApp.primario,
-    onPrimary: Colors.white,
-    secondary: ColoresApp.entra,
-    onSecondary: Colors.white,
-    error: ColoresApp.sale,
-    onError: Colors.white,
-    surface: ColoresApp.superficie,
-    onSurface: ColoresApp.texto,
-    onSurfaceVariant: ColoresApp.textoSecundario,
-    outline: ColoresApp.borde,
-    outlineVariant: ColoresApp.borde,
+    seedColor: c.primario,
+    brightness: brillo,
+    primary: c.primario,
+    onPrimary: c.sobrePrimario,
+    secondary: c.entra,
+    onSecondary: c.sobreEntra,
+    error: c.sale,
+    onError: c.sobreSale,
+    surface: c.superficie,
+    onSurface: c.texto,
+    onSurfaceVariant: c.textoSecundario,
+    outline: c.borde,
+    outlineVariant: c.borde,
   );
   final redondeado =
       RoundedRectangleBorder(borderRadius: BorderRadius.circular(12));
@@ -29,30 +33,32 @@ ThemeData temaApp() {
       fontFamily: _fuente, fontSize: 16, fontWeight: FontWeight.w700);
   final bordeCampo = OutlineInputBorder(
     borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: ColoresApp.borde),
+    borderSide: BorderSide(color: c.borde),
   );
 
   return ThemeData(
     useMaterial3: true,
+    brightness: brillo,
     colorScheme: esquema,
+    extensions: [c],
     fontFamily: _fuente,
-    scaffoldBackgroundColor: ColoresApp.fondo,
+    scaffoldBackgroundColor: c.fondo,
     appBarTheme: AppBarTheme(
-      backgroundColor: ColoresApp.superficie,
-      foregroundColor: ColoresApp.texto,
+      backgroundColor: c.superficie,
+      foregroundColor: c.texto,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      titleTextStyle: estiloTitulo(tamano: 20),
-      shape: const Border(bottom: BorderSide(color: ColoresApp.borde)),
+      titleTextStyle: estiloTitulo(tamano: 20, color: c.texto),
+      shape: Border(bottom: BorderSide(color: c.borde)),
     ),
     cardTheme: CardThemeData(
-      color: ColoresApp.superficie,
+      color: c.superficie,
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: ColoresApp.borde),
+        side: BorderSide(color: c.borde),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
@@ -67,7 +73,7 @@ ThemeData temaApp() {
         minimumSize: const Size(64, 52),
         shape: redondeadoBoton,
         textStyle: textoBoton,
-        side: const BorderSide(color: ColoresApp.borde),
+        side: BorderSide(color: c.borde),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -75,9 +81,9 @@ ThemeData temaApp() {
         minimumSize: const Size(48, 48),
         shape: redondeado,
         elevation: 0,
-        backgroundColor: ColoresApp.superficie,
-        foregroundColor: ColoresApp.primario,
-        side: const BorderSide(color: ColoresApp.borde),
+        backgroundColor: c.superficie,
+        foregroundColor: c.primario,
+        side: BorderSide(color: c.borde),
         textStyle: textoBoton,
       ),
     ),
@@ -90,16 +96,16 @@ ThemeData temaApp() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: ColoresApp.superficie,
+      fillColor: c.superficie,
       border: bordeCampo,
       enabledBorder: bordeCampo,
       focusedBorder: bordeCampo.copyWith(
-        borderSide: const BorderSide(color: ColoresApp.primario, width: 2),
+        borderSide: BorderSide(color: c.primario, width: 2),
       ),
     ),
-    navigationBarTheme: const NavigationBarThemeData(
-      backgroundColor: ColoresApp.superficie,
-      indicatorColor: ColoresApp.primarioSuave,
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: c.superficie,
+      indicatorColor: c.primarioSuave,
       labelTextStyle: WidgetStatePropertyAll(
         TextStyle(
             fontFamily: _fuente, fontSize: 12, fontWeight: FontWeight.w600),
@@ -107,32 +113,32 @@ ThemeData temaApp() {
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: ColoresApp.texto,
-      contentTextStyle: const TextStyle(
-          fontFamily: _fuente, fontSize: 15, color: Colors.white),
-      actionTextColor: const Color(0xFF93C5FD),
+      backgroundColor: c.fondoAviso,
+      contentTextStyle: TextStyle(
+          fontFamily: _fuente, fontSize: 15, color: c.textoAviso),
+      actionTextColor: c.accionAviso,
       shape: redondeado,
     ),
-    bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: ColoresApp.superficie,
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: c.superficie,
       showDragHandle: true,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
     ),
     dialogTheme: DialogThemeData(
-      backgroundColor: ColoresApp.superficie,
+      backgroundColor: c.superficie,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: ColoresApp.primario,
-      foregroundColor: Colors.white,
+      backgroundColor: c.primario,
+      foregroundColor: c.sobrePrimario,
       shape: redondeado,
     ),
-    listTileTheme: const ListTileThemeData(
-      iconColor: ColoresApp.textoSecundario,
+    listTileTheme: ListTileThemeData(
+      iconColor: c.textoSecundario,
       minVerticalPadding: 12,
     ),
-    dividerTheme: const DividerThemeData(color: ColoresApp.borde, space: 1),
+    dividerTheme: DividerThemeData(color: c.borde, space: 1),
   );
 }

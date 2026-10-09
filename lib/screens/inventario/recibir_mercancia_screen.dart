@@ -281,7 +281,7 @@ class _RecibirMercanciaScreenState
                     Text(
                       formatoMoneda(l.cantidad * (l.precioValido ?? 0)),
                       textAlign: TextAlign.right,
-                      style: const TextStyle(color: ColoresApp.textoSecundario),
+                      style: TextStyle(color: ColoresApp.of(context).textoSecundario),
                     ),
                   ],
                 ),
@@ -312,7 +312,7 @@ class _RecibirMercanciaScreenState
               child: Text(
                 _error!,
                 key: const Key('error_recibir'),
-                style: const TextStyle(color: ColoresApp.sale),
+                style: TextStyle(color: ColoresApp.of(context).sale),
               ),
             ),
           const SizedBox(height: 24),

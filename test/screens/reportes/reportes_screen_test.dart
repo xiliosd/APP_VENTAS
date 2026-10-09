@@ -49,7 +49,7 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(ProviderScope(
       overrides: [databaseProvider.overrideWithValue(db)],
-      child: MaterialApp(theme: temaApp(), home: ReportesScreen(reloj: reloj ?? () => hoy)),
+      child: MaterialApp(theme: temaClaro(), home: ReportesScreen(reloj: reloj ?? () => hoy)),
     ));
     await tester.pumpAndSettle();
   }
@@ -262,7 +262,7 @@ void main() {
         }),
       ],
       child:
-          MaterialApp(theme: temaApp(), home: ReportesScreen(reloj: () => hoy)),
+          MaterialApp(theme: temaClaro(), home: ReportesScreen(reloj: () => hoy)),
     ));
     await tester.pumpAndSettle();
 
@@ -302,7 +302,7 @@ void main() {
     expect(find.text(r'Pérdida en productos: $1.000'), findsOneWidget);
     final linea = find.text(r'1. Arepa · 2 u · $7.000 · pierde $1.000');
     expect(linea, findsOneWidget);
-    expect(tester.widget<Text>(linea).style?.color, ColoresApp.sale);
+    expect(tester.widget<Text>(linea).style?.color, ColoresApp.claro.sale);
   });
 
   testWidgets('una semana del año pasado muestra el año', (tester) async {

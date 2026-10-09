@@ -125,7 +125,7 @@ class _Contenido extends StatelessWidget {
     final contra = tipo == TipoPeriodo.semana
         ? 'vs. semana pasada'
         : 'vs. mes pasado';
-    const gris = TextStyle(color: ColoresApp.textoSecundario);
+    final gris = TextStyle(color: ColoresApp.of(context).textoSecundario);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -225,9 +225,9 @@ class _Contenido extends StatelessWidget {
         BarrasPorDia(ventasPorDia: r.ventasPorDia, mejorDia: r.mejorDia),
         const _Titulo('Productos más vendidos'),
         if (r.ranking.isEmpty && r.otrosMontos == 0)
-          const Text(
+          Text(
             'Aún no hay ventas con detalle de productos en este periodo',
-            key: Key('texto_sin_detalle'),
+            key: const Key('texto_sin_detalle'),
             style: gris,
           )
         else ...[
@@ -243,7 +243,7 @@ class _Contenido extends StatelessWidget {
                 key: const Key('texto_ganancia_productos'),
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: r.gananciaProductos < 0 ? ColoresApp.sale : null,
+                  color: r.gananciaProductos < 0 ? ColoresApp.of(context).sale : null,
                 ),
               ),
             ),
@@ -260,7 +260,7 @@ class _Contenido extends StatelessWidget {
                 }}',
                 key: Key('ranking_$i'),
                 style: (p.ganancia ?? 0) < 0
-                    ? const TextStyle(color: ColoresApp.sale)
+                    ? TextStyle(color: ColoresApp.of(context).sale)
                     : null,
               ),
             ),
@@ -339,10 +339,10 @@ class _TextoCambio extends StatelessWidget {
     final valor = cambio;
     if (valor == null) return const SizedBox.shrink();
     final (texto, color) = valor > 0
-        ? ('↑ $valor % $contra', ColoresApp.entra)
+        ? ('↑ $valor % $contra', ColoresApp.of(context).entra)
         : valor < 0
-        ? ('↓ ${-valor} % $contra', ColoresApp.sale)
-        : ('= $contra', ColoresApp.textoSecundario);
+        ? ('↓ ${-valor} % $contra', ColoresApp.of(context).sale)
+        : ('= $contra', ColoresApp.of(context).textoSecundario);
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Text(

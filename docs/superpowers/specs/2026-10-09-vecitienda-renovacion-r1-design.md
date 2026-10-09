@@ -79,7 +79,8 @@ Los existentes se conservan con el mismo nombre; se agregan `tarjetaPrincipal`,
 
 Colores fijos que no cambian por tema (constantes estáticas en `colores_app.dart`):
 `ColoresApp.blancoMarca` (`#FFFFFF`: insignia del logo y fondo del código QR, que debe ser
-blanco para escanearse) y `ColoresApp.paletaAvatar` (los 6 colores de los avatares, con
+blanco para escanearse; la pantalla de cobro QR se dibuja siempre con el tema claro) y
+`ColoresApp.paletaAvatar` (los 6 colores de los avatares, con
 texto `blancoMarca`; los 6 tienen contraste ≥ 4,5:1 con blanco).
 
 Requisito: todo par texto/fondo usado cumple contraste **≥ 4,5:1** (texto ≥ 24 px o 19 px negrita:

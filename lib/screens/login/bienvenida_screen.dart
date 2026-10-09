@@ -27,10 +27,10 @@ class BienvenidaScreen extends ConsumerWidget {
             const SizedBox(height: 32),
             Text('Bienvenido', style: estiloTitulo()),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Registra ventas, fiados y gastos de tu tienda, incluso sin '
               'internet.',
-              style: TextStyle(color: ColoresApp.textoSecundario),
+              style: TextStyle(color: ColoresApp.of(context).textoSecundario),
             ),
             const SizedBox(height: 32),
             BotonPrincipal(

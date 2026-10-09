@@ -132,6 +132,8 @@ class _Tarjetas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ganancia = resumen.totalVendido - resumen.totalGastado;
+    final suave =
+        ColoresApp.of(context).sobreTarjetaPrincipal.withValues(alpha: 0.75);
     return Column(
       children: [
         Container(
@@ -139,21 +141,21 @@ class _Tarjetas extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: ColoresApp.primario,
+            color: ColoresApp.of(context).tarjetaPrincipal,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Ventas del día',
-                  style: estiloTitulo(tamano: 14, color: Colors.white70)),
+                  style: estiloTitulo(tamano: 14, color: suave)),
               const SizedBox(height: 4),
               Monto(resumen.totalVendido, tamano: 32, tono: TonoMonto.claro),
               const SizedBox(height: 4),
               Text(
                 '${plural(resumen.cantidadVentas, 'venta', 'ventas')} · '
                 '${plural(resumen.cantidadFiadas, 'fiada', 'fiadas')}',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                style: TextStyle(color: suave, fontSize: 12),
               ),
               const SizedBox(height: 2),
               Text(
@@ -161,7 +163,7 @@ class _Tarjetas extends StatelessWidget {
                 ' · transferencias '
                 '${formatoMoneda(resumen.recibidoTransferencia)}',
                 key: const Key('texto_recibido'),
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                style: TextStyle(color: suave, fontSize: 12),
               ),
             ],
           ),
@@ -175,7 +177,7 @@ class _Tarjetas extends StatelessWidget {
                 etiqueta: 'Gastos',
                 valor: resumen.totalGastado,
                 tono: TonoMonto.sale,
-                colorBorde: ColoresApp.saleSuave,
+                colorBorde: ColoresApp.of(context).saleSuave,
               ),
             ),
             const SizedBox(width: 12),
@@ -186,7 +188,7 @@ class _Tarjetas extends StatelessWidget {
                 valor: ganancia,
                 tono: ganancia >= 0 ? TonoMonto.entra : TonoMonto.sale,
                 colorBorde:
-                    ganancia >= 0 ? ColoresApp.entraSuave : ColoresApp.saleSuave,
+                    ganancia >= 0 ? ColoresApp.of(context).entraSuave : ColoresApp.of(context).saleSuave,
               ),
             ),
           ],
@@ -197,7 +199,7 @@ class _Tarjetas extends StatelessWidget {
           etiqueta: 'Por cobrar',
           valor: resumen.totalPorCobrar,
           tono: TonoMonto.fiado,
-          fondo: ColoresApp.fiadoSuave,
+          fondo: ColoresApp.of(context).fiadoSuave,
           detalle: plural(resumen.clientesConDeuda, 'cliente', 'clientes'),
           onTap: onVerFiado,
         ),

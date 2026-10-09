@@ -31,16 +31,16 @@ class MarcaApp extends StatelessWidget {
             Flexible(
               child: Text(
                 'VeciTienda',
-                style: estiloTitulo(tamano: 28, color: ColoresApp.primario),
+                style: estiloTitulo(tamano: 28, color: ColoresApp.of(context).primario),
               ),
             ),
           ],
         ),
         if (conSlogan) ...[
           const SizedBox(height: 8),
-          const Text(
+          Text(
             slogan,
-            style: TextStyle(fontSize: 15, color: ColoresApp.textoSecundario),
+            style: TextStyle(fontSize: 15, color: ColoresApp.of(context).textoSecundario),
           ),
         ],
       ],

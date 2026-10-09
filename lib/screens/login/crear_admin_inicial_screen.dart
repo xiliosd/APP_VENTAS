@@ -74,10 +74,10 @@ class _CrearAdminInicialScreenState
             const SizedBox(height: 32),
             Text('Configura tu tienda', style: estiloTitulo()),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Crea el usuario administrador. Con él podrás agregar productos '
               'y vendedores.',
-              style: TextStyle(color: ColoresApp.textoSecundario),
+              style: TextStyle(color: ColoresApp.of(context).textoSecundario),
             ),
             const SizedBox(height: 24),
             TextField(
@@ -106,7 +106,7 @@ class _CrearAdminInicialScreenState
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(_error!,
-                    style: const TextStyle(color: ColoresApp.sale)),
+                    style: TextStyle(color: ColoresApp.of(context).sale)),
               ),
             const SizedBox(height: 8),
             BotonPrincipal(

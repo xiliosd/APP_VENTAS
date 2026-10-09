@@ -42,7 +42,7 @@ class TecladoNumerico extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     shape: const CircleBorder(),
                     padding: EdgeInsets.zero,
-                    foregroundColor: ColoresApp.texto,
+                    foregroundColor: ColoresApp.of(context).texto,
                   ),
                   child: texto == '⌫'
                       ? const Icon(Icons.backspace_outlined,

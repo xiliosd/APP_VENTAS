@@ -29,9 +29,9 @@ class SelectorSegmentado<T> extends StatelessWidget {
         onSelectionChanged: (seleccion) => onCambio(seleccion.first),
         style: SegmentedButton.styleFrom(
           minimumSize: const Size(0, 48),
-          selectedBackgroundColor: ColoresApp.primario,
-          selectedForegroundColor: Colors.white,
-          foregroundColor: ColoresApp.texto,
+          selectedBackgroundColor: ColoresApp.of(context).primario,
+          selectedForegroundColor: ColoresApp.of(context).sobrePrimario,
+          foregroundColor: ColoresApp.of(context).texto,
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),

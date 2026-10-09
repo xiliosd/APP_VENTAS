@@ -14,32 +14,79 @@ double contraste(Color a, Color b) {
 }
 
 void main() {
-  test('los pares de texto y fondo cumplen contraste 4.5:1', () {
-    const pares = <String, (Color, Color)>{
-      'texto/fondo': (ColoresApp.texto, ColoresApp.fondo),
-      'texto/superficie': (ColoresApp.texto, ColoresApp.superficie),
-      'secundario/fondo': (ColoresApp.textoSecundario, ColoresApp.fondo),
-      'secundario/superficie': (ColoresApp.textoSecundario, ColoresApp.superficie),
-      'primario/superficie': (ColoresApp.primario, ColoresApp.superficie),
-      'blanco/primario': (Colors.white, ColoresApp.primario),
-      'entra/superficie': (ColoresApp.entra, ColoresApp.superficie),
-      'blanco/entra': (Colors.white, ColoresApp.entra),
-      'sale/superficie': (ColoresApp.sale, ColoresApp.superficie),
-      'blanco/sale': (Colors.white, ColoresApp.sale),
-      'fiado/superficie': (ColoresApp.fiado, ColoresApp.superficie),
-      'fiado/fiadoSuave': (ColoresApp.fiado, ColoresApp.fiadoSuave),
-    };
-    pares.forEach((nombre, par) {
-      expect(contraste(par.$1, par.$2), greaterThanOrEqualTo(4.5),
-          reason: nombre);
+  Map<String, (Color, Color)> paresDe(ColoresApp c) => {
+        'texto/fondo': (c.texto, c.fondo),
+        'texto/superficie': (c.texto, c.superficie),
+        'secundario/fondo': (c.textoSecundario, c.fondo),
+        'secundario/superficie': (c.textoSecundario, c.superficie),
+        'primario/superficie': (c.primario, c.superficie),
+        'primario/fondo': (c.primario, c.fondo),
+        'primario/primarioSuave': (c.primario, c.primarioSuave),
+        'sobrePrimario/primario': (c.sobrePrimario, c.primario),
+        'sobreTarjeta/tarjeta': (c.sobreTarjetaPrincipal, c.tarjetaPrincipal),
+        'entra/superficie': (c.entra, c.superficie),
+        'sobreEntra/rellenoEntra': (c.sobreEntra, c.rellenoEntra),
+        'sale/superficie': (c.sale, c.superficie),
+        'sobreSale/sale': (c.sobreSale, c.sale),
+        'fiado/superficie': (c.fiado, c.superficie),
+        'fiado/fiadoSuave': (c.fiado, c.fiadoSuave),
+        'texto/fiadoSuave': (c.texto, c.fiadoSuave),
+        'textoAviso/fondoAviso': (c.textoAviso, c.fondoAviso),
+        'accionAviso/fondoAviso': (c.accionAviso, c.fondoAviso),
+      };
+
+  for (final (nombre, c) in [
+    ('claro', ColoresApp.claro),
+    ('oscuro', ColoresApp.oscuro),
+  ]) {
+    test('modo $nombre: los pares de texto y fondo cumplen 4.5:1', () {
+      paresDe(c).forEach((par, colores) {
+        expect(contraste(colores.$1, colores.$2), greaterThanOrEqualTo(4.5),
+            reason: '$nombre $par');
+      });
     });
+
+    test('modo $nombre: el verde de marca se distingue (≥ 3:1) sobre la '
+        'superficie', () {
+      expect(contraste(c.marcaVerde, c.superficie), greaterThanOrEqualTo(3));
+    });
+  }
+
+  test('los avatares tienen texto blanco legible', () {
+    for (final color in ColoresApp.paletaAvatar) {
+      expect(contraste(ColoresApp.blancoMarca, color),
+          greaterThanOrEqualTo(4.5),
+          reason: '$color');
+    }
   });
 
-  test('el tema usa el color primario, el fondo y la fuente Inter', () {
-    final tema = temaApp();
-    expect(tema.colorScheme.primary, ColoresApp.primario);
-    expect(tema.scaffoldBackgroundColor, ColoresApp.fondo);
-    expect(tema.textTheme.bodyMedium!.fontFamily, 'Inter');
+  test('la paleta clara es la de VeciTienda y la oscura es Azul noche', () {
+    expect(ColoresApp.claro.primario, const Color(0xFF1A539B));
+    expect(ColoresApp.claro.marcaVerde, const Color(0xFF16A34A));
+    expect(ColoresApp.claro.fondo, const Color(0xFFF8FAFC));
+    expect(ColoresApp.claro.texto, const Color(0xFF1E293B));
+    expect(ColoresApp.claro.primarioSuave, const Color(0xFFDDE5F0));
+    expect(ColoresApp.claro.entraSuave, const Color(0xFFBBF7D0));
+    expect(ColoresApp.claro.saleSuave, const Color(0xFFFECACA));
+    expect(ColoresApp.oscuro.fondo, const Color(0xFF0B1220));
+    expect(ColoresApp.oscuro.superficie, const Color(0xFF131C2E));
+    expect(ColoresApp.oscuro.tarjetaPrincipal, const Color(0xFF1B3A66));
+  });
+
+  test('cada tema registra su paleta, su brillo, su fondo y la fuente Inter',
+      () {
+    final claro = temaClaro();
+    final oscuro = temaOscuro();
+    expect(claro.extension<ColoresApp>(), ColoresApp.claro);
+    expect(oscuro.extension<ColoresApp>(), ColoresApp.oscuro);
+    expect(claro.brightness, Brightness.light);
+    expect(oscuro.brightness, Brightness.dark);
+    expect(claro.colorScheme.primary, ColoresApp.claro.primario);
+    expect(claro.scaffoldBackgroundColor, ColoresApp.claro.fondo);
+    expect(oscuro.scaffoldBackgroundColor, ColoresApp.oscuro.fondo);
+    expect(oscuro.textTheme.bodyMedium!.fontFamily, 'Inter');
+    expect(claro.navigationBarTheme.indicatorColor,
+        ColoresApp.claro.primarioSuave);
   });
 
   test('la fuente Inter está empaquetada y declarada', () {
@@ -55,32 +102,18 @@ void main() {
     expect(File('pubspec.yaml').readAsStringSync(), contains('family: Inter'));
   });
 
-  test('la paleta es la de VeciTienda', () {
-    expect(ColoresApp.primario, const Color(0xFF1A539B));
-    expect(ColoresApp.marcaVerde, const Color(0xFF16A34A));
-    expect(ColoresApp.fondo, const Color(0xFFF8FAFC));
-    expect(ColoresApp.texto, const Color(0xFF1E293B));
-    expect(ColoresApp.entraSuave, const Color(0xFFBBF7D0));
-    expect(ColoresApp.saleSuave, const Color(0xFFFECACA));
-  });
-
-  test('el verde de marca solo se usa en gráficos: ≥ 3:1 sobre blanco', () {
-    expect(contraste(ColoresApp.marcaVerde, ColoresApp.superficie),
-        greaterThanOrEqualTo(3));
-  });
-
   test('los títulos usan Nunito ExtraBold con el eje de peso fijado', () {
     final estilo = estiloTitulo(tamano: 20);
     expect(estilo.fontFamily, 'Nunito');
     expect(estilo.fontWeight, FontWeight.w800);
     expect(estilo.fontVariations, const [FontVariation('wght', 800)]);
-    expect(temaApp().appBarTheme.titleTextStyle!.fontFamily, 'Nunito');
+    expect(temaClaro().appBarTheme.titleTextStyle!.fontFamily, 'Nunito');
     expect(File('assets/fonts/Nunito-Variable.ttf').existsSync(), isTrue);
     expect(File('pubspec.yaml').readAsStringSync(), contains('family: Nunito'));
   });
 
   test('los botones principales tienen radio 16', () {
-    final forma = temaApp().filledButtonTheme.style!.shape!.resolve({})!
+    final forma = temaClaro().filledButtonTheme.style!.shape!.resolve({})!
         as RoundedRectangleBorder;
     expect(forma.borderRadius, BorderRadius.circular(16));
   });
@@ -100,11 +133,4 @@ void main() {
         reason: 'Sin el eje wght la fuente variable sale con peso 200');
   });
 
-  test('los tonos claros salen del azul de marca', () {
-    expect(ColoresApp.primarioSuave, const Color(0xFFDDE5F0));
-    expect(temaApp().navigationBarTheme.indicatorColor,
-        ColoresApp.primarioSuave);
-    expect(contraste(ColoresApp.primario, ColoresApp.primarioSuave),
-        greaterThanOrEqualTo(4.5));
-  });
 }

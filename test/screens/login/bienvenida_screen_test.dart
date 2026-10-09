@@ -21,7 +21,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(theme: temaApp(), home: const BienvenidaScreen()),
+        child: MaterialApp(theme: temaClaro(), home: const BienvenidaScreen()),
       ),
     );
     await tester.pumpAndSettle();

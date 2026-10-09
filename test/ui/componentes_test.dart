@@ -12,14 +12,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget _app(Widget hijo) =>
-    MaterialApp(theme: temaApp(), home: Scaffold(body: hijo));
+    MaterialApp(theme: temaClaro(), home: Scaffold(body: hijo));
 
 void main() {
   testWidgets('Monto muestra el formato y el color de su tono', (tester) async {
     await tester.pumpWidget(_app(const Monto(5000, tono: TonoMonto.sale)));
 
     final texto = tester.widget<Text>(find.text(r'$5.000'));
-    expect(texto.style!.color, ColoresApp.sale);
+    expect(texto.style!.color, ColoresApp.claro.sale);
   });
 
   testWidgets('Monto grande no desborda en un espacio angosto', (tester) async {
@@ -160,7 +160,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: Monto(5000, tachado: true)));
     final texto = tester.widget<Text>(find.text(r'$5.000'));
     expect(texto.style!.decoration, TextDecoration.lineThrough);
-    expect(texto.style!.color, ColoresApp.textoSecundario);
+    expect(texto.style!.color, ColoresApp.claro.textoSecundario);
   });
 
   testWidgets('el círculo del estado vacío usa el azul claro de marca',
@@ -175,6 +175,6 @@ void main() {
             matching: find.byType(Container))
         .first);
     expect((circulo.decoration! as BoxDecoration).color,
-        ColoresApp.primarioSuave);
+        ColoresApp.claro.primarioSuave);
   });
 }

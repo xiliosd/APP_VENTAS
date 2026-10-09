@@ -25,21 +25,23 @@ class TarjetaMonto extends StatelessWidget {
   final Color? fondo;
   final double tamano;
 
-  /// Color del borde (por defecto el gris de [ColoresApp.borde]).
+  /// Color del borde (por defecto el gris de [ColoresApp.of(context).borde]).
   final Color? colorBorde;
 
   @override
   Widget build(BuildContext context) {
     final colorEtiqueta = tono == TonoMonto.claro
-        ? Colors.white70
-        : ColoresApp.textoSecundario;
+        ? ColoresApp.of(context)
+            .sobreTarjetaPrincipal
+            .withValues(alpha: 0.75)
+        : ColoresApp.of(context).textoSecundario;
     return Material(
-      color: fondo ?? ColoresApp.superficie,
+      color: fondo ?? ColoresApp.of(context).superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: fondo == null
             ? BorderSide(
-                color: colorBorde ?? ColoresApp.borde,
+                color: colorBorde ?? ColoresApp.of(context).borde,
                 width: colorBorde == null ? 1 : 1.5,
               )
             : BorderSide.none,

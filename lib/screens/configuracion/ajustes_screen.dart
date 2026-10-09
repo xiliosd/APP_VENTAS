@@ -96,9 +96,9 @@ class AjustesScreen extends ConsumerWidget {
         Card(
           child: ListTile(
             key: const Key('ajustes_cerrar_sesion'),
-            leading: const Icon(Icons.logout_rounded, color: ColoresApp.sale),
-            title: const Text('Cerrar sesión',
-                style: TextStyle(color: ColoresApp.sale)),
+            leading: Icon(Icons.logout_rounded, color: ColoresApp.of(context).sale),
+            title: Text('Cerrar sesión',
+                style: TextStyle(color: ColoresApp.of(context).sale)),
             onTap: () => ref.read(sesionProvider.notifier).cerrarSesion(),
           ),
         ),
@@ -118,11 +118,11 @@ class _Titulo extends StatelessWidget {
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
         texto,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
-          color: ColoresApp.textoSecundario,
+          color: ColoresApp.of(context).textoSecundario,
         ),
       ),
     );

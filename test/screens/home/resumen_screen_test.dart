@@ -31,7 +31,7 @@ void main() {
       ProviderScope(
         overrides: [databaseProvider.overrideWithValue(db)],
         child: MaterialApp(
-          theme: temaApp(),
+          theme: temaClaro(),
           home: Scaffold(body: ResumenScreen(onVerFiado: onVerFiado)),
         ),
       ),
@@ -142,8 +142,8 @@ void main() {
       return (material.shape! as RoundedRectangleBorder).side.color;
     }
 
-    expect(borde('tarjeta_gastos'), ColoresApp.saleSuave);
-    expect(borde('tarjeta_ganancia'), ColoresApp.entraSuave);
+    expect(borde('tarjeta_gastos'), ColoresApp.claro.saleSuave);
+    expect(borde('tarjeta_ganancia'), ColoresApp.claro.entraSuave);
   });
 
   testWidgets('la etiqueta de la tarjeta principal va en Nunito',

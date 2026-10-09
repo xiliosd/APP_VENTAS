@@ -37,24 +37,24 @@ class BotonPrincipal extends StatelessWidget {
       VarianteBoton.entra => FilledButton(
           onPressed: onPressed,
           style: FilledButton.styleFrom(
-            backgroundColor: ColoresApp.entra,
-            foregroundColor: Colors.white,
+            backgroundColor: ColoresApp.of(context).rellenoEntra,
+            foregroundColor: ColoresApp.of(context).sobreEntra,
           ),
           child: contenido,
         ),
       VarianteBoton.contorno => OutlinedButton(
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
-            foregroundColor: ColoresApp.primario,
-            side: const BorderSide(color: ColoresApp.primario, width: 1.5),
+            foregroundColor: ColoresApp.of(context).primario,
+            side: BorderSide(color: ColoresApp.of(context).primario, width: 1.5),
           ),
           child: contenido,
         ),
       VarianteBoton.peligro => OutlinedButton(
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
-            foregroundColor: ColoresApp.sale,
-            side: const BorderSide(color: ColoresApp.sale, width: 1.5),
+            foregroundColor: ColoresApp.of(context).sale,
+            side: BorderSide(color: ColoresApp.of(context).sale, width: 1.5),
           ),
           child: contenido,
         ),

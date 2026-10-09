@@ -11,15 +11,15 @@ class EtiquetaQr extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: ColoresApp.primario.withValues(alpha: 0.10),
+        color: ColoresApp.of(context).primario.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: const Text(
+      child: Text(
         'QR',
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: ColoresApp.primario,
+          color: ColoresApp.of(context).primario,
         ),
       ),
     );

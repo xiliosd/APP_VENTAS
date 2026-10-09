@@ -32,7 +32,8 @@ class AppVentas extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'VeciTienda',
-      theme: temaApp(),
+      theme: temaClaro(),
+      darkTheme: temaOscuro(),
       home: const RaizApp(),
     );
   }

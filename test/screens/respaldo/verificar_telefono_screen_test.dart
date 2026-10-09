@@ -32,7 +32,7 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
-          theme: temaApp(),
+          theme: temaClaro(),
           navigatorKey: navegador,
           home: const Scaffold(body: Text('Inicio')),
         ),

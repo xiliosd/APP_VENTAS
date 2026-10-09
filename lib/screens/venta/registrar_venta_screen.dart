@@ -190,11 +190,11 @@ class _Seccion extends StatelessWidget {
       padding: const EdgeInsets.only(top: 20, bottom: 8),
       child: Text(
         texto,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
-          color: ColoresApp.textoSecundario,
+          color: ColoresApp.of(context).textoSecundario,
         ),
       ),
     );
@@ -235,12 +235,12 @@ class _BarraCobro extends StatelessWidget {
     final n = ticket.cantidadArticulos;
 
     return Material(
-      color: ColoresApp.superficie,
+      color: ColoresApp.of(context).superficie,
       child: SafeArea(
         top: false,
         child: Container(
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: ColoresApp.borde)),
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: ColoresApp.of(context).borde)),
           ),
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
           child: Column(
@@ -254,7 +254,7 @@ class _BarraCobro extends StatelessWidget {
                       n == 1 ? '1 artículo' : '$n artículos',
                       key: const Key('texto_articulos'),
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: ColoresApp.textoSecundario),
+                      style: TextStyle(color: ColoresApp.of(context).textoSecundario),
                     ),
                   ),
                   // Los botones van lado a lado si caben; con letra muy
@@ -273,7 +273,7 @@ class _BarraCobro extends StatelessWidget {
                         TextButton(
                           key: const Key('boton_vaciar'),
                           style: TextButton.styleFrom(
-                            foregroundColor: ColoresApp.sale,
+                            foregroundColor: ColoresApp.of(context).sale,
                           ),
                           onPressed: ticket.estaVacio ? null : onVaciar,
                           child: const Text('Vaciar'),
@@ -288,9 +288,9 @@ class _BarraCobro extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Text(
                     aviso,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: ColoresApp.textoSecundario,
+                      color: ColoresApp.of(context).textoSecundario,
                     ),
                   ),
                 ),
@@ -352,9 +352,9 @@ class _HojaTicket extends ConsumerWidget {
                 IconButton(
                   key: Key('quitar_${linea.clave}'),
                   tooltip: 'Quitar del ticket',
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.delete_outline_rounded,
-                    color: ColoresApp.sale,
+                    color: ColoresApp.of(context).sale,
                   ),
                   onPressed: () => notifier.quitar(linea.clave),
                 ),

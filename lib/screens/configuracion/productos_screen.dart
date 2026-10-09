@@ -80,13 +80,13 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                   ),
                 ),
               if (inactivos.isNotEmpty) ...[
-                const Padding(
+                Padding(
                   padding: EdgeInsets.fromLTRB(4, 24, 4, 8),
                   child: Text(
                     'Inactivos',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: ColoresApp.textoSecundario,
+                      color: ColoresApp.of(context).textoSecundario,
                     ),
                   ),
                 ),
@@ -97,8 +97,8 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                         ListTile(
                           key: Key('producto_inactivo_${p.id}'),
                           title: Text(p.nombre,
-                              style: const TextStyle(
-                                  color: ColoresApp.textoSecundario)),
+                              style: TextStyle(
+                                  color: ColoresApp.of(context).textoSecundario)),
                           subtitle: Text(formatoMoneda(p.precio)),
                           trailing: TextButton(
                             key: Key('boton_reactivar_${p.id}'),

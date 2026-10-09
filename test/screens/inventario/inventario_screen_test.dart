@@ -78,9 +78,9 @@ void main() {
     final deCoca = tester.widget<Text>(find.byKey(Key('existencias_$coca')));
     final dePan = tester.widget<Text>(find.byKey(Key('existencias_$pan')));
     expect(deCoca.data, '2 u');
-    expect(deCoca.style?.color, ColoresApp.sale);
+    expect(deCoca.style?.color, ColoresApp.claro.sale);
     expect(dePan.data, '12 u');
-    expect(dePan.style?.color, isNot(ColoresApp.sale));
+    expect(dePan.style?.color, isNot(ColoresApp.claro.sale));
   });
 
   testWidgets('sin nada por pedir abre en Todos', (tester) async {

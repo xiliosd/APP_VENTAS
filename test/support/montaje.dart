@@ -28,13 +28,16 @@ Future<ProviderContainer> containerConSesion(
 
 /// App de prueba con el tema real. [inicio] es la pantalla de fondo, para
 /// poder empujar pantallas encima con [navegador] y ver los avisos al volver.
+/// Con [tema] se prueba otro tema (por defecto el claro).
 Widget appDePrueba(
   ProviderContainer container, {
   GlobalKey<NavigatorState>? navegador,
   Widget inicio = const Scaffold(body: Text('Inicio')),
+  ThemeData? tema,
 }) {
   return UncontrolledProviderScope(
     container: container,
-    child: MaterialApp(theme: temaApp(), navigatorKey: navegador, home: inicio),
+    child: MaterialApp(
+        theme: tema ?? temaClaro(), navigatorKey: navegador, home: inicio),
   );
 }
