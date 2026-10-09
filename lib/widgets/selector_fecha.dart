@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../ui/colores_app.dart';
 import '../util/fecha_util.dart';
 
 /// Selector de día: ‹ fecha ›. Tocar la fecha abre un calendario. No permite
@@ -17,7 +18,12 @@ class SelectorFecha extends StatelessWidget {
     final seleccionado = inicioDelDia(dia);
     final esHoy = seleccionado == hoy;
 
-    return Row(
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        shape: const StadiumBorder(),
+        color: ColoresApp.of(context).superficie,
+      ),
+      child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
@@ -53,6 +59,7 @@ class SelectorFecha extends StatelessWidget {
                   seleccionado.day + 1)),
         ),
       ],
+      ),
     );
   }
 }

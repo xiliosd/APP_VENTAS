@@ -3,6 +3,7 @@ import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/screens/home/resumen_screen.dart';
 import 'package:app_ventas/screens/reportes/reportes_screen.dart';
 import 'package:app_ventas/ui/monto.dart';
+import 'package:app_ventas/util/fecha_util.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -183,7 +184,7 @@ void main() {
       (tester) async {
     await montar(tester);
 
-    final etiqueta = tester.widget<Text>(find.text('Ventas del día'));
+    final etiqueta = tester.widget<Text>(find.text('Ventas de hoy'));
     expect(etiqueta.style!.fontFamily, 'Nunito');
     expect(etiqueta.style!.fontVariations,
         contains(const FontVariation('wght', 800)));
@@ -232,5 +233,73 @@ void main() {
     await montarConSesion(tester, 'vendedor');
 
     expect(find.byKey(const Key('boton_ver_reportes')), findsNothing);
+  });
+
+  testWidgets('la tarjeta del día compara con ayer y muestra la mini gráfica',
+      (tester) async {
+    final hoy = DateTime.now();
+    await vender(11200, fecha: hoy);
+    await vender(10000, fecha: hoy.subtract(const Duration(days: 1)));
+    await montar(tester);
+    expect(find.text('Ventas de hoy'), findsOneWidget);
+    expect(enTarjeta('tarjeta_ventas', '▲ 12 % vs. ayer'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byKey(const Key('tarjeta_ventas')),
+            matching: find.byKey(const Key('mini_grafica'))),
+        findsOneWidget);
+  });
+
+  testWidgets('otro día: título con fecha y "el día anterior"', (tester) async {
+    final hoy = inicioDelDia(DateTime.now());
+    await vender(5000, fecha: hoy.subtract(const Duration(days: 1)));
+    await montar(tester);
+    await tester.tap(find.byKey(const Key('boton_dia_anterior')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Ventas del '), findsOneWidget);
+    expect(enTarjeta('tarjeta_ventas', 'El día anterior no hubo ventas'),
+        findsOneWidget);
+  });
+
+  testWidgets('sin ventas ni ayer ni hoy no hay etiqueta de comparación',
+      (tester) async {
+    await montar(tester);
+    expect(find.byKey(const Key('comparacion_ventas')), findsNothing);
+  });
+
+  testWidgets('Venta y Gasto quedan fijos abajo, fuera de la lista',
+      (tester) async {
+    await montar(tester);
+    final barra = find.byKey(const Key('barra_acciones_inicio'));
+    expect(
+        find.descendant(
+            of: barra, matching: find.byKey(const Key('boton_nueva_venta'))),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: barra, matching: find.byKey(const Key('boton_nuevo_gasto'))),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(ListView),
+            matching: find.byKey(const Key('boton_nueva_venta'))),
+        findsNothing);
+  });
+
+  testWidgets('el admin ve Por vendedor con el enlace a reportes',
+      (tester) async {
+    await montarConSesion(tester, 'admin');
+    final tarjeta = find.byKey(const Key('tarjeta_por_vendedor'));
+    expect(
+        find.descendant(
+            of: tarjeta, matching: find.byKey(const Key('boton_ver_reportes'))),
+        findsOneWidget);
+  });
+
+  testWidgets('el admin abre Reportes tocando la mini gráfica', (tester) async {
+    await montarConSesion(tester, 'admin');
+    await tester.tap(find.byKey(const Key('mini_grafica')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReportesScreen), findsOneWidget);
   });
 }

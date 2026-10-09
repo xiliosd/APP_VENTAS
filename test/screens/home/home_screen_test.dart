@@ -102,6 +102,8 @@ void main() {
       (tester) async {
     await montar(tester);
 
+    await tester.ensureVisible(find.byKey(const Key('tarjeta_por_cobrar')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('tarjeta_por_cobrar')));
     await tester.pumpAndSettle();
 

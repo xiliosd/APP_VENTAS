@@ -5,6 +5,15 @@ DateTime finDelDia(DateTime dia) =>
 
 String _dosDigitos(int n) => n.toString().padLeft(2, '0');
 
+const _mesesCortos = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+];
+
+/// "7 oct".
+String fechaCorta(DateTime fecha) =>
+    '${fecha.day} ${_mesesCortos[fecha.month - 1]}';
+
 String formatoFecha(DateTime fecha) =>
     '${_dosDigitos(fecha.day)}/${_dosDigitos(fecha.month)}/${fecha.year}';
 
