@@ -15,6 +15,7 @@ import '../configuracion/hoja_nombre_tienda.dart';
 import '../fiado/lista_fiado_screen.dart';
 import '../historial/historial_screen.dart';
 import '../inventario/inventario_screen.dart';
+import 'hoja_apariencia.dart';
 import 'resumen_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -161,8 +162,25 @@ class _MenuCuenta extends ConsumerWidget {
             ? ColoresApp.of(context).sobreTarjetaPrincipal
             : null,
       ),
-      onSelected: (_) => ref.read(sesionProvider.notifier).cerrarSesion(),
+      onSelected: (valor) {
+        if (valor == 'apariencia') {
+          mostrarHojaApariencia(context);
+        } else {
+          ref.read(sesionProvider.notifier).cerrarSesion();
+        }
+      },
       itemBuilder: (_) => [
+        const PopupMenuItem<String>(
+          key: Key('boton_apariencia'),
+          value: 'apariencia',
+          child: Row(
+            children: [
+              Icon(Icons.dark_mode_outlined),
+              SizedBox(width: 12),
+              Text('Apariencia'),
+            ],
+          ),
+        ),
         PopupMenuItem<String>(
           key: const Key('boton_cerrar_sesion'),
           value: 'salir',

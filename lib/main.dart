@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'providers/apariencia_provider.dart';
 import 'respaldo/config_respaldo.dart';
 import 'respaldo/respaldo_provider.dart';
 import 'screens/raiz_app.dart';
@@ -25,15 +26,16 @@ Future<void> main() async {
   );
 }
 
-class AppVentas extends StatelessWidget {
+class AppVentas extends ConsumerWidget {
   const AppVentas({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       title: 'VeciTienda',
       theme: temaClaro(),
       darkTheme: temaOscuro(),
+      themeMode: ref.watch(aparienciaProvider),
       home: const RaizApp(),
     );
   }

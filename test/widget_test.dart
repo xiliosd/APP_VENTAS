@@ -1,20 +1,27 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/main.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('primer uso: Bienvenida → crear tienda → entra al Inicio',
       (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [databaseProvider.overrideWithValue(db)],
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          preferenciasProvider.overrideWithValue(prefs),
+        ],
         child: const AppVentas(),
       ),
     );
