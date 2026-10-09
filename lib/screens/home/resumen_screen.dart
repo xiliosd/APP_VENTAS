@@ -47,7 +47,10 @@ class _ResumenScreenState extends ConsumerState<ResumenScreen> {
           onCambio: (dia) => setState(() => _dia = inicioDelDia(dia)),
         ),
         const SizedBox(height: 8),
+        // Al recargar por un dato nuevo se mantienen las tarjetas (sin
+        // rueda): así el monto cuenta y la entrada no se repite.
         resumenAsync.when(
+          skipLoadingOnReload: true,
           data: (resumen) =>
               _Tarjetas(resumen: resumen, onVerFiado: widget.onVerFiado),
           loading: () => const Padding(

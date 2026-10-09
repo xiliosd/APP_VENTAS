@@ -119,7 +119,8 @@ class _Activo extends ConsumerWidget {
                   final ok = await notifier.respaldarAhora();
                   if (context.mounted) {
                     avisar(context,
-                        ok ? 'Respaldo guardado' : 'No se pudo respaldar');
+                        ok ? 'Respaldo guardado' : 'No se pudo respaldar',
+                        error: !ok);
                   }
                 },
         ),

@@ -4,6 +4,7 @@ import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:app_ventas/ui/colores_app.dart';
 import 'package:app_ventas/ui/estado_vacio.dart';
 import 'package:app_ventas/ui/hoja_inferior.dart';
+import 'package:app_ventas/ui/marca_app.dart';
 import 'package:app_ventas/ui/monto.dart';
 import 'package:app_ventas/ui/mosaico.dart';
 import 'package:app_ventas/ui/selector_segmentado.dart';
@@ -89,6 +90,31 @@ void main() {
     await tester.tap(find.text('ir'));
     await tester.pumpAndSettle();
     expect(registro, ['HapticFeedbackType.mediumImpact']);
+  });
+
+  testWidgets('avisar un error vibra como error', (tester) async {
+    final registro = registrarVibraciones(tester);
+    await tester.pumpWidget(_app(Builder(
+        builder: (context) => TextButton(
+            onPressed: () =>
+                avisar(context, 'No se pudo respaldar', error: true),
+            child: const Text('ir')))));
+    await tester.tap(find.text('ir'));
+    await tester.pumpAndSettle();
+    expect(registro, ['HapticFeedbackType.heavyImpact']);
+  });
+
+  testWidgets('en oscuro el isotipo va sobre una insignia blanca',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        theme: temaOscuro(), home: const Scaffold(body: MarcaApp())));
+    final insignia = tester.widget<Container>(find
+        .ancestor(
+            of: find.byKey(const Key('isotipo_marca')),
+            matching: find.byType(Container))
+        .first);
+    expect((insignia.decoration! as BoxDecoration).color,
+        ColoresApp.blancoMarca);
   });
 
   testWidgets('tocar un Mosaico vibra suave', (tester) async {

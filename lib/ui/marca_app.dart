@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'colores_app.dart';
+import 'tema_app.dart';
 import 'tipografia.dart';
 
 /// Isotipo y nombre de la app (y, si se pide, el slogan), para las pantallas
@@ -20,12 +21,21 @@ class MarcaApp extends StatelessWidget {
       children: [
         Row(
           children: [
-            Image.asset(
-              'assets/marca/isotipo.png',
-              key: const Key('isotipo_marca'),
-              width: 56,
-              height: 56,
-              semanticLabel: 'Logo de VeciTienda',
+            // Insignia blanca: el contorno azul del isotipo no se ve sobre
+            // el fondo oscuro.
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: ColoresApp.blancoMarca,
+                borderRadius: BorderRadius.circular(radioCampo),
+              ),
+              child: Image.asset(
+                'assets/marca/isotipo.png',
+                key: const Key('isotipo_marca'),
+                width: 56,
+                height: 56,
+                semanticLabel: 'Logo de VeciTienda',
+              ),
             ),
             const SizedBox(width: 12),
             Flexible(

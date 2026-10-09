@@ -45,7 +45,8 @@ class _ConfigurarQrScreenState extends ConsumerState<ConfigurarQrScreen> {
       if (mounted) avisar(context, 'QR guardado');
     } catch (_) {
       if (mounted) {
-        avisar(context, 'No se pudo cargar la imagen, prueba con otra');
+        avisar(context, 'No se pudo cargar la imagen, prueba con otra',
+            error: true);
       }
     } finally {
       if (mounted) setState(() => _ocupado = false);

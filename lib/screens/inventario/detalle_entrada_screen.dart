@@ -48,7 +48,7 @@ class DetalleEntradaScreen extends ConsumerWidget {
       if (context.mounted) avisar(context, 'Entrada anulada');
     } on ArgumentError {
       // Otro toque o dispositivo ya la anuló: el dato está bien.
-      if (context.mounted) avisar(context, 'La entrada ya estaba anulada');
+      if (context.mounted) avisar(context, 'La entrada ya estaba anulada', error: true);
     }
   }
 

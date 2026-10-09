@@ -75,6 +75,39 @@ void main() {
     expect(enTarjeta('tarjeta_por_cobrar', '1 cliente'), findsOneWidget);
   });
 
+  testWidgets('una venta nueva cuenta el total sin repetir la entrada',
+      (tester) async {
+    await vender(5000);
+    await montar(tester);
+
+    await tester.runAsync(() => vender(10000));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(
+        find.descendant(
+            of: find.byKey(const Key('tarjeta_ventas')),
+            matching: find.byType(Opacity)),
+        findsNothing);
+    // Cuadro a cuadro: el monto pasa por valores intermedios.
+    final vistos = <String>{};
+    for (var i = 0; i < 60; i++) {
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pump(const Duration(milliseconds: 16));
+      vistos.addAll(tester
+          .widgetList<Text>(find.descendant(
+              of: find.byKey(const Key('tarjeta_ventas')),
+              matching: find.byType(Text)))
+          .map((t) => t.data ?? ''));
+    }
+    expect(
+        vistos.where((t) =>
+            t.startsWith(r'$') && t != r'$5.000' && t != r'$15.000'),
+        isNotEmpty);
+    await tester.pumpAndSettle();
+    expect(enTarjeta('tarjeta_ventas', r'$15.000'), findsOneWidget);
+  });
+
   testWidgets('una ganancia negativa se muestra en rojo', (tester) async {
     await db.into(db.gastos).insert(GastosCompanion.insert(
         monto: 3000, fecha: DateTime.now(), usuarioId: ana));

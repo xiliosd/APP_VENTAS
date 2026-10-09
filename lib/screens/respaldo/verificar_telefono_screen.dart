@@ -140,7 +140,8 @@ class _VerificarTelefonoScreenState
         avisar(context, 'Respaldo restaurado. Entra con tu PIN.');
         Navigator.of(context).popUntil((ruta) => ruta.isFirst);
       case ResultadoRestauracion.sinRespaldo:
-        avisar(context, 'No encontramos un respaldo para este número');
+        avisar(context, 'No encontramos un respaldo para este número',
+            error: true);
         Navigator.of(context).pop();
       case ResultadoRestauracion.invalido:
         setState(

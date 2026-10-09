@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'movimiento.dart';
 import 'vibracion.dart';
 
-/// Aviso de confirmación abajo de la pantalla. Con [onDeshacer] agrega la
-/// acción "Deshacer" y dura 5 s; sin ella dura 3 s.
-void avisar(BuildContext context, String texto, {VoidCallback? onDeshacer}) {
+/// Aviso abajo de la pantalla. Con [onDeshacer] agrega la acción "Deshacer"
+/// y dura 5 s; sin ella dura 3 s. Con [error] vibra como error, no como éxito.
+void avisar(BuildContext context, String texto,
+    {VoidCallback? onDeshacer, bool error = false}) {
   final messenger = ScaffoldMessenger.of(context);
-  Vibracion.exito();
+  error ? Vibracion.error() : Vibracion.exito();
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(
     SnackBar(

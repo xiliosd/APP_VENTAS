@@ -64,7 +64,8 @@ class _CobroQrScreenState extends ConsumerState<CobroQrScreen> {
                   'Pide al cliente que escanee y digite este valor',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: ColoresApp.of(context).textoSecundario,
+                    // Este context está fuera del Theme claro de la pantalla.
+                    color: ColoresApp.claro.textoSecundario,
                   ),
                 ),
                 const SizedBox(height: 16),

@@ -56,6 +56,9 @@ void main() {
         .style
         .merge(titulo.style);
     expect(estilo.color, ColoresApp.claro.texto);
+    final instruccion = tester.widget<Text>(
+        find.text('Pide al cliente que escanee y digite este valor'));
+    expect(instruccion.style!.color, ColoresApp.claro.textoSecundario);
   });
 
   testWidgets('Recibido devuelve true y Cancelar devuelve false',
