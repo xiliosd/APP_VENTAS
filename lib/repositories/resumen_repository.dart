@@ -1,4 +1,7 @@
+import 'package:drift/drift.dart';
+
 import '../data/database.dart';
+import '../util/fecha_util.dart';
 import 'fiado_repository.dart';
 import 'gasto_repository.dart';
 import 'venta_repository.dart';
@@ -41,6 +44,25 @@ class ResumenRepository {
   final VentaRepository _ventaRepository;
   final GastoRepository _gastoRepository;
   final FiadoRepository _fiadoRepository;
+
+  /// Total vendido (contado + fiado, sin anuladas) de cada uno de los [dias]
+  /// días que terminan en [hasta], del más antiguo al más reciente.
+  Future<List<int>> ventasDiarias(DateTime hasta, {int dias = 7}) async {
+    final primerDia = inicioDelDia(hasta).subtract(Duration(days: dias - 1));
+    final ventas = await (_db.select(_db.ventas)
+          ..where((v) =>
+              v.fecha.isBiggerOrEqualValue(inicioDelDia(primerDia)) &
+              v.fecha.isSmallerOrEqualValue(finDelDia(hasta)) &
+              v.anulado.equals(false)))
+        .get();
+    final totales = List<int>.filled(dias, 0);
+    final inicio = inicioDelDia(primerDia);
+    for (final v in ventas) {
+      final indice = inicioDelDia(v.fecha).difference(inicio).inDays;
+      if (indice >= 0 && indice < dias) totales[indice] += v.monto;
+    }
+    return totales;
+  }
 
   Future<ResumenDia> resumenDelDia(DateTime dia, {int? usuarioId}) async {
     final ventas = await _ventaRepository.ventasDelDia(dia, usuarioId: usuarioId);

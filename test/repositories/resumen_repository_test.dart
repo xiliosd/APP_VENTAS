@@ -3,6 +3,7 @@ import 'package:app_ventas/repositories/fiado_repository.dart';
 import 'package:app_ventas/repositories/gasto_repository.dart';
 import 'package:app_ventas/repositories/resumen_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -162,5 +163,35 @@ void main() {
     final soloAna = await repo.resumenDelDia(dia, usuarioId: vendedor1);
     expect(soloAna.recibidoEfectivo, 5000);
     expect(soloAna.recibidoTransferencia, 2000);
+  });
+
+  test('ventasDiarias da los 7 días que terminan en el día pedido', () async {
+    final hoy = DateTime(2026, 10, 9);
+    final cliente =
+        await db.into(db.clientes).insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
+    Future<void> venta(DateTime fecha, int monto,
+        {bool fiado = false, bool anulada = false}) async {
+      final id = await db.into(db.ventas).insert(VentasCompanion.insert(
+          monto: monto,
+          fecha: fecha,
+          esFiado: Value(fiado),
+          clienteId: Value(fiado ? cliente : null),
+          usuarioId: vendedor1));
+      if (anulada) {
+        await (db.update(db.ventas)..where((v) => v.id.equals(id)))
+            .write(const VentasCompanion(anulado: Value(true)));
+      }
+    }
+
+    await venta(DateTime(2026, 10, 9, 10), 3000);
+    await venta(DateTime(2026, 10, 9, 23, 59), 1000, fiado: true);
+    await venta(DateTime(2026, 10, 9, 11), 9999, anulada: true);
+    await venta(DateTime(2026, 10, 8, 0, 0), 2000);
+    await venta(DateTime(2026, 10, 3, 12), 500);
+    await venta(DateTime(2026, 10, 2, 23, 59), 7777); // fuera de la ventana
+    await venta(DateTime(2026, 10, 10, 0, 0), 8888); // día siguiente
+
+    final valores = await repo.ventasDiarias(hoy);
+    expect(valores, [500, 0, 0, 0, 0, 2000, 4000]);
   });
 }

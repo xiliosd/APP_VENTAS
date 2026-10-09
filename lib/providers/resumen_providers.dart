@@ -21,6 +21,14 @@ final resumenDelDiaProvider =
   return ref.watch(resumenRepositoryProvider).resumenDelDia(dia);
 });
 
+/// Totales de los 7 días que terminan en [dia] (mismo contrato de clave que
+/// [resumenDelDiaProvider]).
+final ventasDiariasProvider =
+    FutureProvider.autoDispose.family<List<int>, DateTime>((ref, dia) {
+  ref.watch(_cambiosResumenProvider);
+  return ref.watch(resumenRepositoryProvider).ventasDiarias(dia);
+});
+
 /// Same key contract as [resumenDelDiaProvider].
 final resumenPorVendedorProvider = FutureProvider.autoDispose
     .family<Map<Usuario, ResumenDia>, DateTime>((ref, dia) {
