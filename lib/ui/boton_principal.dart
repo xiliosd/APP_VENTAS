@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'colores_app.dart';
-import 'movimiento.dart';
+import 'aplastable.dart';
 import 'vibracion.dart';
 
 enum VarianteBoton { primario, entra, contorno, peligro }
@@ -69,44 +69,7 @@ class BotonPrincipal extends StatelessWidget {
     };
     return SizedBox(
       width: double.infinity,
-      child: _Aplastable(habilitado: onPressed != null, child: boton),
-    );
-  }
-}
-
-/// Se encoge al presionar y vuelve con rebote (Material 3 Expressive).
-class _Aplastable extends StatefulWidget {
-  const _Aplastable({required this.child, required this.habilitado});
-
-  final Widget child;
-  final bool habilitado;
-
-  @override
-  State<_Aplastable> createState() => _AplastableState();
-}
-
-class _AplastableState extends State<_Aplastable> {
-  var _presionado = false;
-
-  void _cambiar(bool valor) {
-    if (widget.habilitado && _presionado != valor) {
-      setState(() => _presionado = valor);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Listener(
-      onPointerDown: (_) => _cambiar(true),
-      onPointerUp: (_) => _cambiar(false),
-      onPointerCancel: (_) => _cambiar(false),
-      child: AnimatedScale(
-        scale: _presionado ? 0.94 : 1.0,
-        duration: Movimiento.duracion(
-            context, _presionado ? Movimiento.corta : Movimiento.media),
-        curve: _presionado ? Curves.easeOut : Movimiento.resorte,
-        child: widget.child,
-      ),
+      child: Aplastable(habilitado: onPressed != null, child: boton),
     );
   }
 }
