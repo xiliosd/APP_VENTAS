@@ -9,6 +9,7 @@ import '../../providers/sesion_provider.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/tipografia.dart';
+import '../../ui/vibracion.dart';
 import '../../widgets/nombre_tienda.dart';
 import '../configuracion/ajustes_screen.dart';
 import '../configuracion/hoja_nombre_tienda.dart';
@@ -120,7 +121,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: tabs[_tabActual].pantalla,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tabActual,
-        onDestinationSelected: (i) => setState(() => _tabActual = i),
+        onDestinationSelected: (i) {
+          Vibracion.toque();
+          setState(() => _tabActual = i);
+        },
         destinations: [
           for (final t in tabs)
             NavigationDestination(

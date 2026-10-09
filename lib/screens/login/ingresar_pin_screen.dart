@@ -6,6 +6,7 @@ import '../../providers/sesion_provider.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/tipografia.dart';
+import '../../ui/vibracion.dart';
 import '../../widgets/teclado_numerico.dart';
 import '../../widgets/nombre_tienda.dart';
 
@@ -28,6 +29,7 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
         .iniciarSesion(widget.usuario.id, _pin);
     if (!mounted) return;
     if (!ok) {
+      Vibracion.error();
       setState(() {
         _error = 'PIN incorrecto';
         _pin = '';

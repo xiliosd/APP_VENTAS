@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'colores_app.dart';
+import 'vibracion.dart';
 
 /// Tope de 9 dígitos ($999.999.999).
 const montoMaximo = 999999999;
@@ -44,7 +45,10 @@ class TecladoMonto extends StatelessWidget {
                         height: 56,
                         child: ElevatedButton(
                           key: Key('tecla_monto_$tecla'),
-                          onPressed: () => onTecla(tecla),
+                          onPressed: () {
+                            Vibracion.toque();
+                            onTecla(tecla);
+                          },
                           style: ElevatedButton.styleFrom(
                             foregroundColor: ColoresApp.of(context).texto,
                           ),

@@ -7,9 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/vibraciones.dart';
+
 void main() {
   testWidgets('PIN correcto abre sesión y PIN incorrecto muestra error',
       (tester) async {
+    final registro = registrarVibraciones(tester);
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     final usuarioId = await db.into(db.usuarios).insert(
@@ -42,6 +45,9 @@ void main() {
     }
     expect(find.text('PIN incorrecto'), findsOneWidget);
     expect(container.read(sesionProvider).haySesion, isFalse);
+    expect(registro.where((v) => v == 'HapticFeedbackType.selectionClick'),
+        hasLength(4));
+    expect(registro.last, 'HapticFeedbackType.heavyImpact');
 
     for (final digito in ['1', '2', '3', '4']) {
       await tester.tap(find.byKey(Key('tecla_$digito')));

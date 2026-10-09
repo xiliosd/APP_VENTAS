@@ -2,6 +2,8 @@ import 'package:app_ventas/ui/teclado_monto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/vibraciones.dart';
+
 void main() {
   test('aplicarTecla agrega dígitos y ceros', () {
     expect(aplicarTecla(5, '3'), 53);
@@ -36,5 +38,15 @@ void main() {
     await tester.tap(find.byKey(const Key('tecla_monto_borrar')));
 
     expect(teclas, ['2', '000', 'borrar']);
+  });
+
+  testWidgets('cada tecla del TecladoMonto vibra suave', (tester) async {
+    final registro = registrarVibraciones(tester);
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: TecladoMonto(onTecla: (_) {})),
+    ));
+
+    await tester.tap(find.byKey(const Key('tecla_monto_5')));
+    expect(registro, ['HapticFeedbackType.selectionClick']);
   });
 }

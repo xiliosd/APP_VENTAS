@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'colores_app.dart';
+import 'movimiento.dart';
+import 'vibracion.dart';
 
 enum VarianteBoton { primario, entra, contorno, peligro }
 
@@ -21,6 +23,12 @@ class BotonPrincipal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final alTocar = onPressed == null
+        ? null
+        : () {
+            Vibracion.toque();
+            onPressed!();
+          };
     final contenido = icono == null
         ? Text(texto, textAlign: TextAlign.center)
         : Row(
@@ -33,9 +41,9 @@ class BotonPrincipal extends StatelessWidget {
           );
     final boton = switch (variante) {
       VarianteBoton.primario =>
-        FilledButton(onPressed: onPressed, child: contenido),
+        FilledButton(onPressed: alTocar, child: contenido),
       VarianteBoton.entra => FilledButton(
-          onPressed: onPressed,
+          onPressed: alTocar,
           style: FilledButton.styleFrom(
             backgroundColor: ColoresApp.of(context).rellenoEntra,
             foregroundColor: ColoresApp.of(context).sobreEntra,
@@ -43,7 +51,7 @@ class BotonPrincipal extends StatelessWidget {
           child: contenido,
         ),
       VarianteBoton.contorno => OutlinedButton(
-          onPressed: onPressed,
+          onPressed: alTocar,
           style: OutlinedButton.styleFrom(
             foregroundColor: ColoresApp.of(context).primario,
             side: BorderSide(color: ColoresApp.of(context).primario, width: 1.5),
@@ -51,7 +59,7 @@ class BotonPrincipal extends StatelessWidget {
           child: contenido,
         ),
       VarianteBoton.peligro => OutlinedButton(
-          onPressed: onPressed,
+          onPressed: alTocar,
           style: OutlinedButton.styleFrom(
             foregroundColor: ColoresApp.of(context).sale,
             side: BorderSide(color: ColoresApp.of(context).sale, width: 1.5),
@@ -59,6 +67,46 @@ class BotonPrincipal extends StatelessWidget {
           child: contenido,
         ),
     };
-    return SizedBox(width: double.infinity, child: boton);
+    return SizedBox(
+      width: double.infinity,
+      child: _Aplastable(habilitado: onPressed != null, child: boton),
+    );
+  }
+}
+
+/// Se encoge al presionar y vuelve con rebote (Material 3 Expressive).
+class _Aplastable extends StatefulWidget {
+  const _Aplastable({required this.child, required this.habilitado});
+
+  final Widget child;
+  final bool habilitado;
+
+  @override
+  State<_Aplastable> createState() => _AplastableState();
+}
+
+class _AplastableState extends State<_Aplastable> {
+  var _presionado = false;
+
+  void _cambiar(bool valor) {
+    if (widget.habilitado && _presionado != valor) {
+      setState(() => _presionado = valor);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) => _cambiar(true),
+      onPointerUp: (_) => _cambiar(false),
+      onPointerCancel: (_) => _cambiar(false),
+      child: AnimatedScale(
+        scale: _presionado ? 0.94 : 1.0,
+        duration: Movimiento.duracion(
+            context, _presionado ? Movimiento.corta : Movimiento.media),
+        curve: _presionado ? Curves.easeOut : Movimiento.resorte,
+        child: widget.child,
+      ),
+    );
   }
 }

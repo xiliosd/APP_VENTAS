@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../ui/colores_app.dart';
+import '../ui/vibracion.dart';
 
 /// Teclado del PIN: botones circulares grandes.
 class TecladoNumerico extends StatelessWidget {
@@ -38,7 +39,10 @@ class TecladoNumerico extends StatelessWidget {
                 height: 72,
                 child: ElevatedButton(
                   key: Key('tecla_$texto'),
-                  onPressed: () => texto == '⌫' ? onBorrar() : onDigito(texto),
+                  onPressed: () {
+                    Vibracion.toque();
+                    texto == '⌫' ? onBorrar() : onDigito(texto);
+                  },
                   style: ElevatedButton.styleFrom(
                     shape: const CircleBorder(),
                     padding: EdgeInsets.zero,

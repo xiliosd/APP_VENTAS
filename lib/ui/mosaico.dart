@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'colores_app.dart';
+import 'tema_app.dart';
+import 'vibracion.dart';
 
 /// Baldosa tocable para productos y montos rápidos, con insignia de cantidad.
 class Mosaico extends StatelessWidget {
@@ -25,15 +27,18 @@ class Mosaico extends StatelessWidget {
     return Material(
       color: ColoresApp.of(context).superficie,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(radioTarjeta),
         side: BorderSide(
           color: elegido ? ColoresApp.of(context).primario : ColoresApp.of(context).borde,
           width: elegido ? 2 : 1,
         ),
       ),
       child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          Vibracion.toque();
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(radioTarjeta),
         child: Stack(
           children: [
             Center(

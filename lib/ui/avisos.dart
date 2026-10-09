@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import 'movimiento.dart';
+import 'vibracion.dart';
 
 /// Aviso de confirmación abajo de la pantalla. Con [onDeshacer] agrega la
 /// acción "Deshacer" y dura 5 s; sin ella dura 3 s.
 void avisar(BuildContext context, String texto, {VoidCallback? onDeshacer}) {
   final messenger = ScaffoldMessenger.of(context);
+  Vibracion.exito();
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(
     SnackBar(

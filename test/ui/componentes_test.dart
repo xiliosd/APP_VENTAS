@@ -5,11 +5,14 @@ import 'package:app_ventas/ui/colores_app.dart';
 import 'package:app_ventas/ui/estado_vacio.dart';
 import 'package:app_ventas/ui/hoja_inferior.dart';
 import 'package:app_ventas/ui/monto.dart';
+import 'package:app_ventas/ui/mosaico.dart';
 import 'package:app_ventas/ui/selector_segmentado.dart';
 import 'package:app_ventas/ui/tarjeta_monto.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../support/vibraciones.dart';
 
 Widget _app(Widget hijo) =>
     MaterialApp(theme: temaClaro(), home: Scaffold(body: hijo));
@@ -33,6 +36,71 @@ void main() {
     final forma = material.shape! as RoundedRectangleBorder;
     expect(forma.side, BorderSide.none);
     expect(forma.borderRadius, BorderRadius.circular(radioTarjeta));
+  });
+
+  testWidgets('BotonPrincipal vibra al tocarlo y se encoge mientras se presiona',
+      (tester) async {
+    final registro = registrarVibraciones(tester);
+    await tester
+        .pumpWidget(_app(BotonPrincipal(texto: 'Cobrar', onPressed: () {})));
+    double escala() => tester
+        .widget<AnimatedScale>(find.descendant(
+            of: find.byType(BotonPrincipal),
+            matching: find.byType(AnimatedScale)))
+        .scale;
+    expect(escala(), 1.0);
+
+    final gesto =
+        await tester.startGesture(tester.getCenter(find.text('Cobrar')));
+    await tester.pump();
+    expect(escala(), 0.94);
+    await gesto.up();
+    await tester.pumpAndSettle();
+    expect(escala(), 1.0);
+    expect(registro, ['HapticFeedbackType.selectionClick']);
+  });
+
+  testWidgets('BotonPrincipal deshabilitado no vibra ni se encoge',
+      (tester) async {
+    final registro = registrarVibraciones(tester);
+    await tester.pumpWidget(
+        _app(const BotonPrincipal(texto: 'Cobrar', onPressed: null)));
+    final gesto =
+        await tester.startGesture(tester.getCenter(find.text('Cobrar')));
+    await tester.pump();
+    expect(
+        tester
+            .widget<AnimatedScale>(find.descendant(
+                of: find.byType(BotonPrincipal),
+                matching: find.byType(AnimatedScale)))
+            .scale,
+        1.0);
+    await gesto.up();
+    await tester.pumpAndSettle();
+    expect(registro, isEmpty);
+  });
+
+  testWidgets('avisar vibra como éxito', (tester) async {
+    final registro = registrarVibraciones(tester);
+    await tester.pumpWidget(_app(Builder(
+        builder: (context) => TextButton(
+            onPressed: () => avisar(context, 'Venta registrada'),
+            child: const Text('ir')))));
+    await tester.tap(find.text('ir'));
+    await tester.pumpAndSettle();
+    expect(registro, ['HapticFeedbackType.mediumImpact']);
+  });
+
+  testWidgets('tocar un Mosaico vibra suave', (tester) async {
+    final registro = registrarVibraciones(tester);
+    var tocado = false;
+    await tester.pumpWidget(_app(SizedBox(
+        width: 120,
+        height: 120,
+        child: Mosaico(titulo: 'Pan', onTap: () => tocado = true))));
+    await tester.tap(find.text('Pan'));
+    expect(tocado, isTrue);
+    expect(registro, ['HapticFeedbackType.selectionClick']);
   });
 
   testWidgets('Monto grande no desborda en un espacio angosto', (tester) async {
