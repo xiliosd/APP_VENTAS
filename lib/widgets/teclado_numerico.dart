@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../ui/aplastable.dart';
 import '../ui/colores_app.dart';
 import '../ui/vibracion.dart';
 
@@ -30,13 +31,14 @@ class TecladoNumerico extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: fila.map((texto) {
             if (texto.isEmpty) {
-              return const SizedBox(width: 88, height: 80);
+              return const SizedBox(width: 92, height: 84);
             }
             return Padding(
               padding: const EdgeInsets.all(8),
               child: SizedBox(
-                width: 72,
-                height: 72,
+                width: 76,
+                height: 76,
+                child: Aplastable(
                 child: ElevatedButton(
                   key: Key('tecla_$texto'),
                   onPressed: () {
@@ -54,6 +56,7 @@ class TecladoNumerico extends StatelessWidget {
                       : Text(texto,
                           style: const TextStyle(
                               fontSize: 26, fontWeight: FontWeight.w600)),
+                ),
                 ),
               ),
             );

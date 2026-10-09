@@ -8,6 +8,7 @@ import '../../ui/colores_app.dart';
 import '../../ui/tipografia.dart';
 import '../../ui/vibracion.dart';
 import '../../widgets/teclado_numerico.dart';
+import '../../widgets/indicadores_pin.dart';
 import '../../widgets/nombre_tienda.dart';
 
 class IngresarPinScreen extends ConsumerStatefulWidget {
@@ -23,6 +24,9 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
   String _pin = '';
   String? _error;
 
+  /// Cada PIN incorrecto lo aumenta y sacude los indicadores.
+  int _errores = 0;
+
   Future<void> _validar() async {
     final ok = await ref
         .read(sesionProvider.notifier)
@@ -33,6 +37,7 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
       setState(() {
         _error = 'PIN incorrecto';
         _pin = '';
+        _errores++;
       });
     } else if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
@@ -75,10 +80,13 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
                           fontWeight: FontWeight.w600),
                       espacioAbajo: 12,
                     ),
-                    AvatarInicial(
-                      id: usuario.id,
-                      nombre: usuario.nombre,
-                      radio: 32,
+                    Hero(
+                      tag: 'avatar_${usuario.id}',
+                      child: AvatarInicial(
+                        id: usuario.id,
+                        nombre: usuario.nombre,
+                        radio: 44,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -91,27 +99,7 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
                       style: TextStyle(color: ColoresApp.of(context).textoSecundario),
                     ),
                     const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        for (var i = 0; i < 4; i++)
-                          Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                            width: 16,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: i < _pin.length
-                                  ? ColoresApp.of(context).primario
-                                  : Colors.transparent,
-                              border: Border.all(
-                                color: ColoresApp.of(context).primario,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                    IndicadoresPin(llenos: _pin.length, errores: _errores),
                     SizedBox(
                       height: 32,
                       child: _error == null

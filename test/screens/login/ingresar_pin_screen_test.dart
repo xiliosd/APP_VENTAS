@@ -2,6 +2,7 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/screens/login/ingresar_pin_screen.dart';
+import 'package:app_ventas/widgets/indicadores_pin.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,11 @@ void main() {
   testWidgets('PIN correcto abre sesión y PIN incorrecto muestra error',
       (tester) async {
     final registro = registrarVibraciones(tester);
+    // Celular de 411x914 dp: en la vista de prueba (800x600) el teclado
+    // queda debajo del borde.
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     final usuarioId = await db.into(db.usuarios).insert(
@@ -45,6 +51,8 @@ void main() {
     }
     expect(find.text('PIN incorrecto'), findsOneWidget);
     expect(container.read(sesionProvider).haySesion, isFalse);
+    expect(find.byType(IndicadoresPin), findsOneWidget);
+    expect(tester.getSize(find.byKey(const Key('tecla_1'))).width, 76);
     expect(registro.where((v) => v == 'HapticFeedbackType.selectionClick'),
         hasLength(4));
     expect(registro.last, 'HapticFeedbackType.heavyImpact');
@@ -59,6 +67,11 @@ void main() {
 
   testWidgets('PIN correcto cierra la pantalla cuando fue empujada al stack',
       (tester) async {
+    // Celular de 411x914 dp: en la vista de prueba (800x600) el teclado
+    // queda debajo del borde.
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     await db.into(db.usuarios).insert(
