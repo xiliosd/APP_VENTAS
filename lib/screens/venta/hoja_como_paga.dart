@@ -5,6 +5,7 @@ import '../../providers/ticket_provider.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
+import '../../ui/recorrido/objetivo_recorrido.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
 import '../../widgets/selector_cliente.dart';
@@ -56,12 +57,15 @@ class _ComoPagaState extends ConsumerState<_ComoPaga> {
         // Con Fiado escogido quedan solo el cliente y Fiar, para que con el
         // teclado abierto quepan en celulares pequeños.
         if (!_fiado) ...[
-        _Opcion(
-          key: const Key('pago_efectivo'),
-          icono: Icons.payments_rounded,
-          texto: 'Efectivo',
-          color: c.entra,
-          onTap: () => _elegir(FormaPago.efectivo),
+        ObjetivoRecorrido(
+          id: 'pago_efectivo',
+          child: _Opcion(
+            key: const Key('pago_efectivo'),
+            icono: Icons.payments_rounded,
+            texto: 'Efectivo',
+            color: c.entra,
+            onTap: () => _elegir(FormaPago.efectivo),
+          ),
         ),
         _Opcion(
           key: const Key('pago_transferencia'),

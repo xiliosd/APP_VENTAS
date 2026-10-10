@@ -9,6 +9,7 @@ import '../../ui/colores_app.dart';
 import '../../ui/tipografia.dart';
 import '../../util/texto_util.dart';
 import 'indicador_pasos.dart';
+import 'paso_venta_screen.dart';
 
 /// Paso 2 del recorrido: cargar rápido los productos que más se venden,
 /// solo con nombre y precio de venta.
@@ -89,7 +90,9 @@ class _PasoProductosScreenState extends ConsumerState<PasoProductosScreen> {
 
   Future<void> _seguir() async {
     await ref.read(recorridoProvider.notifier).irA(PasoRecorrido.venta);
-    if (mounted) await Navigator.of(context).maybePop();
+    if (!mounted) return;
+    await Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const PasoVentaScreen()));
   }
 
   @override

@@ -18,10 +18,22 @@ import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
 import '../../widgets/monto_rapido_grid.dart';
 import '../qr/cobro_qr_screen.dart';
+import '../../providers/recorrido_provider.dart';
+import '../../ui/recorrido/globos.dart';
+import '../../ui/recorrido/objetivo_recorrido.dart';
+import '../recorrido/globos_venta.dart';
 import 'hoja_como_paga.dart';
 
 class RegistrarVentaScreen extends ConsumerStatefulWidget {
-  const RegistrarVentaScreen({super.key});
+  const RegistrarVentaScreen(
+      {super.key, this.practica = false, this.conGlobos = true});
+
+  /// Venta de práctica del recorrido: guía con globos y no guarda nada.
+  final bool practica;
+
+  /// Solo para pruebas: práctica sin guía, para probar otras formas de pago
+  /// (con la guía solo se puede tocar Efectivo).
+  final bool conGlobos;
 
   @override
   ConsumerState<RegistrarVentaScreen> createState() =>
@@ -37,10 +49,67 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
   final _busqueda = TextEditingController();
   String _filtro = '';
 
+  /// Globos de la venta de práctica (solo con [RegistrarVentaScreen.practica]).
+  ControladorGlobos? _globos;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.practica && widget.conGlobos) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _globos =
+            mostrarGlobos(context, globosVenta, onSaltar: _saltarRecorrido);
+      });
+    }
+  }
+
   @override
   void dispose() {
+    _globos?.cerrar();
     _busqueda.dispose();
     super.dispose();
+  }
+
+  void _saltarRecorrido() {
+    ref.read(recorridoProvider.notifier).saltar();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  /// Muestra el resultado de la práctica, vacía el ticket y vuelve al Inicio
+  /// (que sigue con los globos del Inicio).
+  Future<void> _terminarPractica() async {
+    final ticket = ref.read(ticketProvider);
+    await mostrarHojaInferior<void>(
+      context,
+      titulo: '¡Así de fácil!',
+      descartable: false,
+      builder: (contexto) => Column(
+        key: const Key('hoja_asi_de_facil'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('${plural(ticket.cantidadArticulos, 'artículo', 'artículos')}'
+              ' · ${formatoMoneda(ticket.total)}'),
+          const SizedBox(height: 4),
+          Text('Esta venta fue de práctica, no quedó en tus cuentas.',
+              style:
+                  TextStyle(color: ColoresApp.of(contexto).textoSecundario)),
+          const SizedBox(height: 16),
+          BotonPrincipal(
+            key: const Key('boton_continuar_practica'),
+            texto: 'Continuar',
+            variante: VarianteBoton.entra,
+            onPressed: () => Navigator.of(contexto).pop(),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    final recorrido = ref.read(recorridoProvider.notifier);
+    ref.read(ticketProvider.notifier).vaciar();
+    // Primero se cierra: así el Inicio ya está a la vista cuando reacciona.
+    Navigator.of(context).pop(true);
+    await recorrido.irA(PasoRecorrido.inicio);
   }
 
   void _vaciar() {
@@ -69,10 +138,18 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
   Future<void> _alCobrar() async {
     if (_cobrando) return;
     final notifier = ref.read(ticketProvider.notifier);
+    // En la práctica, la capa de globos pasa encima de la hoja.
+    if (widget.practica && _globos?.indice == 1) _globos!.avanzar();
     final forma = await mostrarHojaComoPaga(context);
     if (!mounted) return;
     if (forma == null) {
       notifier.cambiarFiado(false);
+      if (widget.practica) _globos?.irA(1);
+      return;
+    }
+    if (widget.practica) {
+      _globos?.cerrar();
+      await _terminarPractica();
       return;
     }
     if (forma != FormaPago.fiado) {
@@ -140,10 +217,17 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     final ticket = ref.watch(ticketProvider);
     final notifier = ref.read(ticketProvider.notifier);
     final productosAsync = ref.watch(productosActivosProvider);
+    if (widget.practica) {
+      ref.listen(ticketProvider, (antes, ahora) {
+        if (_globos?.indice == 0 &&
+            (antes?.estaVacio ?? true) &&
+            !ahora.estaVacio) {
+          _globos!.avanzar();
+        }
+      });
+    }
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nueva venta')),
-      body: ListView(
+    final lista = ListView(
         padding: const EdgeInsets.all(16),
         children: [
           const _Seccion('PRODUCTOS'),
@@ -184,13 +268,16 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
                   GrillaMosaicos(
               conSubtitulo: true,
               children: [
-                for (final p in visibles)
-                  Mosaico(
-                    key: Key('producto_${p.id}'),
-                    titulo: p.nombre,
-                    subtitulo: formatoMoneda(p.precio),
-                    cantidad: ticket.cantidadDe('p${p.id}'),
-                    onTap: () => notifier.agregarProducto(p),
+                for (final (i, p) in visibles.indexed)
+                  ObjetivoRecorrido(
+                    id: i == 0 ? 'primer_producto' : 'producto_${p.id}',
+                    child: Mosaico(
+                      key: Key('producto_${p.id}'),
+                      titulo: p.nombre,
+                      subtitulo: formatoMoneda(p.precio),
+                      cantidad: ticket.cantidadDe('p${p.id}'),
+                      onTap: () => notifier.agregarProducto(p),
+                    ),
                   ),
                 Mosaico(
                   key: const Key('boton_otro_monto'),
@@ -213,7 +300,30 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
             cantidadDe: (monto) => ticket.cantidadDe('m$monto'),
           ),
         ],
-      ),
+      );
+    final c = ColoresApp.of(context);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Nueva venta')),
+      body: !widget.practica
+          ? lista
+          : Column(
+              children: [
+                Container(
+                  key: const Key('franja_practica'),
+                  width: double.infinity,
+                  color: c.fiadoSuave,
+                  padding: const EdgeInsets.all(8),
+                  child: Text(
+                    'MODO PRÁCTICA · no se guarda',
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(color: c.fiado, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Expanded(child: lista),
+              ],
+            ),
       bottomNavigationBar: _BarraCobro(
         ticket: ticket,
         cobrando: _cobrando,
@@ -336,11 +446,14 @@ class _BarraCobro extends StatelessWidget {
                     ),
                   ),
                 ),
-              BotonPrincipal(
-                key: const Key('boton_cobrar'),
-                texto: texto,
-                variante: VarianteBoton.entra,
-                onPressed: !ticket.estaVacio && !cobrando ? onCobrar : null,
+              ObjetivoRecorrido(
+                id: 'boton_cobrar',
+                child: BotonPrincipal(
+                  key: const Key('boton_cobrar'),
+                  texto: texto,
+                  variante: VarianteBoton.entra,
+                  onPressed: !ticket.estaVacio && !cobrando ? onCobrar : null,
+                ),
               ),
             ],
           ),

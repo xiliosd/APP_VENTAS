@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../ui/mosaico.dart';
+import '../ui/recorrido/objetivo_recorrido.dart';
 import '../util/formato_moneda.dart';
 
 class MontoRapidoGrid extends StatelessWidget {
@@ -23,11 +24,14 @@ class MontoRapidoGrid extends StatelessWidget {
       conSubtitulo: false,
       children: [
         for (final monto in montos)
-          Mosaico(
-            key: Key('monto_rapido_$monto'),
-            titulo: formatoMoneda(monto),
-            cantidad: cantidadDe?.call(monto) ?? 0,
-            onTap: () => onSeleccionar(monto),
+          ObjetivoRecorrido(
+            id: 'monto_rapido_$monto',
+            child: Mosaico(
+              key: Key('monto_rapido_$monto'),
+              titulo: formatoMoneda(monto),
+              cantidad: cantidadDe?.call(monto) ?? 0,
+              onTap: () => onSeleccionar(monto),
+            ),
           ),
       ],
     );
