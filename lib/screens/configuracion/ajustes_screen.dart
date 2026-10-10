@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/configuracion_providers.dart';
+import '../../providers/recorrido_provider.dart';
 import '../../providers/sesion_provider.dart';
 import '../../ui/colores_app.dart';
 import '../qr/configurar_qr_screen.dart';
@@ -89,6 +90,20 @@ class AjustesScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        const _Titulo('AYUDA'),
+        Card(
+          child: ListTile(
+            key: const Key('boton_repetir_recorrido'),
+            leading: const Icon(Icons.tour_outlined),
+            title: const Text('Ver el recorrido otra vez'),
+            subtitle: const Text('Venta de práctica y guía del Inicio'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            // El Inicio, que está a la vista, abre el paso 3.
+            onTap: () =>
+                ref.read(recorridoProvider.notifier).irA(PasoRecorrido.venta),
           ),
         ),
         const SizedBox(height: 24),

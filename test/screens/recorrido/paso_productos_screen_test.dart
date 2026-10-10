@@ -1,6 +1,5 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/recorrido_provider.dart';
-import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:app_ventas/screens/recorrido/paso_productos_screen.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +18,7 @@ void main() {
     SharedPreferences.setMockInitialValues({'recorrido_paso': 'productos'});
     final prefs = await SharedPreferences.getInstance();
     container = await containerConSesion(db,
-        overrides: [preferenciasProvider.overrideWithValue(prefs)]);
+        preferencias: prefs);
   });
 
   tearDown(() async {

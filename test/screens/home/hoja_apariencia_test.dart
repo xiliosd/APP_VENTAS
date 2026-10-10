@@ -1,7 +1,6 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/apariencia_provider.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
-import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:app_ventas/screens/home/home_screen.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/native.dart';
@@ -28,7 +27,7 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     final container = await containerConSesion(db,
         rol: rol,
-        overrides: [preferenciasProvider.overrideWithValue(prefs)]);
+        preferencias: prefs);
     addTearDown(container.dispose);
     await tester.pumpWidget(UncontrolledProviderScope(
       container: container,

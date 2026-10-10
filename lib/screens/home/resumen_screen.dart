@@ -10,6 +10,7 @@ import '../../ui/colores_app.dart';
 import '../../ui/entrada_escalonada.dart';
 import '../../ui/tipografia.dart';
 import '../../ui/monto.dart';
+import '../../ui/recorrido/objetivo_recorrido.dart';
 import '../../ui/tarjeta_monto.dart';
 import '../../ui/tema_app.dart';
 import '../../util/fecha_util.dart';
@@ -157,13 +158,16 @@ class _BarraAcciones extends StatelessWidget {
             children: [
               Expanded(
                 flex: 5,
-                child: BotonPrincipal(
-                  key: const Key('boton_nueva_venta'),
-                  texto: '+ Venta',
-                  variante: VarianteBoton.entra,
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const RegistrarVentaScreen()),
+                child: ObjetivoRecorrido(
+                  id: 'boton_nueva_venta',
+                  child: BotonPrincipal(
+                    key: const Key('boton_nueva_venta'),
+                    texto: '+ Venta',
+                    variante: VarianteBoton.entra,
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const RegistrarVentaScreen()),
+                    ),
                   ),
                 ),
               ),
@@ -220,7 +224,9 @@ class _Tarjetas extends StatelessWidget {
       children: [
         EntradaEscalonada(
           indice: 0,
-          child: Container(
+          child: ObjetivoRecorrido(
+            id: 'tarjeta_ventas',
+            child: Container(
             key: const Key('tarjeta_ventas'),
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -265,6 +271,7 @@ class _Tarjetas extends StatelessWidget {
                 ],
               ],
             ),
+          ),
           ),
         ),
         const SizedBox(height: 12),

@@ -5,9 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/configuracion_providers.dart';
+import '../../providers/recorrido_provider.dart';
 import '../../providers/sesion_provider.dart';
 import '../../ui/avatar_inicial.dart';
+import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/hoja_inferior.dart';
+import '../../ui/recorrido/globos.dart';
+import '../../ui/recorrido/objetivo_recorrido.dart';
 import '../../ui/tipografia.dart';
 import '../../ui/vibracion.dart';
 import '../../widgets/nombre_tienda.dart';
@@ -16,6 +21,9 @@ import '../configuracion/hoja_nombre_tienda.dart';
 import '../fiado/lista_fiado_screen.dart';
 import '../historial/historial_screen.dart';
 import '../inventario/inventario_screen.dart';
+import '../recorrido/globos_inicio.dart';
+import '../recorrido/paso_productos_screen.dart';
+import '../recorrido/paso_venta_screen.dart';
 import 'hoja_apariencia.dart';
 import 'resumen_screen.dart';
 
@@ -29,12 +37,82 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _tabActual = 0;
   bool _pidioNombre = false;
+  bool _atendioAlMontar = false;
+  ControladorGlobos? _globos;
+
+  @override
+  void dispose() {
+    _globos?.cerrar();
+    super.dispose();
+  }
+
+  /// Abre el paso pendiente del recorrido (solo administrador).
+  void _atender(PasoRecorrido paso) {
+    if (!mounted || !ref.read(sesionProvider).esAdmin) return;
+    final navegador = Navigator.of(context);
+    switch (paso) {
+      case PasoRecorrido.productos:
+        navegador.push(
+            MaterialPageRoute(builder: (_) => const PasoProductosScreen()));
+      case PasoRecorrido.venta:
+        navegador.push(
+            MaterialPageRoute(builder: (_) => const PasoVentaScreen()));
+      case PasoRecorrido.inicio:
+        if (_globos?.activo ?? false) return;
+        setState(() => _tabActual = 0);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _globos = mostrarGlobos(context, globosInicio,
+              onTerminar: _terminarRecorrido,
+              onSaltar: () => ref.read(recorridoProvider.notifier).saltar());
+        });
+      case PasoRecorrido.ninguno:
+      case PasoRecorrido.hecho:
+        break;
+    }
+  }
+
+  Future<void> _terminarRecorrido() async {
+    await ref.read(recorridoProvider.notifier).irA(PasoRecorrido.hecho);
+    if (!mounted) return;
+    await mostrarHojaInferior<void>(
+      context,
+      titulo: '¡Listo! Tu tienda está lista',
+      builder: (contexto) => Column(
+        key: const Key('hoja_listo'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('Ya puedes vender, fiar y ver cómo va tu tienda.'),
+          const SizedBox(height: 16),
+          BotonPrincipal(
+            key: const Key('boton_empezar_a_vender'),
+            texto: 'Empezar a vender',
+            variante: VarianteBoton.entra,
+            onPressed: () => Navigator.of(contexto).pop(),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final sesion = ref.watch(sesionProvider);
     if (!sesion.haySesion) return const SizedBox.shrink();
     final usuario = sesion.usuarioActivo!;
+
+    // El Inicio dirige el recorrido: reacciona solo si está a la vista (las
+    // pantallas de pasos que van encima navegan por su cuenta).
+    ref.listen<PasoRecorrido>(recorridoProvider, (_, paso) {
+      if (ModalRoute.of(context)?.isCurrent ?? true) _atender(paso);
+    });
+    if (!_atendioAlMontar) {
+      _atendioAlMontar = true;
+      final paso = ref.read(recorridoProvider);
+      if (paso.enCurso) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _atender(paso));
+      }
+    }
 
     // Un administrador sin nombre de tienda debe ponerlo una vez.
     final nombreTienda = ref.watch(nombreTiendaProvider);
@@ -114,7 +192,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               )
             : Text(tabs[_tabActual].titulo),
         actions: [
-          _MenuCuenta(usuario: usuario, enBarraAzul: esInicio),
+          ObjetivoRecorrido(
+            id: 'menu_cuenta',
+            child: _MenuCuenta(usuario: usuario, enBarraAzul: esInicio),
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -128,7 +209,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         destinations: [
           for (final t in tabs)
             NavigationDestination(
-              icon: Icon(t.icono),
+              icon: t.titulo == 'Fiado'
+                  ? ObjetivoRecorrido(
+                      id: 'pestana_fiado', child: Icon(t.icono))
+                  : Icon(t.icono),
               selectedIcon: Icon(t.iconoActivo),
               label: t.titulo,
             ),
