@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/configuracion_providers.dart';
+import '../../providers/recorrido_provider.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../providers/usuarios_providers.dart';
@@ -11,17 +12,18 @@ import '../../ui/colores_app.dart';
 import '../../ui/marca_app.dart';
 import '../../ui/tipografia.dart';
 import '../../util/pin_hash.dart';
+import 'indicador_pasos.dart';
 
-class CrearAdminInicialScreen extends ConsumerStatefulWidget {
-  const CrearAdminInicialScreen({super.key});
+class PasoTiendaScreen extends ConsumerStatefulWidget {
+  const PasoTiendaScreen({super.key});
 
   @override
-  ConsumerState<CrearAdminInicialScreen> createState() =>
-      _CrearAdminInicialScreenState();
+  ConsumerState<PasoTiendaScreen> createState() =>
+      _PasoTiendaScreenState();
 }
 
-class _CrearAdminInicialScreenState
-    extends ConsumerState<CrearAdminInicialScreen> {
+class _PasoTiendaScreenState
+    extends ConsumerState<PasoTiendaScreen> {
   final _tiendaController = TextEditingController();
   final _nombreController = TextEditingController();
   final _pinController = TextEditingController();
@@ -58,6 +60,8 @@ class _CrearAdminInicialScreenState
     final id = await repo.crearUsuario(nombre: nombre, rol: 'admin', pin: pin);
     ref.invalidate(listaUsuariosProvider);
     ref.invalidate(haySesionUsuariosProvider);
+    // Antes de entrar: así el Inicio, al montarse, abre el paso 2.
+    await ref.read(recorridoProvider.notifier).iniciar();
     await ref.read(sesionProvider.notifier).iniciarSesion(id, pin);
     // Se abrió desde la Bienvenida: al entrar, quitarla de encima del Inicio.
     if (mounted && Navigator.of(context).canPop()) Navigator.of(context).pop();
@@ -70,6 +74,8 @@ class _CrearAdminInicialScreenState
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
+            const IndicadorPasos(paso: 1),
+            const SizedBox(height: 16),
             const MarcaApp(),
             const SizedBox(height: 32),
             Text('Configura tu tienda', style: estiloTitulo()),
@@ -111,7 +117,7 @@ class _CrearAdminInicialScreenState
             const SizedBox(height: 8),
             BotonPrincipal(
               key: const Key('boton_crear_admin'),
-              texto: 'Crear tienda',
+              texto: 'Continuar',
               onPressed: _crear,
             ),
           ],
