@@ -28,6 +28,7 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
     required this.fondoAviso,
     required this.textoAviso,
     required this.accionAviso,
+    required this.velo,
   });
 
   final Color fondo;
@@ -72,6 +73,9 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
   final Color textoAviso;
   final Color accionAviso;
 
+  /// Oscurecido detrás de los globos del recorrido.
+  final Color velo;
+
   static const claro = ColoresApp(
     fondo: Color(0xFFF8FAFC),
     superficie: Color(0xFFFFFFFF),
@@ -96,6 +100,7 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
     fondoAviso: Color(0xFF1E293B),
     textoAviso: Color(0xFFFFFFFF),
     accionAviso: Color(0xFF93C5FD),
+    velo: Color(0xB30F172A),
   );
 
   static const oscuro = ColoresApp(
@@ -122,6 +127,7 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
     fondoAviso: Color(0xFFE2E8F0),
     textoAviso: Color(0xFF0B1220),
     accionAviso: Color(0xFF1A539B),
+    velo: Color(0xCC000000),
   );
 
   /// Blanco fijo (no cambia por tema): insignia del logo y fondo del QR, que
@@ -172,6 +178,7 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
       fondoAviso: l(fondoAviso, otro.fondoAviso),
       textoAviso: l(textoAviso, otro.textoAviso),
       accionAviso: l(accionAviso, otro.accionAviso),
+      velo: l(velo, otro.velo),
     );
   }
 }

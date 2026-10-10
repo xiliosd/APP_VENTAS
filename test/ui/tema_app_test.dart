@@ -71,6 +71,8 @@ void main() {
     expect(ColoresApp.oscuro.fondo, const Color(0xFF0B1220));
     expect(ColoresApp.oscuro.superficie, const Color(0xFF131C2E));
     expect(ColoresApp.oscuro.tarjetaPrincipal, const Color(0xFF1B3A66));
+    expect(ColoresApp.claro.velo, const Color(0xB30F172A));
+    expect(ColoresApp.oscuro.velo, const Color(0xCC000000));
   });
 
   test('cada tema registra su paleta, su brillo, su fondo y la fuente Inter',
