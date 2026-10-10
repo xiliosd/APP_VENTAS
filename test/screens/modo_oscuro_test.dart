@@ -3,6 +3,7 @@ import 'package:app_ventas/repositories/configuracion_repository.dart';
 import 'package:app_ventas/screens/home/home_screen.dart';
 import 'package:app_ventas/screens/login/ingresar_pin_screen.dart';
 import 'package:app_ventas/screens/login/seleccionar_usuario_screen.dart';
+import 'package:app_ventas/screens/recorrido/paso_productos_screen.dart';
 import 'package:app_ventas/screens/reportes/reportes_screen.dart';
 import 'package:app_ventas/screens/venta/registrar_venta_screen.dart';
 import 'package:app_ventas/ui/tema_app.dart';
@@ -10,6 +11,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/montaje.dart';
 
@@ -24,11 +26,14 @@ void main() {
 
   /// Monta [pantalla] en modo oscuro en una vista de 800×1600 dp.
   Future<void> montarOscuro(WidgetTester tester, Widget pantalla,
-      {double escalaLetra = 1}) async {
+      {double escalaLetra = 1, String? pasoRecorrido}) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    final container = await containerConSesion(db);
+    SharedPreferences.setMockInitialValues(
+        pasoRecorrido == null ? {} : {'recorrido_paso': pasoRecorrido});
+    final container = await containerConSesion(db,
+        preferencias: await SharedPreferences.getInstance());
     addTearDown(container.dispose);
     final productoId = await db
         .into(db.productos)
@@ -108,6 +113,17 @@ void main() {
     tester.view.physicalSize = const Size(720, 1560);
     tester.view.devicePixelRatio = 2;
     await tester.pumpAndSettle();
+    verificarOscuro(tester, find.byType(HomeScreen));
+  });
+
+  testWidgets('el paso de productos se dibuja en oscuro', (tester) async {
+    await montarOscuro(tester, const PasoProductosScreen());
+    verificarOscuro(tester, find.byType(PasoProductosScreen));
+  });
+
+  testWidgets('los globos del Inicio se dibujan en oscuro', (tester) async {
+    await montarOscuro(tester, const HomeScreen(), pasoRecorrido: 'inicio');
+    expect(find.byKey(const Key('capa_globos')), findsOneWidget);
     verificarOscuro(tester, find.byType(HomeScreen));
   });
 }

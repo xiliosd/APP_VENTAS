@@ -1,6 +1,6 @@
 # Hoja de ruta — VeciTienda
 
-Actualizada: 2026-10-09. Cada fase pasa por especificación (`docs/superpowers/specs/`) y plan
+Actualizada: 2026-10-10. Cada fase pasa por especificación (`docs/superpowers/specs/`) y plan
 (`docs/superpowers/plans/`) antes de programarse.
 
 ## Hecho
@@ -18,10 +18,11 @@ Actualizada: 2026-10-09. Cada fase pasa por especificación (`docs/superpowers/s
 - Pulido, tanda 3 — mejoras internas (guardados atómicos, repositorios y Reportes).
 - Renovación R1 — modo oscuro "Azul noche", estilo Expressive (formas, movimiento, vibración).
 - Renovación R2a — Inicio tipo tablero, Nueva venta con "¿Cómo paga?", "¿Quién eres?" y PIN renovados.
+- Renovación R2b — recorrido de primer uso (tienda, primeros productos, venta de práctica guiada, guía del Inicio).
 
 ## En curso
 
-- Renovación: R2b (recorrido de primer uso), R3 (dinero), R4 (administración).
+- Renovación: R3 (dinero), R4 (administración).
 
 ## Siguiente
 
@@ -36,4 +37,4 @@ Actualizada: 2026-10-09. Cada fase pasa por especificación (`docs/superpowers/s
 
 - Recorrido manual en un celular real de: Cargar QR (2D), corregir y anular (3A) y reportes
   (3B), detalle de tickets (3C) y catálogo, proveedores y nombre de la tienda (4A), inventario (4B), pedido sugerido (4C), pulido tanda 1 y pulido tanda 2 (incluido el ícono temático en
-  Android 13+), renovación R1 en claro y oscuro (incluida la vibración) y renovación R2a.
+  Android 13+), renovación R1 en claro y oscuro (incluida la vibración) renovación R2a y renovación R2b (recorrido completo en un celular nuevo).

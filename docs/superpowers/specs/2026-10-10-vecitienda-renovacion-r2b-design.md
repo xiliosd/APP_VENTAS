@@ -1,7 +1,7 @@
 # Renovación de la interfaz — R2b: recorrido de primer uso
 
 **Fecha:** 2026-10-10
-**Estado:** Diseño aprobado en conversación; pendiente revisión de esta especificación
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con R1 y R2a (4f2abbe, 598 pruebas).
 
 ## Contexto
