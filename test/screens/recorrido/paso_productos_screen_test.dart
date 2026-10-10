@@ -1,6 +1,7 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/recorrido_provider.dart';
 import 'package:app_ventas/screens/recorrido/paso_productos_screen.dart';
+import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -106,5 +107,20 @@ void main() {
     expect(find.byKey(const Key('fila_nombre_19')), findsOneWidget);
     expect(find.byKey(const Key('fila_nombre_20')), findsNothing);
     expect(find.byKey(const Key('boton_agregar_fila')), findsNothing);
+  });
+
+  testWidgets('dos toques seguidos en Guardar no duplican productos',
+      (tester) async {
+    await montar(tester);
+    await tester.enterText(find.byKey(const Key('fila_nombre_0')), 'Pan');
+    await tester.enterText(find.byKey(const Key('fila_precio_0')), '6000');
+    await tester.pump();
+    // Dos toques antes de que termine la primera consulta.
+    final boton = tester.widget<BotonPrincipal>(
+        find.byKey(const Key('boton_guardar_productos')));
+    boton.onPressed!();
+    boton.onPressed!();
+    await tester.pumpAndSettle();
+    expect(await db.select(db.productos).get(), hasLength(1));
   });
 }

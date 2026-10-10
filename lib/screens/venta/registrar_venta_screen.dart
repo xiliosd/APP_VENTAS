@@ -73,7 +73,12 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
 
   void _saltarRecorrido() {
     ref.read(recorridoProvider.notifier).saltar();
-    if (mounted) Navigator.of(context).pop();
+    if (!mounted) return;
+    // Si la hoja "¿Cómo paga?" está abierta, se cierra primero.
+    final navegador = Navigator.of(context);
+    final esta = ModalRoute.of(context);
+    navegador.popUntil((ruta) => ruta == esta);
+    navegador.pop();
   }
 
   /// Muestra el resultado de la práctica, vacía el ticket y vuelve al Inicio
@@ -109,7 +114,10 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     ref.read(ticketProvider.notifier).vaciar();
     // Primero se cierra: así el Inicio ya está a la vista cuando reacciona.
     Navigator.of(context).pop(true);
-    await recorrido.irA(PasoRecorrido.inicio);
+    // Solo si sigue en curso (no si se saltó mientras tanto).
+    if (ref.read(recorridoProvider) == PasoRecorrido.venta) {
+      await recorrido.irA(PasoRecorrido.inicio);
+    }
   }
 
   void _vaciar() {

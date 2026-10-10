@@ -25,6 +25,11 @@ class RecorridoNotifier extends Notifier<PasoRecorrido> {
         PasoRecorrido.ninguno;
   }
 
+  /// Avisa aunque el paso no cambie: así "Ver el recorrido otra vez" abre el
+  /// paso 3 también si quedó guardado en `venta` tras salir con atrás.
+  @override
+  bool updateShouldNotify(PasoRecorrido anterior, PasoRecorrido nuevo) => true;
+
   Future<void> iniciar() => irA(PasoRecorrido.productos);
 
   Future<void> saltar() => irA(PasoRecorrido.hecho);

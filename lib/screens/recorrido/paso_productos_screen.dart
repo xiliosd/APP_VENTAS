@@ -54,6 +54,15 @@ class _PasoProductosScreenState extends ConsumerState<PasoProductosScreen> {
 
   Future<void> _guardar() async {
     if (_guardando) return;
+    setState(() => _guardando = true);
+    try {
+      await _validarYGuardar();
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  Future<void> _validarYGuardar() async {
     final repo = ref.read(productoRepositoryProvider);
     final existentes = {
       for (final p in await repo.listarTodos()) claveNombre(p.nombre),
@@ -81,7 +90,6 @@ class _PasoProductosScreenState extends ConsumerState<PasoProductosScreen> {
       ..clear()
       ..addAll(errores));
     if (errores.isNotEmpty) return;
-    _guardando = true;
     for (final (nombre, precio) in nuevos) {
       await repo.crearProducto(nombre: nombre, precio: precio);
     }
@@ -183,11 +191,11 @@ class _PasoProductosScreenState extends ConsumerState<PasoProductosScreen> {
               BotonPrincipal(
                 key: const Key('boton_guardar_productos'),
                 texto: 'Guardar y continuar',
-                onPressed: _guardar,
+                onPressed: _guardando ? null : _guardar,
               ),
               TextButton(
                 key: const Key('boton_omitir_productos'),
-                onPressed: _seguir,
+                onPressed: _guardando ? null : _seguir,
                 child: const Text('Omitir'),
               ),
             ],

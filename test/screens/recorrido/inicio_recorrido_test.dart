@@ -111,4 +111,21 @@ void main() {
     expect(container.read(recorridoProvider), PasoRecorrido.venta);
     expect(await db.select(db.usuarios).get(), hasLength(1));
   });
+
+  testWidgets('tras salir con atrás del paso 3, repetir el recorrido lo abre',
+      (tester) async {
+    await montar(tester, paso: 'venta');
+    expect(find.byType(PasoVentaScreen), findsOneWidget);
+    await tester.binding.handlePopRoute(); // botón atrás de Android
+    await tester.pumpAndSettle();
+    expect(find.byType(PasoVentaScreen), findsNothing);
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+        find.byKey(const Key('boton_repetir_recorrido')), 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.byKey(const Key('boton_repetir_recorrido')));
+    await tester.pumpAndSettle();
+    expect(find.byType(PasoVentaScreen), findsOneWidget);
+  });
 }

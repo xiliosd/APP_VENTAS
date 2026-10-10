@@ -197,4 +197,20 @@ void main() {
     expect(find.byType(PasoVentaScreen), findsNothing);
     expect(container.read(recorridoProvider), PasoRecorrido.inicio);
   });
+
+  testWidgets('Saltar con la hoja de pago abierta cierra la práctica',
+      (tester) async {
+    await abrirPractica(tester);
+    await tester.tap(find.text('Pan'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_cobrar')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('hoja_como_paga')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('boton_saltar_recorrido')));
+    await tester.pumpAndSettle();
+    expect(find.byType(RegistrarVentaScreen), findsNothing);
+    expect(find.byKey(const Key('hoja_como_paga')), findsNothing);
+    expect(container.read(recorridoProvider), PasoRecorrido.hecho);
+    await sinNadaGuardado();
+  });
 }
