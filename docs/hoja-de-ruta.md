@@ -1,6 +1,6 @@
 # Hoja de ruta — VeciTienda
 
-Actualizada: 2026-10-10. Cada fase pasa por especificación (`docs/superpowers/specs/`) y plan
+Actualizada: 2026-10-11. Cada fase pasa por especificación (`docs/superpowers/specs/`) y plan
 (`docs/superpowers/plans/`) antes de programarse.
 
 ## Hecho
@@ -23,10 +23,6 @@ Actualizada: 2026-10-10. Cada fase pasa por especificación (`docs/superpowers/s
 ## En curso
 
 - Renovación: R3 (dinero), R4 (administración).
-
-## Siguiente
-
-- Recordatorios de fiado por WhatsApp.
 
 ## Después
 
