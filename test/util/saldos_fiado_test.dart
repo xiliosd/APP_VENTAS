@@ -55,4 +55,12 @@ void main() {
     expect(saldos[(venta, 8)], 3000);
     expect(saldos[(abono, 9)], 2000);
   });
+
+  test('mitadAbono redondea a la centena y se anula con saldos pequeños', () {
+    expect(mitadAbono(45000), 22500);
+    expect(mitadAbono(12350), 6200);
+    expect(mitadAbono(100), 0);
+    expect(mitadAbono(150), 100);
+    expect(mitadAbono(0), 0);
+  });
 }

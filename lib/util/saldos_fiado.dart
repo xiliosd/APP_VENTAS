@@ -20,3 +20,11 @@ Map<(TipoMovimientoFiado, int), int> saldosAcumulados(
           m.tipo == TipoMovimientoFiado.venta ? m.monto : -m.monto,
   };
 }
+
+/// Mitad de [saldo] redondeada a la centena; 0 si no tiene sentido
+/// ofrecerla (saldo pequeño o la mitad redondeada iguala al saldo).
+int mitadAbono(int saldo) {
+  if (saldo <= 0) return 0;
+  final mitad = ((saldo / 2) / 100).round() * 100;
+  return mitad <= 0 || mitad >= saldo ? 0 : mitad;
+}

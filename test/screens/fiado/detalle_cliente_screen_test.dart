@@ -313,7 +313,37 @@ void main() {
     expect(saldo(r'Saldo a favor $3.000'), findsOneWidget);
     expect(find.byKey(const Key('boton_registrar_abono')), findsNothing);
   });
+
+  testWidgets('Todo llena la deuda y deja al cliente al día', (tester) async {
+    await montarDetalle(tester);
+    await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pumpAndSettle();
+    expect(find.text(r'Todo · $5.000'), findsOneWidget);
+    expect(find.text(r'Mitad · $2.500'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('abono_todo')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('boton_confirmar_abono')));
+    await tester.tap(find.byKey(const Key('boton_confirmar_abono')));
+    await tester.pumpAndSettle();
+    expect(saldo('Al día'), findsOneWidget);
+    expect(find.byKey(const Key('boton_registrar_abono')), findsNothing);
+  });
+
+  testWidgets('Mitad llena la mitad y el teclado sigue editando',
+      (tester) async {
+    await montarDetalle(tester);
+    await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('abono_mitad')));
+    await tester.pump();
+    await teclear(tester, ['borrar']); // $2.500 → $250
+    await tester.ensureVisible(find.byKey(const Key('boton_confirmar_abono')));
+    await tester.tap(find.byKey(const Key('boton_confirmar_abono')));
+    await tester.pumpAndSettle();
+    expect(saldo(r'$4.750'), findsOneWidget);
+  });
 }
+
 
 /// Espera a [_espera] antes de leer el saldo, para simular la latencia de la
 /// base de datos en segundo plano.

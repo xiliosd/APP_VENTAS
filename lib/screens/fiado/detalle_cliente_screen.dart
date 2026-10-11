@@ -370,6 +370,15 @@ class _HojaAbonoState extends ConsumerState<_HojaAbono> {
             ),
           ),
         const SizedBox(height: 12),
+        _AbonoRapido(
+          saldo: widget.saldo,
+          monto: _monto,
+          onElegir: (monto) => setState(() {
+            _monto = monto;
+            _error = null;
+          }),
+        ),
+        const SizedBox(height: 8),
         TecladoMonto(
           onTecla: (tecla) => setState(() {
             _monto = aplicarTecla(_monto, tecla);
@@ -383,6 +392,40 @@ class _HojaAbonoState extends ConsumerState<_HojaAbono> {
           variante: VarianteBoton.entra,
           onPressed: _monto > 0 && !_guardando ? _registrar : null,
         ),
+      ],
+    );
+  }
+}
+
+/// Chips "Todo" y "Mitad" que llenan el monto del abono con un toque.
+class _AbonoRapido extends StatelessWidget {
+  const _AbonoRapido(
+      {required this.saldo, required this.monto, required this.onElegir});
+
+  final int saldo;
+  final int monto;
+  final ValueChanged<int> onElegir;
+
+  @override
+  Widget build(BuildContext context) {
+    final mitad = mitadAbono(saldo);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        ChoiceChip(
+          key: const Key('abono_todo'),
+          label: Text('Todo · ${formatoMoneda(saldo)}'),
+          selected: monto == saldo,
+          onSelected: (_) => onElegir(saldo),
+        ),
+        if (mitad > 0)
+          ChoiceChip(
+            key: const Key('abono_mitad'),
+            label: Text('Mitad · ${formatoMoneda(mitad)}'),
+            selected: monto == mitad,
+            onSelected: (_) => onElegir(mitad),
+          ),
       ],
     );
   }
