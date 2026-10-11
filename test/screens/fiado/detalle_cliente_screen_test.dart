@@ -86,9 +86,34 @@ void main() {
     await montarDetalle(tester);
 
     expect(saldo(r'$5.000'), findsOneWidget);
-    expect(find.text('Movimientos'), findsOneWidget);
     expect(find.text('Venta fiada'), findsOneWidget);
-    expect(find.text('01/09/2026 10:00'), findsOneWidget);
+    expect(find.text('10:00'), findsOneWidget);
+    expect(find.text('1 sep'), findsOneWidget);
+  });
+
+  testWidgets('tarjeta de la deuda con el nombre y el botón dentro',
+      (tester) async {
+    await montarDetalle(tester);
+    expect(saldo('Don Pedro'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byKey(const Key('tarjeta_saldo_cliente')),
+            matching: find.byKey(const Key('boton_registrar_abono'))),
+        findsOneWidget);
+  });
+
+  testWidgets('línea de tiempo con encabezado de día y saldo tras cada movimiento',
+      (tester) async {
+    final clienteId = await montarDetalle(tester);
+    final usuarioId = (await db.select(db.usuarios).getSingle()).id;
+    final pagoId = await FiadoRepository(db).registrarPago(
+        clienteId: clienteId, monto: 2000, usuarioId: usuarioId);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('linea_tiempo')), findsOneWidget);
+    expect(find.text('Hoy'), findsOneWidget);
+    expect(find.text('1 sep'), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(Key('saldo_tras_abono_$pagoId'))).data,
+        r'Quedó debiendo $3.000');
   });
 
   testWidgets(
@@ -285,8 +310,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Debe'), findsNothing);
-    expect(saldo('Saldo a favor'), findsOneWidget);
-    expect(saldo(r'$3.000'), findsOneWidget);
+    expect(saldo(r'Saldo a favor $3.000'), findsOneWidget);
+    expect(find.byKey(const Key('boton_registrar_abono')), findsNothing);
   });
 }
 

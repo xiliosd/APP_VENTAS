@@ -15,8 +15,11 @@ import '../../ui/hoja_inferior.dart';
 import '../../ui/monto.dart';
 import '../../ui/selector_segmentado.dart';
 import '../../ui/teclado_monto.dart';
+import '../../ui/tema_app.dart';
+import '../../ui/tipografia.dart';
 import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
+import '../../util/saldos_fiado.dart';
 import '../correccion/hoja_movimiento.dart';
 import '../correccion/texto_correccion.dart';
 import '../qr/cobro_qr_screen.dart';
@@ -28,12 +31,12 @@ class DetalleClienteScreen extends ConsumerWidget {
   /// [saldoClienteProvider] para reflejar abonos hechos en esta pantalla.
   final ClienteConSaldo clienteConSaldo;
 
-  Future<void> _abrirAbono(BuildContext context) async {
+  Future<void> _abrirAbono(BuildContext context, int saldo) async {
     final cliente = clienteConSaldo.cliente;
     final registrado = await mostrarHojaInferior<bool>(
       context,
       titulo: 'Abono de ${cliente.nombre}',
-      builder: (_) => _HojaAbono(clienteId: cliente.id),
+      builder: (_) => _HojaAbono(clienteId: cliente.id, saldo: saldo),
     );
     if (registrado == true && context.mounted) {
       avisar(context, 'Abono registrado');
@@ -50,6 +53,10 @@ class DetalleClienteScreen extends ConsumerWidget {
         ref.watch(listaUsuariosProvider).valueOrNull ?? const <Usuario>[];
     final nombres = {for (final u in usuarios) u.id: u.nombre};
 
+    final c = ColoresApp.of(context);
+    final suave = c.sobreTarjetaPrincipal.withValues(alpha: 0.75);
+    final fechaDeuda = clienteConSaldo.fechaDeudaMasAntigua ?? DateTime.now();
+
     return Scaffold(
       appBar: AppBar(title: Text(cliente.nombre)),
       body: ListView(
@@ -59,52 +66,49 @@ class DetalleClienteScreen extends ConsumerWidget {
             key: const Key('tarjeta_saldo_cliente'),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: ColoresApp.of(context).fiadoSuave,
-              borderRadius: BorderRadius.circular(16),
+              color: c.tarjetaPrincipal,
+              borderRadius: BorderRadius.circular(radioTarjetaPrincipal),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                    saldo > 0
-                        ? 'Debe'
-                        : saldo == 0
-                            ? 'Al día'
-                            : 'Saldo a favor',
-                    style:
-                        TextStyle(fontSize: 13, color: ColoresApp.of(context).fiado)),
+                Text(cliente.nombre,
+                    style: estiloTitulo(tamano: 14, color: suave)),
                 const SizedBox(height: 4),
-                Monto(saldo.abs(), tamano: 32, tono: TonoMonto.fiado),
+                // Con saldo a favor se muestra el valor; el texto lo aclara.
+                Monto(saldo.abs(),
+                    tamano: 36, tono: TonoMonto.claro, animado: true),
+                const SizedBox(height: 4),
+                Text(
+                  saldo > 0
+                      ? textoDebeDesde(fechaDeuda, DateTime.now())
+                      : saldo == 0
+                          ? 'Al día'
+                          : 'Saldo a favor ${formatoMoneda(-saldo)}',
+                  style: TextStyle(color: suave, fontSize: 13),
+                ),
+                if (saldo > 0) ...[
+                  const SizedBox(height: 12),
+                  BotonPrincipal(
+                    key: const Key('boton_registrar_abono'),
+                    texto: 'Registrar abono',
+                    variante: VarianteBoton.entra,
+                    onPressed: () => _abrirAbono(context, saldo),
+                  ),
+                ],
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          BotonPrincipal(
-            key: const Key('boton_registrar_abono'),
-            texto: 'Registrar abono',
-            variante: VarianteBoton.entra,
-            onPressed: saldo > 0 ? () => _abrirAbono(context) : null,
-          ),
-          const SizedBox(height: 24),
-          const Text('Movimientos',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           movimientosAsync.when(
-            data: (movimientos) => Card(
-              child: Column(
-                children: [
-                  for (final m in movimientos)
-                    _FilaMovimiento(
-                      movimiento: m,
-                      nombres: nombres,
-                      onTap: () => abrirHojaMovimiento(
-                        context,
-                        MovimientoEditable.desdeFiado(m,
-                            clienteId: cliente.id,
-                            nombreCliente: cliente.nombre),
-                      ),
-                    ),
-                ],
+            skipLoadingOnReload: true,
+            data: (movimientos) => _LineaTiempo(
+              movimientos: movimientos,
+              nombres: nombres,
+              onTap: (m) => abrirHojaMovimiento(
+                context,
+                MovimientoEditable.desdeFiado(m,
+                    clienteId: cliente.id, nombreCliente: cliente.nombre),
               ),
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -116,14 +120,71 @@ class DetalleClienteScreen extends ConsumerWidget {
   }
 }
 
+/// Movimientos del más reciente al más antiguo, agrupados por día, con el
+/// saldo que quedó después de cada uno.
+class _LineaTiempo extends StatelessWidget {
+  const _LineaTiempo(
+      {required this.movimientos, required this.nombres, required this.onTap});
+
+  final List<MovimientoFiado> movimientos;
+  final Map<int, String> nombres;
+  final void Function(MovimientoFiado) onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = ColoresApp.of(context);
+    final saldos = saldosAcumulados(movimientos);
+    final hoy = DateTime.now();
+    String titulo(DateTime dia) => switch (diasDesde(dia, hoy)) {
+          0 => 'Hoy',
+          1 => 'Ayer',
+          _ => fechaCortaConAnio(dia, hoy),
+        };
+    final filas = <Widget>[];
+    DateTime? diaActual;
+    for (final m in movimientos) {
+      final dia = inicioDelDia(m.fecha);
+      if (dia != diaActual) {
+        diaActual = dia;
+        filas.add(Padding(
+          key: Key('encabezado_dia_${dia.toIso8601String().substring(0, 10)}'),
+          padding: const EdgeInsets.fromLTRB(4, 16, 4, 4),
+          child: Text(
+            titulo(dia),
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: c.textoSecundario),
+          ),
+        ));
+      }
+      filas.add(_FilaMovimiento(
+        movimiento: m,
+        nombres: nombres,
+        saldoTras: saldos[(m.tipo, m.id)],
+        onTap: () => onTap(m),
+      ));
+    }
+    return Column(
+      key: const Key('linea_tiempo'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: filas,
+    );
+  }
+}
+
 class _FilaMovimiento extends StatelessWidget {
   const _FilaMovimiento({
     required this.movimiento,
     required this.nombres,
     required this.onTap,
+    this.saldoTras,
   });
 
   final MovimientoFiado movimiento;
+
+  /// Saldo después de este movimiento (null si está anulado).
+  final int? saldoTras;
 
   /// Nombre de cada usuario por id.
   final Map<int, String> nombres;
@@ -131,54 +192,108 @@ class _FilaMovimiento extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = ColoresApp.of(context);
     final esAbono = movimiento.tipo == TipoMovimientoFiado.abono;
-    final color = esAbono ? ColoresApp.of(context).entra : ColoresApp.of(context).fiado;
+    final color = esAbono ? c.entra : c.fiado;
     final correccion = movimiento.ultimaCorreccion;
-    return ListTile(
+    final saldo = saldoTras;
+    final secundario = TextStyle(fontSize: 12, color: c.textoSecundario);
+    return InkWell(
       key: Key('movimiento_fiado_${movimiento.tipo.name}_${movimiento.id}'),
       onTap: onTap,
-      leading: CircleAvatar(
-        radius: 18,
-        backgroundColor: color.withValues(alpha: 0.12),
-        child: Icon(
-          esAbono ? Icons.payments_rounded : Icons.shopping_bag_rounded,
-          color: color,
-          size: 20,
+      borderRadius: BorderRadius.circular(radioCampo),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Línea vertical con el punto del movimiento.
+            SizedBox(
+              width: 24,
+              child: Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  Positioned(
+                    top: 0,
+                    bottom: 0,
+                    child: Container(width: 2, color: c.borde),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: movimiento.anulado ? c.borde : color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(esAbono ? 'Abono' : 'Venta fiada',
+                            style: const TextStyle(fontWeight: FontWeight.w600)),
+                        if (esAbono &&
+                            movimiento.medioPago == MedioPago.transferencia) ...[
+                          const SizedBox(width: 8),
+                          const EtiquetaQr(),
+                        ],
+                        const Spacer(),
+                        Text(esAbono ? '− ' : '+ ',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: movimiento.anulado
+                                    ? c.textoSecundario
+                                    : color)),
+                        Monto(movimiento.monto,
+                            tamano: 16,
+                            tono: esAbono ? TonoMonto.entra : TonoMonto.fiado,
+                            tachado: movimiento.anulado),
+                      ],
+                    ),
+                    Text(formatoHora(movimiento.fecha), style: secundario),
+                    if (correccion != null)
+                      Text(
+                        textoCorreccion(
+                            correccion, nombres[correccion.usuarioId] ?? ''),
+                        style: secundario,
+                      ),
+                    if (!movimiento.anulado && saldo != null)
+                      Text(
+                        saldo >= 0
+                            ? 'Quedó debiendo ${formatoMoneda(saldo)}'
+                            : 'Saldo a favor ${formatoMoneda(-saldo)}',
+                        key: Key('saldo_tras_${movimiento.tipo.name}_'
+                            '${movimiento.id}'),
+                        style: secundario,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      title: Row(
-        children: [
-          Monto(movimiento.monto,
-              tamano: 16,
-              tono: esAbono ? TonoMonto.entra : TonoMonto.fiado,
-              tachado: movimiento.anulado),
-          if (esAbono && movimiento.medioPago == MedioPago.transferencia) ...[
-            const SizedBox(width: 8),
-            const EtiquetaQr(),
-          ],
-        ],
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(formatoFechaHora(movimiento.fecha)),
-          if (correccion != null)
-            Text(
-              textoCorreccion(correccion, nombres[correccion.usuarioId] ?? ''),
-              style: TextStyle(
-                  fontSize: 12, color: ColoresApp.of(context).textoSecundario),
-            ),
-        ],
-      ),
-      trailing: Text(esAbono ? 'Abono' : 'Venta fiada'),
     );
   }
 }
 
 class _HojaAbono extends ConsumerStatefulWidget {
-  const _HojaAbono({required this.clienteId});
+  const _HojaAbono({required this.clienteId, required this.saldo});
 
   final int clienteId;
+
+  /// Deuda al abrir la hoja (para el abono rápido).
+  final int saldo;
 
   @override
   ConsumerState<_HojaAbono> createState() => _HojaAbonoState();
