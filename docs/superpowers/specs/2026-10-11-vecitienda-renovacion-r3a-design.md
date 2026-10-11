@@ -36,9 +36,10 @@ Sin cambios de esquema de base de datos ni dependencias nuevas.
   `textoDebeDesde`:
   | Días desde la deuda más antigua | Fondo / texto |
   |---|---|
-  | 0–7 | `primarioSuave` / `textoSecundario` |
+  | 0–7 | `primarioSuave` / `texto` |
   | 8–30 | `fiadoSuave` / `fiado` |
-  | > 30 | `sale` 15 % / `sale` |
+  | > 30 | `sale` 15 % / `texto`, con ícono de reloj en `sale` |
+  (Con `textoSecundario` o `sale` como texto no se llegaba a 4,5:1.)
   Días = diferencia en días calendario entre `inicioDelDia(fecha)` y `inicioDelDia(hoy)`.
 - Las tarjetas entran con `EntradaEscalonada`.
 - **Al día**: sección plegable (`boton_al_dia`, "Al día (N)" con flecha), **cerrada** por
