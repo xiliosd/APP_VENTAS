@@ -9,6 +9,7 @@ import 'package:app_ventas/screens/fiado/detalle_cliente_screen.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:app_ventas/ui/monto.dart';
 import 'package:app_ventas/ui/tema_app.dart';
+import 'package:app_ventas/util/fecha_util.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -342,8 +343,46 @@ void main() {
     await tester.pumpAndSettle();
     expect(saldo(r'$4.750'), findsOneWidget);
   });
-}
 
+  testWidgets('"Debe desde" sigue la venta vigente más antigua al anular',
+      (tester) async {
+    final clienteId = await montarDetalle(tester);
+    final usuarioId = (await db.select(db.usuarios).getSingle()).id;
+    await db.into(db.ventas).insert(VentasCompanion.insert(
+          monto: 3000,
+          fecha: DateTime(2026, 9, 20, 9),
+          esFiado: const Value(true),
+          clienteId: Value(clienteId),
+          usuarioId: usuarioId,
+        ));
+    // Se anula la venta del 1 de septiembre (la más antigua).
+    await (db.update(db.ventas)
+          ..where((v) => v.fecha.equals(DateTime(2026, 9, 1, 10, 0))))
+        .write(const VentasCompanion(anulado: Value(true)));
+    await tester.pumpAndSettle();
+    expect(saldo(textoDebeDesde(DateTime(2026, 9, 20, 9), DateTime.now())),
+        findsOneWidget);
+  });
+
+  testWidgets('la línea de tiempo no se desborda con letra grande y millones',
+      (tester) async {
+    tester.view.physicalSize = const Size(720, 1560);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final clienteId = await montarDetalle(tester);
+    final usuarioId = (await db.select(db.usuarios).getSingle()).id;
+    await db.into(db.pagosFiado).insert(PagosFiadoCompanion.insert(
+        clienteId: clienteId,
+        monto: 1250000,
+        fecha: DateTime(2026, 9, 2),
+        usuarioId: usuarioId,
+        medioPago: const Value(MedioPago.transferencia)));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+}
 
 /// Espera a [_espera] antes de leer el saldo, para simular la latencia de la
 /// base de datos en segundo plano.

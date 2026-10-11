@@ -40,9 +40,12 @@ class _ListaFiadoScreenState extends ConsumerState<ListaFiadoScreen> {
 
   /// Clientes que pasan el filtro, en el orden elegido.
   List<ClienteConSaldo> _ordenar(List<ClienteConSaldo> clientes) {
+    // Sin buscador a la vista (5 clientes o menos) no se filtra: si no, una
+    // búsqueda vieja dejaría la lista vacía sin forma de borrarla.
+    final filtro = clientes.length > _clientesSinBuscador ? _filtro : '';
     final lista = [
       for (final c in clientes)
-        if (_filtro.isEmpty || sinTildes(c.cliente.nombre).contains(_filtro)) c,
+        if (filtro.isEmpty || sinTildes(c.cliente.nombre).contains(filtro)) c,
     ];
     lista.sort(_porAntiguedad ? _masAntigua : _mayorDeuda);
     return lista;

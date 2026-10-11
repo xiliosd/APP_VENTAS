@@ -55,7 +55,15 @@ class DetalleClienteScreen extends ConsumerWidget {
 
     final c = ColoresApp.of(context);
     final suave = c.sobreTarjetaPrincipal.withValues(alpha: 0.75);
-    final fechaDeuda = clienteConSaldo.fechaDeudaMasAntigua ?? DateTime.now();
+    // Venta fiada vigente más antigua según los movimientos actuales (cambia
+    // al anular o corregir); mientras cargan, la que se trajo al abrir.
+    final ventasVigentes = [
+      for (final m in movimientosAsync.valueOrNull ?? const <MovimientoFiado>[])
+        if (m.tipo == TipoMovimientoFiado.venta && !m.anulado) m.fecha,
+    ];
+    final fechaDeuda = ventasVigentes.isNotEmpty
+        ? ventasVigentes.reduce((a, b) => a.isBefore(b) ? a : b)
+        : clienteConSaldo.fechaDeudaMasAntigua ?? DateTime.now();
 
     return Scaffold(
       appBar: AppBar(title: Text(cliente.nombre)),
@@ -240,24 +248,44 @@ class _FilaMovimiento extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(esAbono ? 'Abono' : 'Venta fiada',
-                            style: const TextStyle(fontWeight: FontWeight.w600)),
+                        Flexible(
+                          child: Text(esAbono ? 'Abono' : 'Venta fiada',
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
+                        ),
                         if (esAbono &&
                             movimiento.medioPago == MedioPago.transferencia) ...[
                           const SizedBox(width: 8),
                           const EtiquetaQr(),
                         ],
-                        const Spacer(),
-                        Text(esAbono ? '− ' : '+ ',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: movimiento.anulado
-                                    ? c.textoSecundario
-                                    : color)),
-                        Monto(movimiento.monto,
-                            tamano: 16,
-                            tono: esAbono ? TonoMonto.entra : TonoMonto.fiado,
-                            tachado: movimiento.anulado),
+                        const SizedBox(width: 8),
+                        // El monto se encoge si no cabe (letra grande).
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(esAbono ? '− ' : '+ ',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          color: movimiento.anulado
+                                              ? c.textoSecundario
+                                              : color)),
+                                  Monto(movimiento.monto,
+                                      tamano: 16,
+                                      tono: esAbono
+                                          ? TonoMonto.entra
+                                          : TonoMonto.fiado,
+                                      tachado: movimiento.anulado),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     Text(formatoHora(movimiento.fecha), style: secundario),

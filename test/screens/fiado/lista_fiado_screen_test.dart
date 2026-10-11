@@ -206,4 +206,25 @@ void main() {
           reason: 'cliente $id');
     }
   });
+
+  testWidgets('si el buscador desaparece, la lista no queda filtrada',
+      (tester) async {
+    final ids = <int>[];
+    for (final n in ['Ángela', 'Beto', 'Carla', 'Darío', 'Elsa', 'Fabio']) {
+      ids.add(await deudor(n, 1000, 1));
+    }
+    await montar(tester);
+    await tester.enterText(find.byKey(const Key('buscador_fiado')), 'angel');
+    await tester.pump();
+    expect(orden(tester), ['Ángela']);
+    // Ángela paga todo: quedan 5 deudores y el buscador ya no se muestra.
+    await db.into(db.pagosFiado).insert(PagosFiadoCompanion.insert(
+        clienteId: ids.first,
+        monto: 1000,
+        fecha: DateTime.now(),
+        usuarioId: await usuario()));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('buscador_fiado')), findsNothing);
+    expect(orden(tester), hasLength(5));
+  });
 }
