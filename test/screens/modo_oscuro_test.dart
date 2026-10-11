@@ -1,5 +1,9 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
+import 'package:app_ventas/repositories/fiado_repository.dart';
+import 'package:app_ventas/screens/fiado/detalle_cliente_screen.dart';
+import 'package:app_ventas/screens/fiado/lista_fiado_screen.dart';
+import 'package:app_ventas/screens/gasto/registrar_gasto_screen.dart';
 import 'package:app_ventas/screens/home/home_screen.dart';
 import 'package:app_ventas/screens/login/ingresar_pin_screen.dart';
 import 'package:app_ventas/screens/login/seleccionar_usuario_screen.dart';
@@ -125,5 +129,65 @@ void main() {
     await montarOscuro(tester, const HomeScreen(), pasoRecorrido: 'inicio');
     expect(find.byKey(const Key('capa_globos')), findsOneWidget);
     verificarOscuro(tester, find.byType(HomeScreen));
+  });
+
+  /// Cliente con una venta fiada de hace 40 días (usuario 1, creado al montar).
+  Future<Cliente> deudor() async {
+    final id = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
+    await db.into(db.ventas).insert(VentasCompanion.insert(
+          monto: 45000,
+          fecha: DateTime.now().subtract(const Duration(days: 40)),
+          esFiado: const Value(true),
+          clienteId: Value(id),
+          usuarioId: 1,
+        ));
+    return (db.select(db.clientes)..where((c) => c.id.equals(id))).getSingle();
+  }
+
+  testWidgets('la lista de fiado se dibuja en oscuro y con letra grande',
+      (tester) async {
+    await montarOscuro(tester, const Scaffold(body: ListaFiadoScreen()));
+    await deudor();
+    await tester.pumpAndSettle();
+    verificarOscuro(tester, find.byType(ListaFiadoScreen));
+    expect(find.text('Don Pedro'), findsOneWidget);
+  });
+
+  testWidgets('la lista de fiado con letra 1,6× no desborda', (tester) async {
+    await montarOscuro(tester, const Scaffold(body: ListaFiadoScreen()),
+        escalaLetra: 1.6);
+    await deudor();
+    await tester.pumpAndSettle();
+    verificarOscuro(tester, find.byType(ListaFiadoScreen));
+  });
+
+  testWidgets('el detalle del cliente se dibuja en oscuro', (tester) async {
+    // Un usuario antes del montaje, para poder crear la deuda antes.
+    await db.into(db.usuarios).insert(
+        UsuariosCompanion.insert(nombre: 'Luis', rol: 'vendedor', pinHash: 'x'));
+    final cliente = await deudor();
+    await montarOscuro(
+      tester,
+      DetalleClienteScreen(
+        clienteConSaldo: ClienteConSaldo(
+          cliente: cliente,
+          saldo: 45000,
+          fechaDeudaMasAntigua:
+              DateTime.now().subtract(const Duration(days: 40)),
+        ),
+      ),
+    );
+    verificarOscuro(tester, find.byType(DetalleClienteScreen));
+    await tester.tap(find.byKey(const Key('boton_registrar_abono')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('abono_todo')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('nuevo gasto se dibuja en oscuro', (tester) async {
+    await montarOscuro(tester, const RegistrarGastoScreen());
+    verificarOscuro(tester, find.byType(RegistrarGastoScreen));
   });
 }

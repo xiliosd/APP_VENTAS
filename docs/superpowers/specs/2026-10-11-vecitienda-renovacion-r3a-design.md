@@ -1,7 +1,7 @@
 # Renovación de la interfaz — R3a: fiado y gasto
 
 **Fecha:** 2026-10-11
-**Estado:** Diseño aprobado en conversación; pendiente revisión de esta especificación
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con R1, R2a y R2b (3636e30, 637 pruebas).
 
 ## Contexto
