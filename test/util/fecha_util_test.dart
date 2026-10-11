@@ -44,4 +44,20 @@ void main() {
     expect(textoUltimoRespaldo(DateTime(2026, 10, 3, 14, 32), ahora),
         '03/10/2026 14:32');
   });
+
+  test('diasDesde y nivelAntiguedad en los bordes 7/8 y 30/31', () {
+    final hoy = DateTime(2026, 10, 31, 18);
+    DateTime hace(int d) => DateTime(2026, 10, 31 - d, 9);
+    expect(diasDesde(hace(0), hoy), 0);
+    expect(nivelAntiguedad(hace(7), hoy), NivelAntiguedad.reciente);
+    expect(nivelAntiguedad(hace(8), hoy), NivelAntiguedad.media);
+    expect(nivelAntiguedad(hace(30), hoy), NivelAntiguedad.media);
+    expect(nivelAntiguedad(hace(31), hoy), NivelAntiguedad.vieja);
+  });
+
+  test('fechaCortaConAnio solo agrega el año si no es el actual', () {
+    final hoy = DateTime(2026, 10, 11);
+    expect(fechaCortaConAnio(DateTime(2026, 10, 7), hoy), '7 oct');
+    expect(fechaCortaConAnio(DateTime(2025, 10, 7), hoy), '7 oct 2025');
+  });
 }

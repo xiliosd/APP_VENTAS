@@ -14,6 +14,25 @@ const _mesesCortos = [
 String fechaCorta(DateTime fecha) =>
     '${fecha.day} ${_mesesCortos[fecha.month - 1]}';
 
+/// "7 oct", o "7 oct 2025" si no es del año de [hoy].
+String fechaCortaConAnio(DateTime fecha, DateTime hoy) => fecha.year == hoy.year
+    ? fechaCorta(fecha)
+    : '${fechaCorta(fecha)} ${fecha.year}';
+
+/// Días calendario entre [desde] y [hoy].
+int diasDesde(DateTime desde, DateTime hoy) =>
+    inicioDelDia(hoy).difference(inicioDelDia(desde)).inDays;
+
+/// Qué tan vieja es una deuda: hasta 7 días, de 8 a 30, o más de 30.
+enum NivelAntiguedad { reciente, media, vieja }
+
+NivelAntiguedad nivelAntiguedad(DateTime desde, DateTime hoy) {
+  final dias = diasDesde(desde, hoy);
+  if (dias <= 7) return NivelAntiguedad.reciente;
+  if (dias <= 30) return NivelAntiguedad.media;
+  return NivelAntiguedad.vieja;
+}
+
 String formatoFecha(DateTime fecha) =>
     '${_dosDigitos(fecha.day)}/${_dosDigitos(fecha.month)}/${fecha.year}';
 
