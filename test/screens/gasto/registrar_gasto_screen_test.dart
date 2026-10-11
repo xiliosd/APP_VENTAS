@@ -56,4 +56,52 @@ void main() {
         .widget<BotonPrincipal>(find.byKey(const Key('boton_registrar_gasto')));
     expect(boton.onPressed, isNull);
   });
+
+  testWidgets('una categoría llena la descripción y se guarda', (tester) async {
+    await abrirGasto(tester);
+    await tester.tap(find.byKey(const Key('tecla_monto_5')));
+    await tester.tap(find.byKey(const Key('tecla_monto_000')));
+    await tester.tap(find.byKey(const Key('categoria_mercancia')));
+    await tester.pump();
+    expect(find.widgetWithText(TextField, 'Mercancía'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('campo_descripcion_gasto')),
+        'Mercancía · gaseosas');
+    await tester.tap(find.byKey(const Key('categoria_servicios')));
+    await tester.pump();
+    expect(find.widgetWithText(TextField, 'Servicios · gaseosas'),
+        findsOneWidget);
+    await tester.tap(find.byKey(const Key('boton_registrar_gasto')));
+    await tester.pumpAndSettle();
+    expect((await db.select(db.gastos).get()).single.descripcion,
+        'Servicios · gaseosas');
+  });
+
+  testWidgets('Otro y volver a tocar la categoría la quitan', (tester) async {
+    await abrirGasto(tester);
+    await tester.enterText(
+        find.byKey(const Key('campo_descripcion_gasto')), 'taxi');
+    await tester.tap(find.byKey(const Key('categoria_transporte')));
+    await tester.pump();
+    expect(find.widgetWithText(TextField, 'Transporte · taxi'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('categoria_transporte')));
+    await tester.pump();
+    expect(find.widgetWithText(TextField, 'taxi'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('categoria_arriendo')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('categoria_otro')));
+    await tester.pump();
+    expect(find.widgetWithText(TextField, 'taxi'), findsOneWidget);
+  });
+
+  testWidgets('el monto se muestra grande mientras se teclea', (tester) async {
+    await abrirGasto(tester);
+    await tester.tap(find.byKey(const Key('tecla_monto_2')));
+    await tester.tap(find.byKey(const Key('tecla_monto_000')));
+    await tester.pumpAndSettle();
+    expect(
+        find.descendant(
+            of: find.byKey(const Key('texto_monto_gasto')),
+            matching: find.text(r'$2.000')),
+        findsOneWidget);
+  });
 }
