@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../ui/colores_app.dart';
+import '../../ui/movimiento.dart';
 import '../../util/formato_moneda.dart';
 
 const _diasCortos = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -139,9 +140,17 @@ class Barra extends StatelessWidget {
           Expanded(
             child: Align(
               alignment: Alignment.centerLeft,
-              child: FractionallySizedBox(
-                // Un día sin ventas deja una marca mínima, no un hueco.
-                widthFactor: fraccion == 0 ? 0.01 : fraccion,
+              // Crece la primera vez (sin repetir al reconstruir).
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: Movimiento.duracion(context, Movimiento.larga),
+                curve: Movimiento.resorte,
+                builder: (context, avance, hijo) => FractionallySizedBox(
+                  // Un día sin ventas deja una marca mínima, no un hueco.
+                  widthFactor:
+                      ((fraccion == 0 ? 0.01 : fraccion) * avance).clamp(0.01, 1.0),
+                  child: hijo,
+                ),
                 child: Container(
                   height: 14,
                   decoration: BoxDecoration(

@@ -313,4 +313,76 @@ void main() {
     }
     expect(find.text('Semana del 21 al 27 dic. 2026'), findsOneWidget);
   });
+
+  /// Vende [unidades] de un producto nuevo [nombre] a [precio] el lunes 6.
+  Future<void> venderProducto(String nombre, int precio, int unidades) async {
+    final id = await db
+        .into(db.productos)
+        .insert(ProductosCompanion.insert(nombre: nombre, precio: precio));
+    await VentaRepository(db).registrarVenta(
+      monto: precio * unidades,
+      esFiado: false,
+      usuarioId: ana,
+      fecha: DateTime(2026, 10, 6, 10),
+      lineas: [
+        LineaNueva(
+            productoId: id,
+            descripcion: nombre,
+            precioUnitario: precio,
+            cantidad: unidades),
+      ],
+    );
+  }
+
+  testWidgets('la tarjeta de ventas es la principal y la etiqueta va dentro',
+      (tester) async {
+    await vender(5000, DateTime(2026, 10, 6));
+    await vender(4000, DateTime(2026, 9, 29));
+    await montar(tester);
+    final tarjeta =
+        tester.widget<Container>(find.byKey(const Key('reporte_ventas')));
+    expect((tarjeta.decoration! as BoxDecoration).color,
+        ColoresApp.claro.tarjetaPrincipal);
+    expect(en('reporte_ventas', '↑ 25 % vs. semana pasada'), findsOneWidget);
+  });
+
+  testWidgets('una caída del 100 % sale en la píldora roja', (tester) async {
+    await vender(4000, DateTime(2026, 9, 29));
+    await db.into(db.gastos).insert(GastosCompanion.insert(
+        monto: 500, fecha: DateTime(2026, 10, 6), usuarioId: ana));
+    await montar(tester);
+    expect(en('reporte_ventas', '↓ 100 % vs. semana pasada'), findsOneWidget);
+  });
+
+  testWidgets('barras del top proporcionales al primero', (tester) async {
+    await venderProducto('Arroz', 10000, 1);
+    await venderProducto('Pan', 5000, 1);
+    await montar(tester);
+    final a = tester.getSize(find.byKey(const Key('barra_ranking_0'))).width;
+    final b = tester.getSize(find.byKey(const Key('barra_ranking_1'))).width;
+    expect(b, closeTo(a / 2, 2));
+  });
+
+  testWidgets('un solo producto: su barra ocupa todo el ancho',
+      (tester) async {
+    await venderProducto('Arroz', 10000, 1);
+    await montar(tester);
+    final barra = tester.getSize(find.byKey(const Key('barra_ranking_0'))).width;
+    final fila = tester.getSize(find.byKey(const Key('ranking_0'))).width;
+    expect(barra, closeTo(fila, 2));
+  });
+
+  testWidgets('la tarjeta de fiado muestra que la deuda subió', (tester) async {
+    await vender(2000, DateTime(2026, 9, 30), fiado: true);
+    await vender(3000, DateTime(2026, 10, 6), fiado: true);
+    await montar(tester);
+    expect(
+        find.descendant(
+            of: find.byKey(const Key('tarjeta_fiado_reporte')),
+            matching: find.byKey(const Key('texto_fiado'))),
+        findsOneWidget);
+    final icono = tester.widget<Icon>(find.byKey(const Key('tendencia_deuda')));
+    expect(icono.icon, Icons.trending_up_rounded);
+    expect(icono.color, ColoresApp.claro.sale);
+  });
 }

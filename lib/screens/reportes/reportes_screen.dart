@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/reporte_providers.dart';
 import '../../repositories/reporte_repository.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/entrada_escalonada.dart';
 import '../../ui/estado_vacio.dart';
 import '../../ui/monto.dart';
 import '../../ui/selector_segmentado.dart';
 import '../../ui/tarjeta_monto.dart';
+import '../../ui/tema_app.dart';
+import '../../ui/tipografia.dart';
 import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/periodo.dart';
@@ -86,6 +89,7 @@ class _ReportesScreenState extends ConsumerState<ReportesScreen> {
           ),
           const SizedBox(height: 8),
           comparacionAsync.when(
+            skipLoadingOnReload: true,
             data: (comparacion) => comparacion.actual.vacio
                 ? const EstadoVacio(
                     icono: Icons.bar_chart_rounded,
@@ -125,26 +129,50 @@ class _Contenido extends StatelessWidget {
     final contra = tipo == TipoPeriodo.semana
         ? 'vs. semana pasada'
         : 'vs. mes pasado';
-    final gris = TextStyle(color: ColoresApp.of(context).textoSecundario);
+    final c = ColoresApp.of(context);
+    final gris = TextStyle(color: c.textoSecundario);
+    final suave = c.sobreTarjetaPrincipal.withValues(alpha: 0.75);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _Titulo('¿Cómo te fue?'),
-        TarjetaMonto(
-          key: const Key('reporte_ventas'),
-          etiqueta: 'Ventas',
-          valor: r.ventas,
-          tono: TonoMonto.entra,
-          tamano: 28,
-        ),
-        _TextoCambio(
-          key: const Key('cambio_ventas'),
-          cambio: comparacion.cambioVentas,
-          contra: contra,
+        EntradaEscalonada(
+          indice: 0,
+          child: Container(
+            key: const Key('reporte_ventas'),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: c.tarjetaPrincipal,
+              borderRadius: BorderRadius.circular(radioTarjetaPrincipal),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Ventas', style: estiloTitulo(tamano: 14, color: suave)),
+                const SizedBox(height: 4),
+                Monto(r.ventas,
+                    tamano: 36, tono: TonoMonto.claro, animado: true),
+                _EtiquetaCambio(
+                  key: const Key('cambio_ventas'),
+                  cambio: comparacion.cambioVentas,
+                  contra: contra,
+                  enTarjeta: true,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${plural(r.cantidadVentas, 'venta', 'ventas')} · '
+                  'promedio ${formatoMoneda(r.ventaPromedio)}',
+                  key: const Key('texto_promedio'),
+                  style: TextStyle(color: suave, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 12),
-        Row(
+        EntradaEscalonada(
+          indice: 1,
+          child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
@@ -166,7 +194,7 @@ class _Contenido extends StatelessWidget {
                     valor: r.ganancia,
                     tono: r.ganancia < 0 ? TonoMonto.sale : TonoMonto.neutro,
                   ),
-                  _TextoCambio(
+                  _EtiquetaCambio(
                     key: const Key('cambio_ganancia'),
                     cambio: comparacion.cambioGanancia,
                     contra: contra,
@@ -176,15 +204,11 @@ class _Contenido extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          '${plural(r.cantidadVentas, 'venta', 'ventas')} · '
-          'promedio ${formatoMoneda(r.ventaPromedio)}',
-          key: const Key('texto_promedio'),
-          style: gris,
         ),
         const _Titulo('Caja y banco'),
-        Row(
+        EntradaEscalonada(
+          indice: 2,
+          child: Row(
           children: [
             Expanded(
               child: TarjetaMonto(
@@ -203,23 +227,59 @@ class _Contenido extends StatelessWidget {
             ),
           ],
         ),
+        ),
         const SizedBox(height: 8),
         Text(
           'Gastos ${formatoMoneda(r.gastos)}',
           key: const Key('texto_gastos_caja'),
           style: gris,
         ),
-        const _Titulo('Fiado'),
-        Text(
-          'Fiaste ${formatoMoneda(r.fiado)} · '
-          'Cobraste ${formatoMoneda(r.cobrado)}',
-          key: const Key('texto_fiado'),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Deuda: ${formatoMoneda(r.deudaInicio)} → '
-          '${formatoMoneda(r.deudaFin)}',
-          key: const Key('texto_deuda'),
+        const SizedBox(height: 12),
+        EntradaEscalonada(
+          indice: 3,
+          child: Card(
+            key: const Key('tarjeta_fiado_reporte'),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Fiado',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Fiaste ${formatoMoneda(r.fiado)} · '
+                    'Cobraste ${formatoMoneda(r.cobrado)}',
+                    key: const Key('texto_fiado'),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Deuda: ${formatoMoneda(r.deudaInicio)} → '
+                          '${formatoMoneda(r.deudaFin)}',
+                          key: const Key('texto_deuda'),
+                        ),
+                      ),
+                      if (r.deudaFin != r.deudaInicio) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          r.deudaFin > r.deudaInicio
+                              ? Icons.trending_up_rounded
+                              : Icons.trending_down_rounded,
+                          key: const Key('tendencia_deuda'),
+                          size: 18,
+                          color: r.deudaFin > r.deudaInicio ? c.sale : c.entra,
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
         const _Titulo('Ventas por día'),
         BarrasPorDia(ventasPorDia: r.ventasPorDia, mejorDia: r.mejorDia),
@@ -249,8 +309,12 @@ class _Contenido extends StatelessWidget {
             ),
           for (final (i, p) in r.ranking.indexed)
             Padding(
+              key: Key('ranking_$i'),
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
                 '${i + 1}. ${p.nombre} · ${p.unidades} u · '
                 '${formatoMoneda(p.dinero)}'
                 '${switch (p.ganancia) {
@@ -258,10 +322,33 @@ class _Contenido extends StatelessWidget {
                   final g when g < 0 => ' · pierde ${formatoMoneda(-g)}',
                   final g => ' · gana ${formatoMoneda(g)}',
                 }}',
-                key: Key('ranking_$i'),
                 style: (p.ganancia ?? 0) < 0
                     ? TextStyle(color: ColoresApp.of(context).sale)
                     : null,
+              ),
+                  const SizedBox(height: 4),
+                  LayoutBuilder(
+                    builder: (context, limites) {
+                      final primero = r.ranking.first.dinero;
+                      final ancho = primero <= 0
+                          ? 4.0
+                          : (limites.maxWidth * p.dinero / primero)
+                              .clamp(4.0, limites.maxWidth);
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          key: Key('barra_ranking_$i'),
+                          height: 6,
+                          width: ancho,
+                          decoration: BoxDecoration(
+                            color: i == 0 ? c.marcaVerde : c.primario,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           if (r.otrosMontos > 0)
@@ -288,11 +375,24 @@ class _Contenido extends StatelessWidget {
         if (r.horaPico case final pico?)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              'Hora pico: ${etiquetaHora(pico)} · '
-              '${formatoMoneda(r.ventasPorHora[pico]!)}',
-              key: const Key('texto_hora_pico'),
-              style: const TextStyle(fontWeight: FontWeight.w600),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Icons.schedule_rounded, color: c.primario),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Hora pico: ${etiquetaHora(pico)} · '
+                        '${formatoMoneda(r.ventasPorHora[pico]!)}',
+                        key: const Key('texto_hora_pico'),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         Barras(
@@ -326,28 +426,69 @@ class _Titulo extends StatelessWidget {
   );
 }
 
-/// "↑ 12 % vs. semana pasada" en verde, "↓ 8 % …" en rojo o "= …" en gris;
-/// nada si no hay porcentaje.
-class _TextoCambio extends StatelessWidget {
-  const _TextoCambio({super.key, required this.cambio, required this.contra});
+/// "↑ 12 % vs. semana pasada", "↓ 8 % …" o "= …"; nada si no hay
+/// porcentaje. En la tarjeta principal va como píldora verde o roja.
+class _EtiquetaCambio extends StatelessWidget {
+  const _EtiquetaCambio(
+      {super.key,
+      required this.cambio,
+      required this.contra,
+      this.enTarjeta = false});
 
   final int? cambio;
   final String contra;
+  final bool enTarjeta;
 
   @override
   Widget build(BuildContext context) {
     final valor = cambio;
     if (valor == null) return const SizedBox.shrink();
-    final (texto, color) = valor > 0
-        ? ('↑ $valor % $contra', ColoresApp.of(context).entra)
+    final c = ColoresApp.of(context);
+    final texto = valor > 0
+        ? '↑ $valor % $contra'
         : valor < 0
-        ? ('↓ ${-valor} % $contra', ColoresApp.of(context).sale)
-        : ('= $contra', ColoresApp.of(context).textoSecundario);
+            ? '↓ ${-valor} % $contra'
+            : '= $contra';
+    final tono = valor > 0
+        ? c.entra
+        : valor < 0
+            ? c.sale
+            : null;
+    if (!enTarjeta) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text(texto,
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: tono ?? c.textoSecundario)),
+      );
+    }
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Text(
-        texto,
-        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+      padding: const EdgeInsets.only(top: 6),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: tono == null
+              ? EdgeInsets.zero
+              : const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: tono == null
+              ? null
+              : ShapeDecoration(
+                  shape: const StadiumBorder(),
+                  color: tono.withValues(alpha: 0.22),
+                ),
+          child: Text(
+            texto,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: tono == null
+                  ? c.sobreTarjetaPrincipal.withValues(alpha: 0.75)
+                  : c.sobreTarjetaPrincipal,
+            ),
+          ),
+        ),
       ),
     );
   }
