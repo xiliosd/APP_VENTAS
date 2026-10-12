@@ -329,10 +329,14 @@ class _Contenido extends StatelessWidget {
                   const SizedBox(height: 4),
                   LayoutBuilder(
                     builder: (context, limites) {
-                      final primero = r.ranking.first.dinero;
-                      final ancho = primero <= 0
+                      // El top va por unidades: la barra se mide contra el
+                      // producto que más dinero dejó, no contra el primero.
+                      final mayor = r.ranking
+                          .map((x) => x.dinero)
+                          .reduce((a, b) => a > b ? a : b);
+                      final ancho = mayor <= 0
                           ? 4.0
-                          : (limites.maxWidth * p.dinero / primero)
+                          : (limites.maxWidth * p.dinero / mayor)
                               .clamp(4.0, limites.maxWidth);
                       return Align(
                         alignment: Alignment.centerLeft,

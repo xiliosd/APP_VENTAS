@@ -169,10 +169,12 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
                                 key: const Key('total_ventas'),
                                 children: [
                                   const Expanded(child: Text('Ventas')),
-                                  Monto(totalVentas,
-                                      tamano: 18,
-                                      tono: TonoMonto.entra,
-                                      animado: true),
+                                  Flexible(
+                                    child: Monto(totalVentas,
+                                        tamano: 18,
+                                        tono: TonoMonto.entra,
+                                        animado: true),
+                                  ),
                                 ],
                               ),
                             if (_tipo == FiltroTipo.todo ||
@@ -181,10 +183,12 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
                                 key: const Key('total_gastos'),
                                 children: [
                                   const Expanded(child: Text('Gastos')),
-                                  Monto(totalGastos,
-                                      tamano: 18,
-                                      tono: TonoMonto.sale,
-                                      animado: true),
+                                  Flexible(
+                                    child: Monto(totalGastos,
+                                        tamano: 18,
+                                        tono: TonoMonto.sale,
+                                        animado: true),
+                                  ),
                                 ],
                               ),
                             const SizedBox(height: 4),
@@ -294,10 +298,14 @@ class _MovimientoTile extends StatelessWidget {
             ),
         ],
       ),
-      trailing: Monto(movimiento.monto,
-          tamano: 16,
-          tono: esGasto ? TonoMonto.sale : TonoMonto.neutro,
-          tachado: movimiento.anulado),
+      // Con letra grande el monto se encoge en vez de ocupar toda la fila.
+      trailing: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 120),
+        child: Monto(movimiento.monto,
+            tamano: 16,
+            tono: esGasto ? TonoMonto.sale : TonoMonto.neutro,
+            tachado: movimiento.anulado),
+      ),
     );
   }
 }

@@ -385,4 +385,17 @@ void main() {
     expect(icono.icon, Icons.trending_up_rounded);
     expect(icono.color, ColoresApp.claro.sale);
   });
+
+  testWidgets('la barra más larga es la del producto que más dinero dejó',
+      (tester) async {
+    // El top se ordena por unidades: Agua (10 u, $10.000) va primero, pero
+    // Aguardiente (2 u, $1.250.000) dejó más plata.
+    await venderProducto('Agua', 1000, 10);
+    await venderProducto('Aguardiente', 625000, 2);
+    await montar(tester);
+    final agua = tester.getSize(find.byKey(const Key('barra_ranking_0'))).width;
+    final aguardiente =
+        tester.getSize(find.byKey(const Key('barra_ranking_1'))).width;
+    expect(aguardiente, greaterThan(agua * 10));
+  });
 }

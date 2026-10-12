@@ -258,4 +258,17 @@ void main() {
     expect(color('icono_movimiento_gasto_$gasto'),
         c.sale.withValues(alpha: 0.15));
   });
+
+  testWidgets('con letra 2× en 360 dp un monto de millones no rompe la fila',
+      (tester) async {
+    tester.view.physicalSize = const Size(720, 1560);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await ventas.registrarVenta(
+        monto: 1250000, esFiado: false, usuarioId: ana);
+    await montar(tester);
+    expect(tester.takeException(), isNull);
+  });
 }
