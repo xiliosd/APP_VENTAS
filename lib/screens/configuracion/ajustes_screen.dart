@@ -4,7 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/configuracion_providers.dart';
 import '../../providers/recorrido_provider.dart';
 import '../../providers/sesion_provider.dart';
+import '../../respaldo/respaldo_provider.dart';
+import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/entrada_escalonada.dart';
+import '../../ui/icono_cuadrado.dart';
+import '../../ui/tema_app.dart';
+import '../../ui/titulo_seccion.dart';
 import '../qr/configurar_qr_screen.dart';
 import '../respaldo/respaldo_screen.dart';
 import 'hoja_nombre_tienda.dart';
@@ -17,104 +23,191 @@ class AjustesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = ColoresApp.of(context);
+    final nombre = ref.watch(nombreTiendaProvider).valueOrNull;
+    final usuario = ref.watch(sesionProvider).usuarioActivo;
+    final respaldoActivo =
+        ref.watch(respaldoProvider).fase == FaseRespaldo.activo;
+    final suave = c.sobreTarjetaPrincipal.withValues(alpha: 0.75);
+
+    void abrir(Widget pantalla) => Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => pantalla));
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const _Titulo('TIENDA'),
+        EntradaEscalonada(
+          indice: 0,
+          child: Material(
+            key: const Key('cabecera_ajustes'),
+            color: c.tarjetaPrincipal,
+            borderRadius: BorderRadius.circular(radioTarjetaPrincipal),
+            child: InkWell(
+              key: const Key('menu_nombre_tienda'),
+              borderRadius: BorderRadius.circular(radioTarjetaPrincipal),
+              onTap: () => mostrarHojaNombreTienda(context),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    AvatarInicial(
+                      id: 0,
+                      nombre: nombre ?? '?',
+                      radio: 28,
+                      colorAnillo: c.sobreTarjetaPrincipal,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nombre ?? 'Sin nombre',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: c.sobreTarjetaPrincipal,
+                            ),
+                          ),
+                          if (usuario != null)
+                            Text(
+                              '${usuario.nombre} · ${etiquetaRol(usuario.rol)}',
+                              style: TextStyle(fontSize: 13, color: suave),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.edit_outlined, color: c.sobreTarjetaPrincipal),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        EntradaEscalonada(
+          indice: 1,
+          child: _Grupo(titulo: 'TIENDA', opciones: [
+            _Opcion(
+              key: const Key('menu_productos'),
+              icono: Icons.inventory_2_outlined,
+              color: c.primario,
+              titulo: 'Productos',
+              subtitulo: 'Catálogo y precios',
+              onTap: () => abrir(const ProductosScreen()),
+            ),
+            _Opcion(
+              key: const Key('menu_proveedores'),
+              icono: Icons.local_shipping_outlined,
+              color: c.fiado,
+              titulo: 'Proveedores',
+              subtitulo: 'A quién le compras',
+              onTap: () => abrir(const ProveedoresScreen()),
+            ),
+            _Opcion(
+              key: const Key('menu_usuarios'),
+              icono: Icons.group_outlined,
+              color: c.marcaVerde,
+              titulo: 'Usuarios',
+              subtitulo: 'Administradores, vendedores y PIN',
+              onTap: () => abrir(const UsuariosScreen()),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 24),
+        EntradaEscalonada(
+          indice: 2,
+          child: _Grupo(titulo: 'COBROS Y DATOS', opciones: [
+            _Opcion(
+              key: const Key('menu_cobro_qr'),
+              icono: Icons.qr_code_2_rounded,
+              color: c.entra,
+              titulo: 'Cobro por QR',
+              subtitulo: 'Tu QR de Nequi, Daviplata o banco',
+              onTap: () => abrir(const ConfigurarQrScreen()),
+            ),
+            _Opcion(
+              key: const Key('menu_respaldo'),
+              icono: Icons.cloud_upload_outlined,
+              color: c.primario,
+              titulo: 'Respaldo',
+              subtitulo: 'Copia de seguridad en la nube',
+              estado: respaldoActivo
+                  ? Row(
+                      key: const Key('estado_respaldo_menu'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                              color: c.entra, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text('Activo',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w700)),
+                      ],
+                    )
+                  : null,
+              onTap: () => abrir(const RespaldoScreen()),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 24),
+        EntradaEscalonada(
+          indice: 3,
+          child: _Grupo(titulo: 'AYUDA', opciones: [
+            _Opcion(
+              key: const Key('boton_repetir_recorrido'),
+              icono: Icons.tour_outlined,
+              color: c.primario,
+              titulo: 'Ver el recorrido otra vez',
+              subtitulo: 'Venta de práctica y guía del Inicio',
+              // El Inicio, que está a la vista, abre el paso 3.
+              onTap: () => ref
+                  .read(recorridoProvider.notifier)
+                  .irA(PasoRecorrido.venta),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 24),
+        EntradaEscalonada(
+          indice: 4,
+          child: _Grupo(titulo: 'CUENTA', opciones: [
+            ListTile(
+              key: const Key('ajustes_cerrar_sesion'),
+              leading: IconoCuadrado(icono: Icons.logout_rounded, color: c.sale),
+              title: Text('Cerrar sesión', style: TextStyle(color: c.sale)),
+              onTap: () => ref.read(sesionProvider.notifier).cerrarSesion(),
+            ),
+          ]),
+        ),
+      ],
+    );
+  }
+}
+
+class _Grupo extends StatelessWidget {
+  const _Grupo({required this.titulo, required this.opciones});
+
+  final String titulo;
+  final List<Widget> opciones;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TituloSeccion(titulo),
         Card(
           child: Column(
             children: [
-              ListTile(
-                key: const Key('menu_nombre_tienda'),
-                leading: const Icon(Icons.storefront_outlined),
-                title: const Text('Tienda'),
-                subtitle: Text(
-                    ref.watch(nombreTiendaProvider).valueOrNull ?? 'Sin nombre'),
-                trailing: const Icon(Icons.edit_outlined),
-                onTap: () => mostrarHojaNombreTienda(context),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                key: const Key('menu_productos'),
-                leading: const Icon(Icons.inventory_2_outlined),
-                title: const Text('Productos'),
-                subtitle: const Text('Catálogo y precios'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ProductosScreen()),
-                ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                key: const Key('menu_proveedores'),
-                leading: const Icon(Icons.local_shipping_outlined),
-                title: const Text('Proveedores'),
-                subtitle: const Text('A quién le compras'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ProveedoresScreen()),
-                ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                key: const Key('menu_usuarios'),
-                leading: const Icon(Icons.group_outlined),
-                title: const Text('Usuarios'),
-                subtitle: const Text('Administradores, vendedores y PIN'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const UsuariosScreen()),
-                ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                key: const Key('menu_cobro_qr'),
-                leading: const Icon(Icons.qr_code_2_rounded),
-                title: const Text('Cobro por QR'),
-                subtitle: const Text('Tu QR de Nequi, Daviplata o banco'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const ConfigurarQrScreen()),
-                ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                key: const Key('menu_respaldo'),
-                leading: const Icon(Icons.cloud_upload_outlined),
-                title: const Text('Respaldo'),
-                subtitle: const Text('Copia de seguridad en la nube'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RespaldoScreen()),
-                ),
-              ),
+              for (final (i, o) in opciones.indexed) ...[
+                if (i > 0) const Divider(height: 1),
+                o,
+              ],
             ],
-          ),
-        ),
-        const SizedBox(height: 24),
-        const _Titulo('AYUDA'),
-        Card(
-          child: ListTile(
-            key: const Key('boton_repetir_recorrido'),
-            leading: const Icon(Icons.tour_outlined),
-            title: const Text('Ver el recorrido otra vez'),
-            subtitle: const Text('Venta de práctica y guía del Inicio'),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            // El Inicio, que está a la vista, abre el paso 3.
-            onTap: () =>
-                ref.read(recorridoProvider.notifier).irA(PasoRecorrido.venta),
-          ),
-        ),
-        const SizedBox(height: 24),
-        const _Titulo('CUENTA'),
-        Card(
-          child: ListTile(
-            key: const Key('ajustes_cerrar_sesion'),
-            leading: Icon(Icons.logout_rounded, color: ColoresApp.of(context).sale),
-            title: Text('Cerrar sesión',
-                style: TextStyle(color: ColoresApp.of(context).sale)),
-            onTap: () => ref.read(sesionProvider.notifier).cerrarSesion(),
           ),
         ),
       ],
@@ -122,24 +215,38 @@ class AjustesScreen extends ConsumerWidget {
   }
 }
 
-class _Titulo extends StatelessWidget {
-  const _Titulo(this.texto);
+class _Opcion extends StatelessWidget {
+  const _Opcion({
+    super.key,
+    required this.icono,
+    required this.color,
+    required this.titulo,
+    required this.subtitulo,
+    required this.onTap,
+    this.estado,
+  });
 
-  final String texto;
+  final IconData icono;
+  final Color color;
+  final String titulo;
+  final String subtitulo;
+  final VoidCallback onTap;
+  final Widget? estado;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        texto,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
-          color: ColoresApp.of(context).textoSecundario,
-        ),
+    return ListTile(
+      leading: IconoCuadrado(icono: icono, color: color),
+      title: Text(titulo),
+      subtitle: Text(subtitulo),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ?estado,
+          const Icon(Icons.chevron_right_rounded),
+        ],
       ),
+      onTap: onTap,
     );
   }
 }
