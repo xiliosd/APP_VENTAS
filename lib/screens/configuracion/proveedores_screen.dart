@@ -4,11 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../providers/proveedores_providers.dart';
 import '../../providers/repository_providers.dart';
+import '../../ui/avatar_inicial.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/estado_vacio.dart';
 import '../../ui/hoja_inferior.dart';
+import '../../ui/pildora.dart';
+import '../../ui/titulo_seccion.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
 
@@ -65,15 +68,38 @@ class ProveedoresScreen extends ConsumerWidget {
                       for (final p in activos)
                         ListTile(
                           key: Key('proveedor_item_${p.id}'),
+                          leading: AvatarInicial(id: p.id, nombre: p.nombre),
                           title: Text(
                             p.nombre,
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
-                          subtitle: Text(
-                            [
-                              if (p.telefono != null) p.telefono!,
-                              'Surte ${plural(conteo[p.id] ?? 0, 'producto', 'productos')}',
-                            ].join(' · '),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                if (p.telefono != null)
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.phone_rounded,
+                                          size: 14,
+                                          color: ColoresApp.of(context)
+                                              .textoSecundario),
+                                      const SizedBox(width: 4),
+                                      Text(p.telefono!),
+                                    ],
+                                  ),
+                                Pildora(
+                                  key: Key('texto_surte_${p.id}'),
+                                  texto:
+                                      'Surte ${plural(conteo[p.id] ?? 0, 'producto', 'productos')}',
+                                  color: ColoresApp.of(context).fiado,
+                                ),
+                              ],
+                            ),
                           ),
                           onTap: () => _abrir(context, proveedor: p),
                           trailing: IconButton(
@@ -87,22 +113,18 @@ class ProveedoresScreen extends ConsumerWidget {
                   ),
                 ),
               if (inactivos.isNotEmpty) ...[
-                Padding(
-                  padding: EdgeInsets.fromLTRB(4, 24, 4, 8),
-                  child: Text(
-                    'Inactivos',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: ColoresApp.of(context).textoSecundario,
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 24),
+                const TituloSeccion('INACTIVOS'),
                 Card(
                   child: Column(
                     children: [
                       for (final p in inactivos)
                         ListTile(
                           key: Key('proveedor_inactivo_${p.id}'),
+                          leading: Opacity(
+                            opacity: 0.5,
+                            child: AvatarInicial(id: p.id, nombre: p.nombre),
+                          ),
                           title: Text(
                             p.nombre,
                             style: TextStyle(

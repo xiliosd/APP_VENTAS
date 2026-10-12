@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/repository_providers.dart';
+import '../../providers/sesion_provider.dart';
 import '../../providers/usuarios_providers.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
+import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
+import '../../ui/pildora.dart';
 import '../../ui/selector_segmentado.dart';
 import '../../util/pin_hash.dart';
 import 'resetear_pin_dialog.dart';
@@ -43,6 +46,7 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
   @override
   Widget build(BuildContext context) {
     final usuariosAsync = ref.watch(listaUsuariosProvider);
+    final actual = ref.watch(sesionProvider).usuarioActivo?.id;
     return Scaffold(
       appBar: AppBar(title: const Text('Usuarios')),
       floatingActionButton: FloatingActionButton.extended(
@@ -63,10 +67,23 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
                       ListTile(
                         key: Key('usuario_item_${u.id}'),
                         leading: AvatarInicial(id: u.id, nombre: u.nombre),
-                        title: Text(u.nombre,
+                        title: Text(
+                            u.id == actual ? '${u.nombre} (tú)' : u.nombre,
                             style:
                                 const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(etiquetaRol(u.rol)),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Pildora(
+                              key: Key('rol_${u.id}'),
+                              texto: etiquetaRol(u.rol),
+                              color: u.rol == 'admin'
+                                  ? ColoresApp.of(context).primario
+                                  : ColoresApp.of(context).marcaVerde,
+                            ),
+                          ),
+                        ),
                         trailing: const Icon(Icons.lock_reset_rounded),
                         onTap: () => _resetearPin(u),
                       ),

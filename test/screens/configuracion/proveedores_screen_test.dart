@@ -44,7 +44,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Postobón'), findsOneWidget);
-    expect(find.text('3001234567 · Surte 0 productos'), findsOneWidget);
+    expect(find.text('3001234567'), findsOneWidget);
+    expect(find.byIcon(Icons.phone_rounded), findsOneWidget);
+    expect(find.text('Surte 0 productos'), findsOneWidget);
     expect(find.text('Proveedor guardado'), findsOneWidget);
   });
 

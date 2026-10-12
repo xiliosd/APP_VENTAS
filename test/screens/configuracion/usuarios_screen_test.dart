@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/montaje.dart';
+
 void main() {
   late AppDatabase db;
 
@@ -57,7 +59,9 @@ void main() {
 
     await tester.enterText(find.byKey(const Key('campo_nombre_usuario')), 'Carla');
     await tester.enterText(find.byKey(const Key('campo_pin_usuario')), '1111');
-    await tester.tap(find.text('Administrador'));
+    await tester.tap(find.descendant(
+        of: find.byKey(const Key('selector_rol')),
+        matching: find.text('Administrador')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('boton_crear_usuario')));
     await tester.pumpAndSettle();
@@ -150,6 +154,30 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
     expect(find.byType(UsuariosScreen), findsOneWidget);
   });
+
+  testWidgets('cada usuario lleva su chip de rol y el actual dice (tú)',
+      (tester) async {
+    final container = await containerConSesion(db);
+    addTearDown(container.dispose);
+    await UsuarioRepository(db)
+        .crearUsuario(nombre: 'Beto', rol: 'vendedor', pin: '1234');
+    await tester.pumpWidget(
+        appDePrueba(container, inicio: const UsuariosScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ana (tú)'), findsOneWidget);
+    expect(find.text('Beto'), findsOneWidget);
+    expect(find.text('Beto (tú)'), findsNothing);
+    final beto = (await (db.select(db.usuarios)
+              ..where((u) => u.nombre.equals('Beto')))
+            .getSingle())
+        .id;
+    expect(
+        find.descendant(
+            of: find.byKey(Key('rol_$beto')), matching: find.text('Vendedor')),
+        findsOneWidget);
+  });
+
 }
 
 /// Espera a [_espera] antes de guardar el PIN, para simular la latencia de la
