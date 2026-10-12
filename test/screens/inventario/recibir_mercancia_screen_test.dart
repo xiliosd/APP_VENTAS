@@ -310,4 +310,39 @@ void main() {
             matching: find.byType(BarraAccionFija)),
         findsOneWidget);
   });
+
+  testWidgets('con una entrega larga, el error al guardar se ve sin desplazarse',
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final container = await containerConSesion(db);
+    addTearDown(container.dispose);
+    final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
+    final proveedor = await (db.select(db.proveedores)
+          ..where((p) => p.id.equals(postobon)))
+        .getSingle();
+    final repo = ProductoRepository(db);
+    final lineas = <LineaInicial>[];
+    for (var i = 0; i < 12; i++) {
+      final id = await repo.guardarProducto(nombre: 'Producto $i', precio: 1000);
+      final p = await (db.select(db.productos)..where((x) => x.id.equals(id)))
+          .getSingle();
+      lineas.add(LineaInicial(producto: p, cantidad: 2, precio: 500));
+    }
+    await tester.pumpWidget(appDePrueba(container,
+        inicio: RecibirMercanciaScreen(
+            proveedorInicial: proveedor, lineasIniciales: lineas)));
+    await tester.pumpAndSettle();
+
+    await ProveedorRepository(db).desactivar(postobon);
+    await tester.tap(find.byKey(const Key('boton_guardar_recibir')));
+    await tester.pumpAndSettle();
+
+    final pantalla = tester.getRect(find.byType(Scaffold).last);
+    final error = find.byKey(const Key('error_recibir'));
+    expect(error, findsOneWidget);
+    expect(tester.getRect(error).bottom, lessThanOrEqualTo(pantalla.bottom));
+    expect(tester.getRect(error).top, greaterThanOrEqualTo(pantalla.top));
+  });
 }

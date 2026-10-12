@@ -181,10 +181,26 @@ class _RecibirMercanciaScreenState
     return Scaffold(
       appBar: AppBar(title: const Text('Recibir mercancía')),
       bottomNavigationBar: BarraAccionFija(
-        total: Text(
-          'Total ${formatoMoneda(_total)}',
-          key: const Key('total_recibir'),
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        // El error va junto al botón para que se vea aunque la lista sea larga.
+        total: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  _error!,
+                  key: const Key('error_recibir'),
+                  style: TextStyle(color: ColoresApp.of(context).sale),
+                ),
+              ),
+            Text(
+              'Total ${formatoMoneda(_total)}',
+              key: const Key('total_recibir'),
+              style:
+                  const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            ),
+          ],
         ),
         boton: BotonPrincipal(
           key: const Key('boton_guardar_recibir'),
@@ -318,15 +334,6 @@ class _RecibirMercanciaScreenState
             controller: _nota,
             decoration: const InputDecoration(labelText: 'Nota'),
           ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(
-                _error!,
-                key: const Key('error_recibir'),
-                style: TextStyle(color: ColoresApp.of(context).sale),
-              ),
-            ),
         ],
       ),
     );
