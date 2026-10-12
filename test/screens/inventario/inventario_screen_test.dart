@@ -94,7 +94,8 @@ void main() {
     expect(find.text('12 u'), findsOneWidget);
     await tester.tap(find.text('Por pedir (0)'));
     await tester.pumpAndSettle();
-    expect(find.text('Nada por pedir'), findsOneWidget);
+    expect(find.text('Todo en orden'), findsOneWidget);
+    expect(find.byKey(const Key('texto_nada_por_pedir')), findsOneWidget);
   });
 
   testWidgets('el detalle muestra historial y ajusta el conteo',
@@ -213,8 +214,10 @@ void main() {
     expect(tester.getSize(grupo).height, lessThan(50)); // una línea
     expect(tester.getTopLeft(find.byKey(Key('ver_pedido_$postobon'))).dy,
         greaterThan(tester.getTopLeft(grupo).dy));
-    // El nombre del grupo sigue alineado a la izquierda.
-    expect(tester.getTopLeft(grupo).dx, lessThan(40));
+    // El grupo (ícono y nombre) sigue alineado a la izquierda.
+    expect(
+        tester.getTopLeft(find.byIcon(Icons.local_shipping_rounded)).dx,
+        lessThan(40));
   });
 
   testWidgets('con letra normal el grupo y el botón van en una fila',
@@ -231,5 +234,76 @@ void main() {
         tester.getCenter(find.byKey(Key('grupo_por_pedir_$postobon')));
     final boton = tester.getCenter(find.byKey(Key('ver_pedido_$postobon')));
     expect((grupo.dy - boton.dy).abs(), lessThan(8));
+  });
+
+  testWidgets('el resumen cuenta controlados, por pedir y agotados',
+      (tester) async {
+    final (container, ana) = await montar(tester);
+    final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
+    final coca = await producto('Coca', proveedor: postobon);
+    final pan = await producto('Pan');
+    final agua = await producto('Agua');
+    final inv = InventarioRepository(db);
+    await inv.activarControl(coca, cantidad: 2, minimo: 6, por: ana);
+    await inv.activarControl(pan, cantidad: 12, minimo: 5, por: ana);
+    await inv.activarControl(agua, cantidad: 0, minimo: 0, por: ana);
+    await pintar(tester, container);
+
+    String cifra(String clave) =>
+        tester.widget<Text>(find.byKey(Key(clave))).data!;
+    expect(find.byKey(const Key('resumen_inventario')), findsOneWidget);
+    expect(cifra('resumen_controlados'), '3');
+    expect(cifra('resumen_por_pedir'), '2');
+    expect(cifra('resumen_agotados'), '1');
+    expect(tester.widget<Text>(find.byKey(const Key('resumen_agotados')))
+        .style!.color, ColoresApp.claro.sale);
+  });
+
+  testWidgets('en Todos cada producto lleva su etiqueta y su barra',
+      (tester) async {
+    final (container, ana) = await montar(tester);
+    final coca = await producto('Coca');
+    final pan = await producto('Pan');
+    final inv = InventarioRepository(db);
+    await inv.activarControl(coca, cantidad: 2, minimo: 6, por: ana);
+    await inv.activarControl(pan, cantidad: 12, minimo: 5, por: ana);
+    await pintar(tester, container);
+    await tester.tap(find.text('Todos'));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.descendant(
+            of: find.byKey(Key('etiqueta_nivel_$coca')),
+            matching: find.text('Bajo')),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byKey(Key('etiqueta_nivel_$pan')),
+            matching: find.text('OK')),
+        findsOneWidget);
+    final barra = tester.widget<LinearProgressIndicator>(find.descendant(
+        of: find.byKey(Key('nivel_$coca')),
+        matching: find.byType(LinearProgressIndicator)));
+    expect(barra.value, closeTo(2 / 12, 1e-9));
+  });
+
+  testWidgets('una entrada anulada muestra su monto tachado', (tester) async {
+    final (container, ana) = await montar(tester);
+    final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
+    final pan = await producto('Pan', proveedor: postobon);
+    final inv = InventarioRepository(db);
+    await inv.activarControl(pan, cantidad: 0, minimo: 0, por: ana);
+    final entrada = await inv.recibirMercancia(
+      proveedorId: postobon,
+      lineas: [LineaRecibida(productoId: pan, cantidad: 2, precioCompra: 500)],
+      por: ana,
+    );
+    await inv.anularEntrada(entrada, por: ana);
+    await pintar(tester, container);
+    await tester.scrollUntilVisible(find.byKey(Key('entrada_$entrada')), 200);
+    final monto = tester.widget<Text>(find.descendant(
+        of: find.byKey(Key('entrada_$entrada')),
+        matching: find.text(r'$1.000')));
+    expect(monto.style!.decoration, TextDecoration.lineThrough);
   });
 }

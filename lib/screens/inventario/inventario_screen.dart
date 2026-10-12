@@ -5,10 +5,15 @@ import '../../data/database.dart';
 import '../../providers/inventario_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../ui/avisos.dart';
+import '../../ui/avatar_inicial.dart';
+import '../../ui/entrada_escalonada.dart';
+import '../../ui/monto.dart';
+import '../../ui/nivel_existencias.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/estado_vacio.dart';
 import '../../ui/selector_segmentado.dart';
+import '../../ui/titulo_seccion.dart';
 import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
@@ -62,18 +67,52 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = ColoresApp.of(context);
     final controlados =
         ref.watch(productosConControlProvider).valueOrNull ?? const [];
     final grupos = ref.watch(porPedirProvider).valueOrNull ?? const [];
     final entradas =
         ref.watch(entradasRecientesProvider).valueOrNull ?? const [];
     final nPorPedir = grupos.fold<int>(0, (s, g) => s + g.productos.length);
+    final agotados = controlados
+        .where((x) =>
+            nivelExistencias(x.existencias, x.producto.minimo) ==
+            NivelExistencias.agotado)
+        .length;
     final vista = _vista ?? (nPorPedir > 0 ? _Vista.porPedir : _Vista.todos);
-    final gris = TextStyle(color: ColoresApp.of(context).textoSecundario);
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (controlados.isNotEmpty) ...[
+          EntradaEscalonada(
+            indice: 0,
+            child: Card(
+              key: const Key('resumen_inventario'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Row(
+                  children: [
+                    _Cifra(
+                        clave: 'resumen_controlados',
+                        valor: controlados.length,
+                        rotulo: 'Controlados'),
+                    _Cifra(
+                        clave: 'resumen_por_pedir',
+                        valor: nPorPedir,
+                        rotulo: 'Por pedir'),
+                    _Cifra(
+                        clave: 'resumen_agotados',
+                        valor: agotados,
+                        rotulo: 'Agotados',
+                        color: agotados > 0 ? c.sale : null),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         BotonPrincipal(
           key: const Key('boton_recibir_mercancia'),
           texto: 'Recibir mercancía',
@@ -101,110 +140,136 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
           ),
           const SizedBox(height: 12),
           if (vista == _Vista.todos)
-            Card(
-              child: Column(
-                children: [
-                  for (final c in controlados)
-                    ListTile(
-                      key: Key('inventario_item_${c.producto.id}'),
-                      title: Text(
-                        c.producto.nombre,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text('mín. ${c.producto.minimo}'),
-                      trailing: Text(
-                        textoExistencias(c.existencias),
-                        key: Key('existencias_${c.producto.id}'),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: c.existencias <= c.producto.minimo
-                              ? ColoresApp.of(context).sale
-                              : ColoresApp.of(context).texto,
+            EntradaEscalonada(
+              indice: 1,
+              child: Card(
+                child: Column(
+                  children: [
+                    for (final (i, x) in controlados.indexed) ...[
+                      if (i > 0) const Divider(height: 1),
+                      _FilaInventario(
+                        producto: x.producto,
+                        existencias: x.existencias,
+                        onTap: () => _abrir(
+                          DetalleInventarioScreen(productoId: x.producto.id),
                         ),
                       ),
-                      onTap: () => _abrir(
-                        DetalleInventarioScreen(productoId: c.producto.id),
-                      ),
-                    ),
-                ],
+                    ],
+                  ],
+                ),
               ),
             )
           else if (grupos.isEmpty)
-            Text(
-              'Nada por pedir',
-              key: const Key('texto_nada_por_pedir'),
-              style: gris,
+            const EstadoVacio(
+              key: Key('texto_nada_por_pedir'),
+              icono: Icons.check_circle_rounded,
+              titulo: 'Todo en orden',
+              mensaje: 'Ningún producto está en su mínimo',
             )
           else
-            for (final g in grupos) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 8, 0, 4),
-                // Si no caben, el botón baja a su propia línea.
-                child: OverflowBar(
-                  alignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '${g.proveedor?.nombre ?? 'Sin proveedor'} · '
-                      '${plural(g.productos.length, 'producto', 'productos')}',
-                      key: Key('grupo_por_pedir_${g.proveedor?.id ?? 'sin'}'),
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    TextButton(
-                      key: Key('ver_pedido_${g.proveedor?.id ?? 'sin'}'),
-                      onPressed: () => _verPedido(g.proveedor),
-                      child: const Text('Ver pedido sugerido'),
-                    ),
-                  ],
-                ),
-              ),
-              Card(
+            for (final (i, g) in grupos.indexed)
+              EntradaEscalonada(
+                indice: i + 1,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    for (final p in g.productos)
-                      ListTile(
-                        key: Key('por_pedir_${p.producto.id}'),
-                        title: Text(p.producto.nombre),
-                        subtitle: Text(
-                          'quedan ${numeroConSigno(p.existencias)} · '
-                          'mín. ${p.producto.minimo}',
-                        ),
-                        onTap: () => _abrir(
-                          DetalleInventarioScreen(productoId: p.producto.id),
-                        ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 8, 0, 4),
+                      // Si no caben, el botón baja a su propia línea.
+                      child: OverflowBar(
+                        alignment: MainAxisAlignment.spaceBetween,
+                        overflowAlignment: OverflowBarAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.local_shipping_rounded,
+                                  size: 18, color: c.textoSecundario),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  '${g.proveedor?.nombre ?? 'Sin proveedor'} · '
+                                  '${plural(g.productos.length, 'producto', 'productos')}',
+                                  key: Key(
+                                      'grupo_por_pedir_${g.proveedor?.id ?? 'sin'}'),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ],
+                          ),
+                          FilledButton.tonal(
+                            key: Key('ver_pedido_${g.proveedor?.id ?? 'sin'}'),
+                            onPressed: () => _verPedido(g.proveedor),
+                            child: const Text('Ver pedido sugerido'),
+                          ),
+                        ],
                       ),
+                    ),
+                    Card(
+                      child: Column(
+                        children: [
+                          for (final p in g.productos)
+                            ListTile(
+                              key: Key('por_pedir_${p.producto.id}'),
+                              title: Text(p.producto.nombre),
+                              subtitle: Text(
+                                'quedan ${numeroConSigno(p.existencias)} · '
+                                'mín. ${p.producto.minimo}',
+                              ),
+                              trailing: EtiquetaNivel(
+                                nivel: nivelExistencias(
+                                    p.existencias, p.producto.minimo),
+                              ),
+                              onTap: () => _abrir(
+                                DetalleInventarioScreen(
+                                    productoId: p.producto.id),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ],
         ],
         if (entradas.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(4, 24, 4, 8),
-            child: Text(
-              'Entradas recibidas',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-          ),
+          const SizedBox(height: 24),
+          const TituloSeccion('ENTRADAS RECIBIDAS'),
           Card(
             child: Column(
               children: [
                 for (final e in entradas)
                   ListTile(
                     key: Key('entrada_${e.entrada.id}'),
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: (e.entrada.anulada ? c.textoSecundario : c.entra)
+                            .withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.local_shipping_rounded,
+                          size: 20,
+                          color: e.entrada.anulada
+                              ? c.textoSecundario
+                              : c.entra),
+                    ),
                     title: Text(
-                      '${e.proveedor} · ${formatoMoneda(e.entrada.total)}',
+                      e.proveedor,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        decoration: e.entrada.anulada
-                            ? TextDecoration.lineThrough
-                            : null,
-                        color: e.entrada.anulada
-                            ? ColoresApp.of(context).textoSecundario
-                            : null,
+                        color: e.entrada.anulada ? c.textoSecundario : null,
                       ),
                     ),
                     subtitle: Text(
                       '${formatoFechaHora(e.entrada.fecha)} · ${e.usuario}',
+                    ),
+                    trailing: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 120),
+                      child: Monto(e.entrada.total,
+                          tamano: 16, tachado: e.entrada.anulada),
                     ),
                     onTap: () =>
                         _abrir(DetalleEntradaScreen(entradaId: e.entrada.id)),
@@ -214,6 +279,117 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// Una cifra del resumen con su rótulo.
+class _Cifra extends StatelessWidget {
+  const _Cifra({
+    required this.clave,
+    required this.valor,
+    required this.rotulo,
+    this.color,
+  });
+
+  final String clave;
+  final int valor;
+  final String rotulo;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = ColoresApp.of(context);
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            '$valor',
+            key: Key(clave),
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: color ?? c.texto,
+            ),
+          ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              rotulo,
+              style: TextStyle(fontSize: 12, color: c.textoSecundario),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Producto en la vista "Todos": nombre, mínimo, barra y existencias.
+class _FilaInventario extends StatelessWidget {
+  const _FilaInventario({
+    required this.producto,
+    required this.existencias,
+    required this.onTap,
+  });
+
+  final Producto producto;
+  final int existencias;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = ColoresApp.of(context);
+    final nivel = nivelExistencias(existencias, producto.minimo);
+    return InkWell(
+      key: Key('inventario_item_${producto.id}'),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            AvatarInicial(id: producto.id, nombre: producto.nombre),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(producto.nombre,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text('mín. ${producto.minimo}',
+                      style: TextStyle(
+                          fontSize: 12, color: c.textoSecundario)),
+                  const SizedBox(height: 6),
+                  BarraNivel(
+                    key: Key('nivel_${producto.id}'),
+                    fraccion: fraccionNivel(
+                        existencias, producto.minimo, producto.pedirHasta),
+                    nivel: nivel,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  textoExistencias(existencias),
+                  key: Key('existencias_${producto.id}'),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: existencias <= producto.minimo ? c.sale : c.texto,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                EtiquetaNivel(
+                    key: Key('etiqueta_nivel_${producto.id}'), nivel: nivel),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
