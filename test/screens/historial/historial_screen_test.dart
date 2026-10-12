@@ -7,6 +7,7 @@ import 'package:app_ventas/screens/historial/historial_screen.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_ventas/ui/colores_app.dart';
 import 'package:app_ventas/ui/monto.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -192,5 +193,69 @@ void main() {
 
     expect(enTotal('total_ventas', r'$0'), findsOneWidget);
     expect(find.text('Venta anulada'), findsOneWidget);
+  });
+
+  testWidgets('el filtro Gastos deja solo gastos y el resumen sin ventas',
+      (tester) async {
+    await cargarHoy();
+    await montar(tester);
+    await tester.tap(find.byKey(const Key('filtro_tipo_gastos')));
+    await tester.pumpAndSettle();
+    expect(enLista('Contado · Ana'), findsNothing);
+    expect(enLista('Hielo · Beto'), findsOneWidget);
+    expect(find.byKey(const Key('total_ventas')), findsNothing);
+    expect(enTotal('total_gastos', r'$1.500'), findsOneWidget);
+  });
+
+  testWidgets('Gastos sin gastos en el día muestra el vacío del filtro',
+      (tester) async {
+    await ventas.registrarVenta(monto: 5000, esFiado: false, usuarioId: ana);
+    await montar(tester);
+    await tester.tap(find.byKey(const Key('filtro_tipo_gastos')));
+    await tester.pumpAndSettle();
+    expect(find.text('Sin gastos este día'), findsOneWidget);
+    expect(enTotal('total_gastos', r'$0'), findsOneWidget);
+  });
+
+  testWidgets('agrupa por hora (recientes arriba) y cuenta los movimientos',
+      (tester) async {
+    final hoy = DateTime.now();
+    DateTime a(int h, int m) => DateTime(hoy.year, hoy.month, hoy.day, h, m);
+    await ventas.registrarVenta(
+        monto: 1000, esFiado: false, usuarioId: ana, fecha: a(18, 10));
+    await ventas.registrarVenta(
+        monto: 2000, esFiado: false, usuarioId: ana, fecha: a(9, 5));
+    await db.into(db.gastos).insert(GastosCompanion.insert(
+        monto: 300, fecha: a(18, 40), usuarioId: ana));
+    await montar(tester);
+    expect(find.byKey(const Key('hora_18')), findsOneWidget);
+    expect(find.byKey(const Key('hora_9')), findsOneWidget);
+    expect(tester.getTopLeft(find.byKey(const Key('hora_18'))).dy,
+        lessThan(tester.getTopLeft(find.byKey(const Key('hora_9'))).dy));
+    expect(find.text('3 movimientos'), findsOneWidget);
+  });
+
+  testWidgets('el ícono depende del tipo', (tester) async {
+    final cliente = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
+    final contado =
+        await ventas.registrarVenta(monto: 1000, esFiado: false, usuarioId: ana);
+    final fiado = await ventas.registrarVenta(
+        monto: 2000, esFiado: true, clienteId: cliente, usuarioId: ana);
+    final gasto =
+        await gastos.registrarGasto(monto: 300, usuarioId: ana);
+    await montar(tester);
+    Color color(String clave) =>
+        (tester.widget<Container>(find.byKey(Key(clave))).decoration!
+                as BoxDecoration)
+            .color!;
+    final c = ColoresApp.claro;
+    expect(color('icono_movimiento_venta_$contado'),
+        c.entra.withValues(alpha: 0.15));
+    expect(color('icono_movimiento_venta_$fiado'),
+        c.fiado.withValues(alpha: 0.15));
+    expect(color('icono_movimiento_gasto_$gasto'),
+        c.sale.withValues(alpha: 0.15));
   });
 }
