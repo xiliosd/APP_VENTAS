@@ -18,9 +18,10 @@ void main() {
         UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'));
 
     final copia = await CopiaBaseDatos.crearCopia(db, carpeta);
+    final version = db.schemaVersion;
     await db.close();
 
-    expect(CopiaBaseDatos.esCopiaValida(copia, versionMaxima: 7), isTrue);
+    expect(CopiaBaseDatos.esCopiaValida(copia, versionMaxima: version), isTrue);
     final abierta = AppDatabase(NativeDatabase(copia));
     expect((await abierta.select(abierta.usuarios).get()).single.nombre, 'Ana');
     await abierta.close();

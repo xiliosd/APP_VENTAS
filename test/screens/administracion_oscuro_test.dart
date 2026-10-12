@@ -15,6 +15,9 @@ import 'package:app_ventas/screens/inventario/inventario_screen.dart';
 import 'package:app_ventas/screens/inventario/pedido_sugerido_screen.dart';
 import 'package:app_ventas/screens/inventario/recibir_mercancia_screen.dart';
 import 'package:app_ventas/screens/qr/configurar_qr_screen.dart';
+import 'package:app_ventas/screens/venta/hoja_producto_rapido.dart';
+import 'package:app_ventas/screens/venta/registrar_venta_screen.dart';
+import 'package:app_ventas/servicios/open_food_facts.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -39,17 +42,32 @@ void main() {
     final prov = await ProveedorRepository(db)
         .crear(nombre: 'Distribuidora Postobón', telefono: '3001234567');
     final productos = ProductoRepository(db);
-    Future<int> nuevo(String nombre, int precio) => productos.guardarProducto(
+    Future<int> nuevo(String nombre, int precio,
+            [DetallesProducto? detalles]) =>
+        productos.guardarProducto(
           nombre: nombre,
           precio: precio,
           proveedores: [
             ProveedorDeProducto(
                 proveedorId: prov, precioCompra: 900, preferido: true),
           ],
+          detalles: detalles,
         );
-    final coca = await nuevo('Coca-Cola 1,5 litros familiar', 4500);
-    final pan = await nuevo('Pan tajado integral', 600);
+    final coca = await nuevo(
+        'Coca-Cola 1,5 litros familiar',
+        4500,
+        const DetallesProducto(
+            codigoBarras: '7702004003508',
+            marca: 'Postobón',
+            tamano: '1,5 litros familiar',
+            envase: 'botella_plastica',
+            tipo: 'bebidas'));
+    final pan = await nuevo('Pan tajado integral', 600,
+        const DetallesProducto(tipo: 'panaderia', marca: 'Bimbo'));
     final agua = await nuevo('Agua', 1500);
+    for (final n in ['Leche entera', 'Yogur', 'Kumis', 'Queso campesino']) {
+      await nuevo(n, 3000, const DetallesProducto(tipo: 'lacteos'));
+    }
     final inv = InventarioRepository(db);
     await inv.activarControl(coca, cantidad: 2, minimo: 6, por: ana);
     await inv.activarControl(pan, cantidad: 30, minimo: 5, por: ana);
@@ -72,7 +90,9 @@ void main() {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    final container = await containerConSesion(db);
+    final container = await containerConSesion(db, overrides: [
+      consultaProductoProvider.overrideWithValue(_SinDatos()),
+    ]);
     addTearDown(container.dispose);
     final d = await datos(container);
     await tester.pumpWidget(appDePrueba(
@@ -105,6 +125,7 @@ void main() {
     'proveedores': (_) => const ProveedoresScreen(),
     'usuarios': (_) => const UsuariosScreen(),
     'configurar QR': (_) => const ConfigurarQrScreen(),
+    'nueva venta con chips': (_) => const RegistrarVentaScreen(),
   };
 
   for (final MapEntry(key: nombre, value: construir) in pantallas.entries) {
@@ -125,4 +146,36 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('la hoja de producto rápido en oscuro con letra 2,0× no desborda',
+      (tester) async {
+    await montar(
+        tester,
+        (_) => Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () =>
+                      mostrarHojaProductoRapido(context, codigo: '999'),
+                  child: const Text('abrir'),
+                ),
+              ),
+            ));
+    await tester.tap(find.text('abrir'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('hoja_producto_rapido')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('la venta con chips muestra los tipos con letra 2,0×',
+      (tester) async {
+    await montar(tester, (_) => const RegistrarVentaScreen());
+    expect(find.byKey(const Key('filtro_tipo_venta_todos')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+/// Sin internet en pruebas: la consulta nunca encuentra nada.
+class _SinDatos implements ConsultaProducto {
+  @override
+  Future<DatosProducto?> buscar(String codigo) async => null;
 }

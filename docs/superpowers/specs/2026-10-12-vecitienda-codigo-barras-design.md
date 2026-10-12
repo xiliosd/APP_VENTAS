@@ -1,7 +1,7 @@
 # Código de barras: escanear, autocompletar y vender
 
 **Fecha:** 2026-10-12
-**Estado:** Diseño aprobado en conversación; pendiente de revisar la spec escrita
+**Estado:** Implementado (falta probar la cámara con productos reales)
 **Base:** master con la renovación R1–R4 y el buscador fijo de la venta (fb154d6, 727 pruebas).
 
 ## Contexto y objetivo
