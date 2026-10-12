@@ -17,6 +17,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:app_ventas/ui/colores_app.dart';
+
 import '../../support/montaje.dart';
 
 void main() {
@@ -485,6 +487,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ya no puedes corregir este movimiento'), findsOneWidget);
+  });
+
+  testWidgets('la cabecera lleva el ícono y el color del tipo',
+      (tester) async {
+    final (container, ana) = await sesion();
+    final id = await GastoRepository(db)
+        .registrarGasto(monto: 300, descripcion: 'Hielo', usuarioId: ana.id);
+    await abrir(
+        tester,
+        container,
+        MovimientoEditable(
+          tipo: TipoMovimiento.gasto,
+          id: id,
+          monto: 300,
+          fecha: DateTime.now(),
+          usuarioId: ana.id,
+        ));
+    final cabecera =
+        tester.widget<Container>(find.byKey(const Key('cabecera_movimiento')));
+    expect((cabecera.decoration! as BoxDecoration).color,
+        ColoresApp.claro.sale.withValues(alpha: 0.15));
+    expect(
+        tester.widget<BotonPrincipal>(find.byKey(const Key('boton_anular')))
+            .variante,
+        VarianteBoton.peligro);
   });
 }
 

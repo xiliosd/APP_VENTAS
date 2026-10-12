@@ -361,7 +361,7 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Monto(_m.monto, tamano: 32, tachado: _m.anulado),
+        _CabeceraMovimiento(movimiento: _m),
         const SizedBox(height: 4),
         Text(_detalle, key: const Key('detalle_movimiento')),
         for (final linea in _lineas)
@@ -393,12 +393,12 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
               texto: 'Corregir',
               onPressed: () => setState(() => _editando = true),
             ),
-          const SizedBox(height: 8),
-          TextButton(
+          const SizedBox(height: 12),
+          BotonPrincipal(
             key: const Key('boton_anular'),
-            style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
+            texto: 'Anular',
+            variante: VarianteBoton.peligro,
             onPressed: _guardando ? null : _anular,
-            child: const Text('Anular'),
           ),
         ],
       ],
@@ -532,6 +532,46 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
           key: const Key('boton_guardar_correccion'),
           texto: 'Guardar',
           onPressed: _hayCambios && _valido && !_guardando ? _guardar : null,
+        ),
+      ],
+    );
+  }
+}
+
+/// Ícono y monto del movimiento con el color de su tipo.
+class _CabeceraMovimiento extends StatelessWidget {
+  const _CabeceraMovimiento({required this.movimiento});
+
+  final MovimientoEditable movimiento;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = ColoresApp.of(context);
+    final (color, icono, tono) = switch (movimiento.tipo) {
+      TipoMovimiento.gasto => (c.sale, Icons.call_made_rounded, TonoMonto.sale),
+      TipoMovimiento.abono =>
+        (c.entra, Icons.payments_rounded, TonoMonto.entra),
+      TipoMovimiento.venta => movimiento.esFiado
+          ? (c.fiado, Icons.menu_book_rounded, TonoMonto.fiado)
+          : (c.entra, Icons.shopping_cart_rounded, TonoMonto.entra),
+    };
+    final colorIcono = movimiento.anulado ? c.textoSecundario : color;
+    return Row(
+      children: [
+        Container(
+          key: const Key('cabecera_movimiento'),
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: colorIcono.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icono, color: colorIcono, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Monto(movimiento.monto,
+              tamano: 32, tono: tono, tachado: movimiento.anulado),
         ),
       ],
     );
