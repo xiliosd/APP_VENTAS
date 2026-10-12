@@ -27,15 +27,18 @@ inventario, buscador de productos, barra de total fija y avatares con chip de ro
   - `double fraccionNivel(int existencias, int minimo, int? pedirHasta)`: existencias ÷ tope,
     con tope = `pedirHasta` si es > 0; si no, `2 × minimo` si es > 0; si no,
     `existencias` (barra llena). Resultado limitado a 0..1; 0 si existencias ≤ 0.
-  - `EtiquetaNivel(nivel)`: píldora con "Agotado" (`sale`), "Bajo" (`fiado`) u "OK"
-    (`entra`); fondo del color al 15 %, texto 12 px w700 en el color (en modo claro el
-    texto usa `c.texto` si el color no alcanza 4,5:1 sobre su fondo, como en R3a).
+  - `EtiquetaNivel(nivel)`: `Pildora` con "Agotado" (`sale`), "Bajo" (`fiado`) u "OK"
+    (`entra`).
   - `BarraNivel(fraccion, nivel)`: barra de 6 px de alto, redondeada, fondo
     `textoSecundario` al 15 % y relleno en el color del nivel.
+- **`pildora.dart`** — `Pildora({required String texto, required Color color})`: fondo
+  del color al 15 %, forma de estadio, punto de 8 px en el color y texto 12 px w700 en
+  `c.texto` (así cumple 4,5:1 en ambos temas, como se decidió en R3a). La usan la etiqueta de
+  nivel, el margen de productos, "Surte N" y el chip de rol.
 - **`barra_accion_fija.dart`** — `BarraAccionFija({required Widget total, required Widget
   boton})`: franja inferior (para `Scaffold.bottomNavigationBar`) con fondo `superficie`,
-  sombra superior suave, `SafeArea`, padding 16; total a la izquierda (`Flexible`, con
-  `FittedBox` para letra grande) y botón a la derecha.
+  sombra superior suave, `SafeArea`, padding 16; el total arriba y el botón (ancho completo)
+  debajo, para que con letra grande nada se desborde.
 - **`titulo_seccion.dart`** — `TituloSeccion(texto)`: el `_Titulo` actual de Ajustes (12 px,
   w700, espaciado 0,5, `textoSecundario`) movido para reutilizarlo.
 - **`icono_cuadrado.dart`** — `IconoCuadrado(icono, color)`: ícono de 20 px en un cuadrado
@@ -97,7 +100,8 @@ inventario, buscador de productos, barra de total fija y avatares con chip de ro
 
 - El total y el botón se mueven a `BarraAccionFija` como `bottomNavigationBar`; se
   conservan `total_recibir`/`boton_guardar_recibir` y `total_pedido`/
-  `boton_recibir_pedido`. El total usa `Monto(animado: true)`.
+  `boton_recibir_pedido`. El total conserva su texto actual ("Total $X", "Total estimado
+  $X"), ahora a 20 px w800.
 - Cada línea de producto es una `Card` con nombre (w600), botones −/+ redondos de 40 px
   envueltos en `Aplastable`, cantidad y precio de compra. Se conservan todas las claves
   (`restar_*`, `sumar_*`, `cantidad_*`, `precio_*`, `quitar_recibir_*`).
@@ -131,8 +135,8 @@ inventario, buscador de productos, barra de total fija y avatares con chip de ro
 
 ### 4.2 Ficha de producto (`producto_screen.dart`)
 
-- **Vista previa** (`vista_previa_producto`) arriba: `AvatarInicial`, nombre ("Nuevo
-  producto" si está vacío) y `Monto` del precio, que se actualizan al escribir.
+- **Vista previa** (`vista_previa_producto`) arriba: `AvatarInicial`, nombre ("Sin nombre" si
+  está vacío, para no repetir el título) y `Monto` del precio, que se actualizan al escribir.
 - El formulario se agrupa en tres tarjetas con `TituloSeccion`: "DATOS" (nombre y precio),
   "PROVEEDORES Y COSTO" (filas de proveedor, "Agregar proveedor" y `texto_resumen_costo`) y
   "EXISTENCIAS" (interruptor y sus campos).
@@ -149,9 +153,8 @@ inventario, buscador de productos, barra de total fija y avatares con chip de ro
 ### 4.4 Usuarios (`usuarios_screen.dart`)
 
 - Cada fila (`usuario_item_{id}`) con `AvatarInicial(id, nombre)`, nombre con " (tú)" si
-  es el usuario de la sesión, y chip de rol (`rol_{id}`): "Administrador" con `primario`,
-  "Vendedor" con `marcaVerde` (fondo al 15 %, mismo criterio de contraste que
-  `EtiquetaNivel`).
+  es el usuario de la sesión, y chip de rol (`rol_{id}`, `Pildora`): "Administrador" con
+  `primario`, "Vendedor" con `marcaVerde`.
 - La hoja de nuevo usuario y el diálogo de resetear PIN conservan flujo y claves; sus
   botones de acción son `BotonPrincipal`.
 
