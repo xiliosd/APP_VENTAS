@@ -25,8 +25,11 @@ import '../recorrido/globos_venta.dart';
 import 'hoja_como_paga.dart';
 
 class RegistrarVentaScreen extends ConsumerStatefulWidget {
-  const RegistrarVentaScreen(
-      {super.key, this.practica = false, this.conGlobos = true});
+  const RegistrarVentaScreen({
+    super.key,
+    this.practica = false,
+    this.conGlobos = true,
+  });
 
   /// Venta de práctica del recorrido: guía con globos y no guarda nada.
   final bool practica;
@@ -58,8 +61,11 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     if (widget.practica && widget.conGlobos) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _globos =
-            mostrarGlobos(context, globosVenta, onSaltar: _saltarRecorrido);
+        _globos = mostrarGlobos(
+          context,
+          globosVenta,
+          onSaltar: _saltarRecorrido,
+        );
       });
     }
   }
@@ -93,12 +99,15 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
         key: const Key('hoja_asi_de_facil'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('${plural(ticket.cantidadArticulos, 'artículo', 'artículos')}'
-              ' · ${formatoMoneda(ticket.total)}'),
+          Text(
+            '${plural(ticket.cantidadArticulos, 'artículo', 'artículos')}'
+            ' · ${formatoMoneda(ticket.total)}',
+          ),
           const SizedBox(height: 4),
-          Text('Esta venta fue de práctica, no quedó en tus cuentas.',
-              style:
-                  TextStyle(color: ColoresApp.of(contexto).textoSecundario)),
+          Text(
+            'Esta venta fue de práctica, no quedó en tus cuentas.',
+            style: TextStyle(color: ColoresApp.of(contexto).textoSecundario),
+          ),
           const SizedBox(height: 16),
           BotonPrincipal(
             key: const Key('boton_continuar_practica'),
@@ -162,9 +171,11 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     }
     if (forma != FormaPago.fiado) {
       notifier.cambiarFiado(false);
-      notifier.cambiarMedioPago(forma == FormaPago.transferencia
-          ? MedioPago.transferencia
-          : MedioPago.efectivo);
+      notifier.cambiarMedioPago(
+        forma == FormaPago.transferencia
+            ? MedioPago.transferencia
+            : MedioPago.efectivo,
+      );
     }
     await _cobrar();
   }
@@ -236,102 +247,115 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     }
 
     final lista = ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const _Seccion('PRODUCTOS'),
-          productosAsync.when(
-            data: (productos) {
-              final visibles = [
-                for (final p in productos)
-                  if (_filtro.isEmpty || sinTildes(p.nombre).contains(_filtro))
-                    p,
-              ];
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (productos.length > _productosSinBuscador) ...[
-                    TextField(
-                      key: const Key('buscador_productos'),
-                      controller: _busqueda,
-                      decoration: const InputDecoration(
-                        hintText: 'Buscar producto…',
-                        prefixIcon: Icon(Icons.search_rounded),
-                      ),
-                      onChanged: (t) =>
-                          setState(() => _filtro = sinTildes(t.trim())),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  if (_filtro.isNotEmpty && visibles.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        'Sin resultados',
-                        key: const Key('texto_sin_resultados'),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: ColoresApp.of(context).textoSecundario),
-                      ),
-                    ),
-                  GrillaMosaicos(
-              conSubtitulo: true,
+      padding: const EdgeInsets.all(16),
+      children: [
+        const _Seccion('PRODUCTOS'),
+        productosAsync.when(
+          data: (productos) {
+            final visibles = [
+              for (final p in productos)
+                if (_filtro.isEmpty || sinTildes(p.nombre).contains(_filtro)) p,
+            ];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final (i, p) in visibles.indexed)
-                  ObjetivoRecorrido(
-                    id: i == 0 ? 'primer_producto' : 'producto_${p.id}',
-                    child: Mosaico(
-                      key: Key('producto_${p.id}'),
-                      titulo: p.nombre,
-                      subtitulo: formatoMoneda(p.precio),
-                      cantidad: ticket.cantidadDe('p${p.id}'),
-                      onTap: () => notifier.agregarProducto(p),
+                if (_filtro.isNotEmpty && visibles.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'Sin resultados',
+                      key: const Key('texto_sin_resultados'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: ColoresApp.of(context).textoSecundario,
+                      ),
                     ),
                   ),
-                Mosaico(
-                  key: const Key('boton_otro_monto'),
-                  titulo: '+ Otro',
-                  subtitulo: 'monto',
-                  destacado: true,
-                  onTap: _otroMonto,
+                GrillaMosaicos(
+                  conSubtitulo: true,
+                  children: [
+                    for (final (i, p) in visibles.indexed)
+                      ObjetivoRecorrido(
+                        id: i == 0 ? 'primer_producto' : 'producto_${p.id}',
+                        child: Mosaico(
+                          key: Key('producto_${p.id}'),
+                          titulo: p.nombre,
+                          subtitulo: formatoMoneda(p.precio),
+                          cantidad: ticket.cantidadDe('p${p.id}'),
+                          onTap: () => notifier.agregarProducto(p),
+                          onRestar: () => notifier.restar('p${p.id}'),
+                        ),
+                      ),
+                    Mosaico(
+                      key: const Key('boton_otro_monto'),
+                      titulo: '+ Otro',
+                      subtitulo: 'monto',
+                      destacado: true,
+                      onTap: _otroMonto,
+                    ),
+                  ],
                 ),
               ],
-                  ),
-                ],
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Text('Error: $e'),
-          ),
-          const _Seccion('MONTOS RÁPIDOS'),
-          MontoRapidoGrid(
-            onSeleccionar: notifier.agregarMonto,
-            cantidadDe: (monto) => ticket.cantidadDe('m$monto'),
-          ),
-        ],
-      );
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, st) => Text('Error: $e'),
+        ),
+        const _Seccion('MONTOS RÁPIDOS'),
+        MontoRapidoGrid(
+          onSeleccionar: notifier.agregarMonto,
+          cantidadDe: (monto) => ticket.cantidadDe('m$monto'),
+        ),
+      ],
+    );
     final c = ColoresApp.of(context);
+    final conBuscador =
+        (productosAsync.valueOrNull?.length ?? 0) > _productosSinBuscador;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Nueva venta')),
-      body: !widget.practica
-          ? lista
-          : Column(
-              children: [
-                Container(
-                  key: const Key('franja_practica'),
-                  width: double.infinity,
-                  color: c.fiadoSuave,
-                  padding: const EdgeInsets.all(8),
-                  child: Text(
-                    'MODO PRÁCTICA · no se guarda',
-                    textAlign: TextAlign.center,
-                    style:
-                        TextStyle(color: c.fiado, fontWeight: FontWeight.w700),
-                  ),
-                ),
-                Expanded(child: lista),
-              ],
+      body: Column(
+        children: [
+          if (widget.practica)
+            Container(
+              key: const Key('franja_practica'),
+              width: double.infinity,
+              color: c.fiadoSuave,
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                'MODO PRÁCTICA · no se guarda',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: c.fiado, fontWeight: FontWeight.w700),
+              ),
             ),
+          // Fijo arriba: sigue a la vista aunque se baje por la lista.
+          if (conBuscador)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: TextField(
+                key: const Key('buscador_productos'),
+                controller: _busqueda,
+                decoration: InputDecoration(
+                  hintText: 'Buscar producto…',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: _filtro.isEmpty
+                      ? null
+                      : IconButton(
+                          key: const Key('borrar_busqueda'),
+                          tooltip: 'Borrar búsqueda',
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () {
+                            _busqueda.clear();
+                            setState(() => _filtro = '');
+                          },
+                        ),
+                ),
+                onChanged: (t) => setState(() => _filtro = sinTildes(t.trim())),
+              ),
+            ),
+          Expanded(child: lista),
+        ],
+      ),
       bottomNavigationBar: _BarraCobro(
         ticket: ticket,
         cobrando: _cobrando,
@@ -414,7 +438,9 @@ class _BarraCobro extends StatelessWidget {
                       n == 1 ? '1 artículo' : '$n artículos',
                       key: const Key('texto_articulos'),
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: ColoresApp.of(context).textoSecundario),
+                      style: TextStyle(
+                        color: ColoresApp.of(context).textoSecundario,
+                      ),
                     ),
                   ),
                   // Los botones van lado a lado si caben; con letra muy

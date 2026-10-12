@@ -1,4 +1,5 @@
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/providers/ticket_provider.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
 import 'package:app_ventas/screens/venta/registrar_venta_screen.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
@@ -423,6 +424,66 @@ void main() {
     await tester.tap(find.byKey(const Key('boton_vaciar')));
     await tester.pump();
     expect(find.text('Pan'), findsOneWidget);
+  });
+
+  testWidgets('con muchos productos el buscador sigue a la vista al bajar',
+      (tester) async {
+    await crearProductos([for (var i = 0; i < 40; i++) 'Producto $i']);
+    await abrirVenta(tester);
+    await tester.drag(find.text('Producto 0'), const Offset(0, -1500));
+    await tester.pumpAndSettle();
+    final buscador = find.byKey(const Key('buscador_productos'));
+    expect(buscador, findsOneWidget);
+    expect(tester.getRect(buscador).top, greaterThanOrEqualTo(0));
+    // La lista bajó por debajo del buscador, que se quedó arriba.
+    expect(tester.getRect(find.text('Producto 0')).bottom,
+        lessThan(tester.getRect(buscador).bottom));
+    await tester.enterText(buscador, 'producto 3');
+    await tester.pump();
+    expect(find.text('Producto 3'), findsOneWidget);
+  });
+
+  testWidgets('la ✕ del buscador borra la búsqueda', (tester) async {
+    await crearProductos(siete);
+    await abrirVenta(tester);
+    expect(find.byKey(const Key('borrar_busqueda')), findsNothing);
+    await tester.enterText(find.byKey(const Key('buscador_productos')), 'caf');
+    await tester.pump();
+    expect(find.text('Pan'), findsNothing);
+    await tester.tap(find.byKey(const Key('borrar_busqueda')));
+    await tester.pump();
+    expect(find.text('Pan'), findsOneWidget);
+    expect(find.byKey(const Key('borrar_busqueda')), findsNothing);
+  });
+
+  testWidgets('el − del mosaico resta y en 1 muestra la caneca y lo quita',
+      (tester) async {
+    await crearProductos(['Pan']);
+    await abrirVenta(tester);
+    final pan = find.byKey(const Key('producto_1'));
+    Finder restar() => find.descendant(
+        of: pan, matching: find.byKey(const Key('restar_mosaico')));
+    expect(restar(), findsNothing);
+
+    await tester.tap(find.text('Pan'));
+    await tester.tap(find.text('Pan'));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: pan, matching: find.text('2')), findsOneWidget);
+    expect(find.descendant(of: restar(), matching: find.byIcon(Icons.remove_rounded)),
+        findsOneWidget);
+
+    await tester.tap(restar());
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: pan, matching: find.text('1')), findsOneWidget);
+    expect(
+        find.descendant(
+            of: restar(), matching: find.byIcon(Icons.delete_outline_rounded)),
+        findsOneWidget);
+
+    await tester.tap(restar());
+    await tester.pumpAndSettle();
+    expect(restar(), findsNothing);
+    expect(container.read(ticketProvider).estaVacio, isTrue);
   });
 
   testWidgets('con 6 productos o menos no hay buscador', (tester) async {
