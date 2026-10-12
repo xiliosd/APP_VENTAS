@@ -7,6 +7,8 @@ import '../../providers/proveedores_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../repositories/inventario_repository.dart';
+import '../../ui/barra_accion_fija.dart';
+import '../../ui/boton_cantidad.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/dialogo_cantidad.dart';
@@ -178,6 +180,18 @@ class _RecibirMercanciaScreenState
         const <Proveedor>[];
     return Scaffold(
       appBar: AppBar(title: const Text('Recibir mercancía')),
+      bottomNavigationBar: BarraAccionFija(
+        total: Text(
+          'Total ${formatoMoneda(_total)}',
+          key: const Key('total_recibir'),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+        boton: BotonPrincipal(
+          key: const Key('boton_guardar_recibir'),
+          texto: 'Guardar',
+          onPressed: _puedeGuardar ? _guardar : null,
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -203,7 +217,7 @@ class _RecibirMercanciaScreenState
           for (final l in _lineas)
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -228,10 +242,10 @@ class _RecibirMercanciaScreenState
                     ),
                     Row(
                       children: [
-                        IconButton(
+                        BotonCantidad(
                           key: Key('restar_recibir_${l.producto.id}'),
+                          icono: Icons.remove_rounded,
                           tooltip: 'Restar',
-                          icon: const Icon(Icons.remove_rounded),
                           onPressed: l.cantidad > 1
                               ? () => setState(() => l.cantidad--)
                               : null,
@@ -255,13 +269,17 @@ class _RecibirMercanciaScreenState
                             child: Text(
                               '${l.cantidad}',
                               key: Key('cantidad_recibir_${l.producto.id}'),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
-                        IconButton(
+                        BotonCantidad(
                           key: Key('sumar_recibir_${l.producto.id}'),
+                          icono: Icons.add_rounded,
                           tooltip: 'Sumar',
-                          icon: const Icon(Icons.add_rounded),
                           onPressed: () => setState(() => l.cantidad++),
                         ),
                         const SizedBox(width: 8),
@@ -295,12 +313,6 @@ class _RecibirMercanciaScreenState
             label: const Text('Agregar producto'),
           ),
           const SizedBox(height: 12),
-          Text(
-            'Total ${formatoMoneda(_total)}',
-            key: const Key('total_recibir'),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 12),
           TextField(
             key: const Key('campo_nota_recibir'),
             controller: _nota,
@@ -315,12 +327,6 @@ class _RecibirMercanciaScreenState
                 style: TextStyle(color: ColoresApp.of(context).sale),
               ),
             ),
-          const SizedBox(height: 24),
-          BotonPrincipal(
-            key: const Key('boton_guardar_recibir'),
-            texto: 'Guardar',
-            onPressed: _puedeGuardar ? _guardar : null,
-          ),
         ],
       ),
     );

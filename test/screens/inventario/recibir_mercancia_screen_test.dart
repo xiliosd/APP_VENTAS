@@ -4,6 +4,7 @@ import 'package:app_ventas/repositories/inventario_repository.dart';
 import 'package:app_ventas/repositories/producto_repository.dart';
 import 'package:app_ventas/repositories/proveedor_repository.dart';
 import 'package:app_ventas/screens/inventario/recibir_mercancia_screen.dart';
+import 'package:app_ventas/ui/barra_accion_fija.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -276,5 +277,37 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(precio(tester, arepa), '2800');
+  });
+
+  testWidgets('con muchos productos el total y Guardar siguen a la vista',
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final container = await containerConSesion(db);
+    addTearDown(container.dispose);
+    final repo = ProductoRepository(db);
+    final lineas = <LineaInicial>[];
+    for (var i = 0; i < 12; i++) {
+      final id = await repo.guardarProducto(nombre: 'Producto $i', precio: 1000);
+      final p = await (db.select(db.productos)..where((x) => x.id.equals(id)))
+          .getSingle();
+      lineas.add(LineaInicial(producto: p, cantidad: 2, precio: 500));
+    }
+    await tester.pumpWidget(appDePrueba(container,
+        inicio: RecibirMercanciaScreen(lineasIniciales: lineas)));
+    await tester.pumpAndSettle();
+
+    final pantalla = tester.getRect(find.byType(Scaffold).last);
+    for (final clave in ['total_recibir', 'boton_guardar_recibir']) {
+      final r = tester.getRect(find.byKey(Key(clave)));
+      expect(r.bottom, lessThanOrEqualTo(pantalla.bottom), reason: clave);
+      expect(r.top, greaterThanOrEqualTo(pantalla.top), reason: clave);
+    }
+    expect(
+        find.ancestor(
+            of: find.byKey(const Key('boton_guardar_recibir')),
+            matching: find.byType(BarraAccionFija)),
+        findsOneWidget);
   });
 }

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../providers/inventario_providers.dart';
 import '../../repositories/inventario_repository.dart';
+import '../../ui/barra_accion_fija.dart';
+import '../../ui/boton_cantidad.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/dialogo_cantidad.dart';
@@ -69,6 +71,21 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
           'Pedido sugerido · ${widget.proveedor?.nombre ?? 'Sin proveedor'}',
         ),
       ),
+      bottomNavigationBar: pedido.hasValue && lineas.isNotEmpty
+          ? BarraAccionFija(
+              total: Text(
+                'Total estimado ${formatoMoneda(total)}',
+                key: const Key('total_pedido'),
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              ),
+              boton: BotonPrincipal(
+                key: const Key('boton_recibir_pedido'),
+                texto: 'Recibir este pedido',
+                onPressed: hayAlgo ? () => _recibir(lineas) : null,
+              ),
+            )
+          : null,
       body: !pedido.hasValue
           ? pedido.hasError
                 ? const EstadoVacio(
@@ -87,7 +104,7 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
                 for (final l in lineas)
                   Card(
                     child: Padding(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
                           Expanded(
@@ -118,10 +135,10 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
                               ],
                             ),
                           ),
-                          IconButton(
+                          BotonCantidad(
                             key: Key('restar_pedido_${l.producto.id}'),
+                            icono: Icons.remove_rounded,
                             tooltip: 'Restar',
-                            icon: const Icon(Icons.remove_rounded),
                             onPressed: _cantidad(l) > 0
                                 ? () => setState(
                                     () => _cantidades[l.producto.id] =
@@ -154,10 +171,10 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
                               ),
                             ),
                           ),
-                          IconButton(
+                          BotonCantidad(
                             key: Key('sumar_pedido_${l.producto.id}'),
+                            icono: Icons.add_rounded,
                             tooltip: 'Sumar',
-                            icon: const Icon(Icons.add_rounded),
                             onPressed: () => setState(
                               () =>
                                   _cantidades[l.producto.id] = _cantidad(l) + 1,
@@ -167,21 +184,6 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
                       ),
                     ),
                   ),
-                const SizedBox(height: 12),
-                Text(
-                  'Total estimado ${formatoMoneda(total)}',
-                  key: const Key('total_pedido'),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                BotonPrincipal(
-                  key: const Key('boton_recibir_pedido'),
-                  texto: 'Recibir este pedido',
-                  onPressed: hayAlgo ? () => _recibir(lineas) : null,
-                ),
               ],
             ),
     );

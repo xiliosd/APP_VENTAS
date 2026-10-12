@@ -11,6 +11,7 @@ import 'package:app_ventas/screens/inventario/pedido_sugerido_screen.dart';
 import 'package:app_ventas/screens/inventario/recibir_mercancia_screen.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:drift/native.dart';
+import 'package:app_ventas/ui/barra_accion_fija.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -76,6 +77,11 @@ void main() {
         tester.widget<Text>(find.byKey(Key('cantidad_pedido_$pan'))).data, '9');
     expect(find.text(r'22 × $900 = $19.800'), findsOneWidget);
     expect(find.text(r'Total estimado $23.400'), findsOneWidget);
+    expect(
+        find.ancestor(
+            of: find.byKey(const Key('total_pedido')),
+            matching: find.byType(BarraAccionFija)),
+        findsOneWidget);
 
     await tester.tap(find.byKey(Key('restar_pedido_$coca')));
     await tester.tap(find.byKey(Key('sumar_pedido_$pan')));
