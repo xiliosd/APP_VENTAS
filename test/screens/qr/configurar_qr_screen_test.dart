@@ -30,10 +30,11 @@ void main() {
   testWidgets('sin QR muestra la ayuda y Cargar QR lo guarda',
       (tester) async {
     await montar(tester, SelectorImagenFalso(bytes: pngDePrueba));
-    expect(
-        find.text('Descarga tu QR desde la app de Nequi, Daviplata o tu '
-            'banco y cárgalo aquí.'),
+    expect(find.byKey(const Key('pasos_qr')), findsOneWidget);
+    expect(find.text('Descarga tu QR de Nequi, Daviplata o tu banco'),
         findsOneWidget);
+    expect(find.text('Cárgalo aquí'), findsOneWidget);
+    expect(find.text('Cobra mostrándolo en la venta'), findsOneWidget);
     expect(find.text('Aún no has cargado tu QR'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('boton_cargar_qr')));
@@ -42,6 +43,11 @@ void main() {
     expect(await ConfiguracionRepository(db).imagenQr(), pngDePrueba);
     expect(find.byKey(const Key('vista_qr')), findsOneWidget);
     expect(find.text('Cambiar QR'), findsOneWidget);
+    expect(
+        find.ancestor(
+            of: find.byKey(const Key('vista_qr')),
+            matching: find.byKey(const Key('tarjeta_qr_configurado'))),
+        findsOneWidget);
   });
 
   testWidgets('si no se elige imagen no cambia nada', (tester) async {
@@ -63,6 +69,7 @@ void main() {
   testWidgets('Quitar QR pide confirmación y lo borra', (tester) async {
     await ConfiguracionRepository(db).guardarImagenQr(pngDePrueba);
     await montar(tester, SelectorImagenFalso());
+    await tester.ensureVisible(find.byKey(const Key('boton_quitar_qr')));
     await tester.tap(find.byKey(const Key('boton_quitar_qr')));
     await tester.pumpAndSettle();
     expect(find.text('¿Quitar tu QR?'), findsOneWidget);
@@ -76,6 +83,7 @@ void main() {
   testWidgets('cancelar Quitar QR no lo borra', (tester) async {
     await ConfiguracionRepository(db).guardarImagenQr(pngDePrueba);
     await montar(tester, SelectorImagenFalso());
+    await tester.ensureVisible(find.byKey(const Key('boton_quitar_qr')));
     await tester.tap(find.byKey(const Key('boton_quitar_qr')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cancelar'));

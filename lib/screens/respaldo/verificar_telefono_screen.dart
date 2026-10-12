@@ -228,13 +228,33 @@ class _VerificarTelefonoScreenState
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
+          Center(
+            child: Container(
+              key: const Key('icono_verificacion'),
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: ColoresApp.of(context).primarioSuave,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                esperandoCodigo ? Icons.sms_rounded : Icons.phone_iphone_rounded,
+                size: 32,
+                color: ColoresApp.of(context).primario,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           Text(
             esperandoCodigo
                 ? 'Escribe el código que llegó por SMS al '
                       '${telefonoEnmascarado(_telefono!)}.'
                 : 'Escribe el celular de la tienda. Te enviaremos un código '
                       'por SMS.',
-            style: const TextStyle(fontSize: 16),
+            style: TextStyle(
+              fontSize: 16,
+              color: ColoresApp.of(context).textoSecundario,
+            ),
           ),
           const SizedBox(height: 16),
           if (!esperandoCodigo)

@@ -55,9 +55,24 @@ void main() {
     expect(nube.subidas, 2);
     expect(find.text('Respaldo guardado'), findsOneWidget);
 
+    expect(find.byKey(const Key('tarjeta_estado_respaldo')), findsOneWidget);
     await tester.tap(find.byKey(const Key('boton_desconectar')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmar_desconectar')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('boton_activar_respaldo')), findsOneWidget);
+  });
+
+  testWidgets('cancelar Desconectar deja el respaldo activo', (tester) async {
+    final nube = NubeRespaldoFalsa(conSesion: true, telefono: '+573001234567');
+    await abrir(tester, nube);
+    await tester.tap(find.byKey(const Key('boton_desconectar')));
+    await tester.pumpAndSettle();
+    expect(find.text('¿Desconectar el respaldo?'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('boton_respaldar_ahora')), findsOneWidget);
+    expect(find.byKey(const Key('boton_activar_respaldo')), findsNothing);
   });
 
   testWidgets('sesión vencida pide reconectar', (tester) async {

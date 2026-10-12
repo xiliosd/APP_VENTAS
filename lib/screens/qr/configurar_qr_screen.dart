@@ -85,13 +85,44 @@ class _ConfigurarQrScreenState extends ConsumerState<ConfigurarQrScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Cobro por QR')),
-      body: ListView(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
+        child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Descarga tu QR desde la app de Nequi, Daviplata o tu banco y '
-            'cárgalo aquí.',
-            style: TextStyle(color: ColoresApp.of(context).textoSecundario),
+          Card(
+            key: const Key('pasos_qr'),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  for (final (i, paso) in const [
+                    'Descarga tu QR de Nequi, Daviplata o tu banco',
+                    'Cárgalo aquí',
+                    'Cobra mostrándolo en la venta',
+                  ].indexed)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 12,
+                            backgroundColor:
+                                ColoresApp.of(context).primarioSuave,
+                            child: Text('${i + 1}',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: ColoresApp.of(context).primario)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(paso)),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           if (bytes == null)
@@ -100,16 +131,31 @@ class _ConfigurarQrScreenState extends ConsumerState<ConfigurarQrScreen> {
               titulo: 'Aún no has cargado tu QR',
             )
           else
-            SizedBox(
-              key: const Key('vista_qr'),
-              height: 280,
-              child: Image.memory(
-                bytes,
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const Center(
-                  child: Text('No se pudo mostrar el QR'),
-                ),
+            Container(
+              key: const Key('tarjeta_qr_configurado'),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: ColoresApp.blancoMarca,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: ColoresApp.of(context).texto.withValues(alpha: 0.12),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
+              child: SizedBox(
+                  key: const Key('vista_qr'),
+                  height: 280,
+                  child: Image.memory(
+                    bytes,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => const Center(
+                      child: Text('No se pudo mostrar el QR'),
+                    ),
+                  ),
+            ),
             ),
           const SizedBox(height: 16),
           BotonPrincipal(
@@ -119,14 +165,15 @@ class _ConfigurarQrScreenState extends ConsumerState<ConfigurarQrScreen> {
           ),
           if (bytes != null) ...[
             const SizedBox(height: 8),
-            TextButton(
+            BotonPrincipal(
               key: const Key('boton_quitar_qr'),
-              style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
+              texto: 'Quitar QR',
+              variante: VarianteBoton.contorno,
               onPressed: _quitar,
-              child: const Text('Quitar QR'),
             ),
           ],
         ],
+        ),
       ),
     );
   }

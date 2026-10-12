@@ -81,29 +81,42 @@ class _Activo extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       children: [
         Card(
+          key: const Key('tarjeta_estado_respaldo'),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.cloud_done_rounded, color: ColoresApp.of(context).entra),
-                    SizedBox(width: 8),
-                    Text('Respaldo activo',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w700)),
-                  ],
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: ColoresApp.of(context).entra.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.cloud_done_rounded,
+                      size: 28, color: ColoresApp.of(context).entra),
                 ),
-                const SizedBox(height: 8),
-                Text(estado.telefono == null
-                    ? 'Celular conectado'
-                    : 'Celular: ${telefonoEnmascarado(estado.telefono!)}'),
-                const SizedBox(height: 4),
-                Text(
-                  textoEstado,
-                  key: const Key('texto_ultimo_respaldo'),
-                  style: TextStyle(color: ColoresApp.of(context).textoSecundario),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Respaldo activo',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 4),
+                      Text(estado.telefono == null
+                          ? 'Celular conectado'
+                          : 'Celular: ${telefonoEnmascarado(estado.telefono!)}'),
+                      const SizedBox(height: 4),
+                      Text(
+                        textoEstado,
+                        key: const Key('texto_ultimo_respaldo'),
+                        style: TextStyle(
+                            color: ColoresApp.of(context).textoSecundario),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -128,8 +141,34 @@ class _Activo extends ConsumerWidget {
         BotonPrincipal(
           key: const Key('boton_desconectar'),
           texto: 'Desconectar',
-          variante: VarianteBoton.peligro,
-          onPressed: () => notifier.desconectar(),
+          variante: VarianteBoton.contorno,
+          onPressed: () async {
+            final confirmado = await showDialog<bool>(
+              context: context,
+              builder: (contexto) => AlertDialog(
+                title: const Text('¿Desconectar el respaldo?'),
+                content: const Text(
+                    'Tus datos se quedan en este celular, pero ya no se '
+                    'guardará una copia en la nube.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(contexto, false),
+                    child: const Text('Cancelar'),
+                  ),
+                  FilledButton(
+                    key: const Key('confirmar_desconectar'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: ColoresApp.of(context).sale,
+                      foregroundColor: ColoresApp.of(context).sobreSale,
+                    ),
+                    onPressed: () => Navigator.pop(contexto, true),
+                    child: const Text('Desconectar'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmado == true) await notifier.desconectar();
+          },
         ),
       ],
     );
