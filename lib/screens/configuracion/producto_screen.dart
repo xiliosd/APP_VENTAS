@@ -7,9 +7,12 @@ import '../../providers/proveedores_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../repositories/catalogo_repository.dart';
+import '../../ui/avatar_inicial.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
+import '../../ui/monto.dart';
+import '../../ui/titulo_seccion.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
 import '../inventario/hoja_ajuste_conteo.dart';
@@ -243,9 +246,12 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
               onPressed: () => Navigator.pop(contexto, false),
               child: const Text('Cancelar'),
             ),
-            TextButton(
+            FilledButton(
               key: const Key('confirmar_dejar_de_controlar'),
-              style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
+              style: FilledButton.styleFrom(
+                backgroundColor: ColoresApp.of(context).sale,
+                foregroundColor: ColoresApp.of(context).sobreSale,
+              ),
               onPressed: () => Navigator.pop(contexto, true),
               child: const Text('Dejar de controlar'),
             ),
@@ -290,6 +296,25 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     );
   }
 
+  Widget _tarjeta(String titulo, List<Widget> hijos) => Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TituloSeccion(titulo),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: hijos,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -298,144 +323,181 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
           widget.producto == null ? 'Nuevo producto' : 'Editar producto',
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        // Abajo queda espacio para que un aviso no tape Guardar.
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
-            key: const Key('campo_nombre_producto'),
-            controller: _nombre,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(
-              labelText: 'Nombre del producto',
-              errorText: _errorNombre,
+          Card(
+            key: const Key('vista_previa_producto'),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  AvatarInicial(
+                    id: widget.producto?.id ?? 0,
+                    nombre: _nombre.text,
+                    radio: 26,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _nombre.text.trim().isEmpty
+                              ? 'Sin nombre'
+                              : _nombre.text.trim(),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 4),
+                        Monto(parsearMonto(_precio.text) ?? 0,
+                            tamano: 20, tono: TonoMonto.entra),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            key: const Key('campo_precio_producto'),
-            controller: _precio,
-            keyboardType: TextInputType.number,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              labelText: 'Precio de venta',
-              errorText: _errorPrecio,
+          _tarjeta('DATOS', [
+            TextField(
+              key: const Key('campo_nombre_producto'),
+              controller: _nombre,
+              textCapitalization: TextCapitalization.sentences,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText: 'Nombre del producto',
+                errorText: _errorNombre,
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Proveedores',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          for (final f in _filas)
-            Row(
-              key: Key('fila_proveedor_${f.clave}'),
-              children: [
-                Expanded(
-                  child: InkWell(
-                    key: Key('editar_proveedor_${f.clave}'),
-                    onTap: () => _editarPrecio(f),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              f.nombre,
-                              style: TextStyle(
-                                color: f.activo
-                                    ? null
-                                    : ColoresApp.of(context).textoSecundario,
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('campo_precio_producto'),
+              controller: _precio,
+              keyboardType: TextInputType.number,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText: 'Precio de venta',
+                errorText: _errorPrecio,
+              ),
+            ),
+          ]),
+          _tarjeta('PROVEEDORES Y COSTO', [
+            for (final f in _filas)
+              Row(
+                key: Key('fila_proveedor_${f.clave}'),
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      key: Key('editar_proveedor_${f.clave}'),
+                      onTap: () => _editarPrecio(f),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                f.nombre,
+                                style: TextStyle(
+                                  color: f.activo
+                                      ? null
+                                      : ColoresApp.of(context).textoSecundario,
+                                ),
                               ),
                             ),
-                          ),
-                          Text(formatoMoneda(f.precioCompra)),
-                        ],
+                            Text(formatoMoneda(f.precioCompra)),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                IconButton(
-                  key: Key('preferido_${f.clave}'),
-                  tooltip: 'Preferido',
-                  icon: Icon(
-                    f.preferido
-                        ? Icons.star_rounded
-                        : Icons.star_border_rounded,
-                    color: f.preferido ? ColoresApp.of(context).fiado : null,
+                  IconButton(
+                    key: Key('preferido_${f.clave}'),
+                    tooltip: 'Preferido',
+                    icon: Icon(
+                      f.preferido
+                          ? Icons.star_rounded
+                          : Icons.star_border_rounded,
+                      color: f.preferido ? ColoresApp.of(context).fiado : null,
+                    ),
+                    onPressed: () => _marcarPreferido(f),
                   ),
-                  onPressed: () => _marcarPreferido(f),
+                  IconButton(
+                    key: Key('quitar_proveedor_${f.clave}'),
+                    tooltip: 'Quitar',
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => _quitar(f),
+                  ),
+                ],
+              ),
+            TextButton.icon(
+              key: const Key('boton_agregar_proveedor'),
+              onPressed: _cargando ? null : _agregarProveedor,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Agregar proveedor'),
+            ),
+            const SizedBox(height: 12),
+            _resumen(),
+          ]),
+          _tarjeta('EXISTENCIAS', [
+            SwitchListTile(
+              key: const Key('interruptor_existencias'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Controlar existencias'),
+              value: _controla,
+              onChanged: _cargando ? null : _cambiarControl,
+            ),
+            if (_controla && _controlabaAlAbrir && widget.producto != null) ...[
+              Text(
+                'Hay ${ref.watch(existenciasProductoProvider(widget.producto!.id)).valueOrNull ?? 0} u',
+                key: const Key('texto_existencias_producto'),
+              ),
+              TextButton(
+                key: const Key('boton_ajustar_conteo_producto'),
+                onPressed: () =>
+                    mostrarHojaAjusteConteo(context, producto: widget.producto!),
+                child: const Text('Ajustar conteo'),
+              ),
+            ],
+            if (_controla && !_controlabaAlAbrir) const SizedBox(height: 12),
+            if (_controla && !_controlabaAlAbrir)
+              TextField(
+                key: const Key('campo_hay_ahora'),
+                controller: _hayAhora,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Hay ahora',
+                  errorText: _errorHay,
                 ),
-                IconButton(
-                  key: Key('quitar_proveedor_${f.clave}'),
-                  tooltip: 'Quitar',
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () => _quitar(f),
+              ),
+            if (_controla) const SizedBox(height: 12),
+            if (_controla)
+              TextField(
+                key: const Key('campo_minimo'),
+                controller: _minimo,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Mínimo',
+                  errorText: _errorMinimo,
                 ),
-              ],
-            ),
-          TextButton.icon(
-            key: const Key('boton_agregar_proveedor'),
-            onPressed: _cargando ? null : _agregarProveedor,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Agregar proveedor'),
-          ),
-          const SizedBox(height: 12),
-          _resumen(),
-          const SizedBox(height: 24),
-          const Text(
-            'Existencias',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          SwitchListTile(
-            key: const Key('interruptor_existencias'),
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Controlar existencias'),
-            value: _controla,
-            onChanged: _cargando ? null : _cambiarControl,
-          ),
-          if (_controla && _controlabaAlAbrir && widget.producto != null) ...[
-            Text(
-              'Hay ${ref.watch(existenciasProductoProvider(widget.producto!.id)).valueOrNull ?? 0} u',
-              key: const Key('texto_existencias_producto'),
-            ),
-            TextButton(
-              key: const Key('boton_ajustar_conteo_producto'),
-              onPressed: () =>
-                  mostrarHojaAjusteConteo(context, producto: widget.producto!),
-              child: const Text('Ajustar conteo'),
-            ),
-          ],
-          if (_controla && !_controlabaAlAbrir)
-            TextField(
-              key: const Key('campo_hay_ahora'),
-              controller: _hayAhora,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Hay ahora',
-                errorText: _errorHay,
               ),
-            ),
-          if (_controla)
-            TextField(
-              key: const Key('campo_minimo'),
-              controller: _minimo,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Mínimo',
-                errorText: _errorMinimo,
+            if (_controla) const SizedBox(height: 12),
+            if (_controla)
+              TextField(
+                key: const Key('campo_pedir_hasta'),
+                controller: _pedirHasta,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Pedir hasta',
+                  errorText: _errorPedirHasta,
+                ),
               ),
-            ),
-          if (_controla)
-            TextField(
-              key: const Key('campo_pedir_hasta'),
-              controller: _pedirHasta,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Pedir hasta',
-                errorText: _errorPedirHasta,
-              ),
-            ),
+          ]),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -451,6 +513,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
             onPressed: _guardando || _cargando ? null : _guardar,
           ),
         ],
+        ),
       ),
     );
   }

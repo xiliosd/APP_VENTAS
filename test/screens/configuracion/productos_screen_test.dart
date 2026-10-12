@@ -630,6 +630,29 @@ void main() {
         findsOneWidget);
   });
 
+
+  testWidgets('la vista previa cambia al escribir y la ficha va en tarjetas',
+      (tester) async {
+    await montar(tester);
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    final previa = find.byKey(const Key('vista_previa_producto'));
+    expect(find.descendant(of: previa, matching: find.text('Sin nombre')),
+        findsOneWidget);
+    await tester.enterText(
+        find.byKey(const Key('campo_nombre_producto')), 'Arepa');
+    await tester.enterText(
+        find.byKey(const Key('campo_precio_producto')), '3.000');
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: previa, matching: find.text('Arepa')),
+        findsOneWidget);
+    expect(find.descendant(of: previa, matching: find.text(r'$3.000')),
+        findsOneWidget);
+    expect(find.text('DATOS'), findsOneWidget);
+    expect(find.text('PROVEEDORES Y COSTO'), findsOneWidget);
+    expect(find.text('EXISTENCIAS'), findsOneWidget);
+  });
+
 }
 
 /// Demora la carga de proveedores de un producto hasta [_espera].
