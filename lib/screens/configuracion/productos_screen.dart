@@ -4,10 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../providers/productos_providers.dart';
 import '../../providers/repository_providers.dart';
+import '../../ui/avatar_inicial.dart';
 import '../../ui/avisos.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/entrada_escalonada.dart';
 import '../../ui/estado_vacio.dart';
+import '../../ui/monto.dart';
+import '../../ui/pildora.dart';
+import '../../ui/titulo_seccion.dart';
 import '../../util/formato_moneda.dart';
+import '../../util/texto_util.dart';
 import 'producto_screen.dart';
 
 class ProductosScreen extends ConsumerStatefulWidget {
@@ -18,6 +24,20 @@ class ProductosScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductosScreenState extends ConsumerState<ProductosScreen> {
+  final _buscar = TextEditingController();
+  String _busqueda = '';
+
+  @override
+  void dispose() {
+    _buscar.dispose();
+    super.dispose();
+  }
+
+  bool _coincide(Producto p) {
+    final q = sinTildes(claveNombre(_busqueda));
+    return q.isEmpty || sinTildes(claveNombre(p.nombre)).contains(q);
+  }
+
   Future<void> _abrir({Producto? producto}) async {
     final guardado = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => ProductoScreen(producto: producto)),
@@ -49,56 +69,98 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
               mensaje: 'Agrega los que más vendes para cobrarlos con un toque',
             );
           }
+          final c = ColoresApp.of(context);
+          final visibles = productos.where(_coincide).toList();
+          final inactivosVisibles = inactivos.where(_coincide).toList();
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
-              if (productos.isNotEmpty)
+              TextField(
+                key: const Key('campo_buscar_productos'),
+                controller: _buscar,
+                onChanged: (v) => setState(() => _busqueda = v),
+                decoration: InputDecoration(
+                  hintText: 'Buscar producto',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: _busqueda.isEmpty
+                      ? null
+                      : IconButton(
+                          key: const Key('borrar_busqueda_productos'),
+                          tooltip: 'Borrar',
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () {
+                            _buscar.clear();
+                            setState(() => _busqueda = '');
+                          },
+                        ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (visibles.isEmpty && inactivosVisibles.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Ningún producto coincide',
+                    key: const Key('texto_sin_coincidencias'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: c.textoSecundario),
+                  ),
+                ),
+              if (visibles.isNotEmpty)
                 Card(
                   child: Column(
                     children: [
-                      for (final p in productos)
-                        ListTile(
-                          key: Key('producto_item_${p.id}'),
-                          title: Text(p.nombre,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600)),
-                          subtitle: Text(costos[p.id] == null
-                              ? '${formatoMoneda(p.precio)} · sin costo'
-                              : '${formatoMoneda(p.precio)} · gana '
-                                  '${formatoMoneda(p.precio - costos[p.id]!)}'),
-                          onTap: () => _abrir(producto: p),
-                          trailing: IconButton(
-                            key: Key('boton_desactivar_${p.id}'),
-                            tooltip: 'Desactivar',
-                            icon: const Icon(Icons.visibility_off_outlined),
-                            onPressed: () => ref
-                                .read(productoRepositoryProvider)
-                                .desactivarProducto(p.id),
+                      for (final (i, p) in visibles.indexed)
+                        EntradaEscalonada(
+                          indice: i,
+                          child: ListTile(
+                            key: Key('producto_item_${p.id}'),
+                            leading:
+                                AvatarInicial(id: p.id, nombre: p.nombre),
+                            title: Text(p.nombre,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600)),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Monto(p.precio, tamano: 15),
+                                  _margen(c, p, costos[p.id]),
+                                ],
+                              ),
+                            ),
+                            onTap: () => _abrir(producto: p),
+                            trailing: IconButton(
+                              key: Key('boton_desactivar_${p.id}'),
+                              tooltip: 'Desactivar',
+                              icon: const Icon(Icons.visibility_off_outlined),
+                              onPressed: () => ref
+                                  .read(productoRepositoryProvider)
+                                  .desactivarProducto(p.id),
+                            ),
                           ),
                         ),
                     ],
                   ),
                 ),
-              if (inactivos.isNotEmpty) ...[
-                Padding(
-                  padding: EdgeInsets.fromLTRB(4, 24, 4, 8),
-                  child: Text(
-                    'Inactivos',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: ColoresApp.of(context).textoSecundario,
-                    ),
-                  ),
-                ),
+              if (inactivosVisibles.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                const TituloSeccion('INACTIVOS'),
                 Card(
                   child: Column(
                     children: [
-                      for (final p in inactivos)
+                      for (final p in inactivosVisibles)
                         ListTile(
                           key: Key('producto_inactivo_${p.id}'),
+                          leading: Opacity(
+                            opacity: 0.5,
+                            child: AvatarInicial(id: p.id, nombre: p.nombre),
+                          ),
                           title: Text(p.nombre,
-                              style: TextStyle(
-                                  color: ColoresApp.of(context).textoSecundario)),
+                              style: TextStyle(color: c.textoSecundario)),
                           subtitle: Text(formatoMoneda(p.precio)),
                           trailing: TextButton(
                             key: Key('boton_reactivar_${p.id}'),
@@ -119,5 +181,17 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
         error: (e, st) => Center(child: Text('Error: $e')),
       ),
     );
+  }
+
+  Widget _margen(ColoresApp c, Producto p, int? costo) {
+    final key = Key('margen_${p.id}');
+    if (costo == null) {
+      return Pildora(key: key, texto: 'sin costo', color: c.textoSecundario);
+    }
+    final m = p.precio - costo;
+    return m >= 0
+        ? Pildora(key: key, texto: 'gana ${formatoMoneda(m)}', color: c.entra)
+        : Pildora(
+            key: key, texto: 'pierde ${formatoMoneda(-m)}', color: c.sale);
   }
 }

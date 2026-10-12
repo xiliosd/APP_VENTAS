@@ -77,7 +77,8 @@ void main() {
 
     expect(find.byType(ProductoScreen), findsNothing);
     expect(find.text('Arepa'), findsOneWidget);
-    expect(find.text(r'$3.000 · sin costo'), findsOneWidget);
+    expect(find.text(r'$3.000'), findsOneWidget);
+    expect(find.text('sin costo'), findsOneWidget);
     expect(find.text('Producto guardado'), findsOneWidget);
   });
 
@@ -112,7 +113,8 @@ void main() {
     final producto = await db.select(db.productos).getSingle();
     expect(producto.nombre, 'Arepa rellena');
     expect(producto.precio, 3500);
-    expect(find.text(r'$3.500 · sin costo'), findsOneWidget);
+    expect(find.text(r'$3.500'), findsOneWidget);
+    expect(find.text('sin costo'), findsOneWidget);
   });
 
   testWidgets(
@@ -142,7 +144,7 @@ void main() {
 
     final id = (await db.select(db.productos).getSingle()).id;
     expect(await ProductoRepository(db).costoDe(id), 2300);
-    expect(find.text(r'$3.500 · gana $1.200'), findsOneWidget);
+    expect(find.text(r'gana $1.200'), findsOneWidget);
   });
 
   testWidgets('quitar el preferido deja preferido al otro', (tester) async {
@@ -590,6 +592,44 @@ void main() {
     final p = await db.select(db.productos).getSingle();
     expect((p.minimo, p.pedirHasta), (15, 20));
   });
+
+  testWidgets('el buscador filtra sin tildes ni espacios', (tester) async {
+    final repo = ProductoRepository(db);
+    final cafe = await repo.guardarProducto(nombre: 'Café', precio: 2000);
+    final pan = await repo.guardarProducto(nombre: 'Pan', precio: 500);
+    await montar(tester);
+    await tester.enterText(
+        find.byKey(const Key('campo_buscar_productos')), '  cafe ');
+    await tester.pumpAndSettle();
+    expect(find.byKey(Key('producto_item_$cafe')), findsOneWidget);
+    expect(find.byKey(Key('producto_item_$pan')), findsNothing);
+
+    await tester.enterText(
+        find.byKey(const Key('campo_buscar_productos')), 'xyz');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('texto_sin_coincidencias')), findsOneWidget);
+    expect(find.text('Ningún producto coincide'), findsOneWidget);
+  });
+
+  testWidgets('un producto que se vende por debajo del costo dice "pierde"',
+      (tester) async {
+    final proveedor = await ProveedorRepository(db).crear(nombre: 'Alpina');
+    final id = await ProductoRepository(db).guardarProducto(
+      nombre: 'Yogur',
+      precio: 2000,
+      proveedores: [
+        ProveedorDeProducto(
+            proveedorId: proveedor, precioCompra: 2500, preferido: true),
+      ],
+    );
+    await montar(tester);
+    expect(
+        find.descendant(
+            of: find.byKey(Key('margen_$id')),
+            matching: find.text(r'pierde $500')),
+        findsOneWidget);
+  });
+
 }
 
 /// Demora la carga de proveedores de un producto hasta [_espera].
