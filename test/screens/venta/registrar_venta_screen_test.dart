@@ -1,6 +1,9 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/ticket_provider.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
+import 'package:app_ventas/repositories/producto_repository.dart';
+import 'package:app_ventas/servicios/lector_codigo.dart';
+import 'package:app_ventas/servicios/open_food_facts.dart';
 import 'package:app_ventas/screens/venta/registrar_venta_screen.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:drift/native.dart';
@@ -10,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/imagen_prueba.dart';
+import '../../support/lector_falso.dart';
 import '../../support/montaje.dart';
 
 void main() {
@@ -548,4 +552,146 @@ void main() {
     expect(find.byKey(const Key('campo_cliente')), findsOneWidget);
     expect(find.byKey(const Key('boton_fiar')), findsOneWidget);
   });
+
+  Future<void> abrirVentaCon(WidgetTester tester,
+      {required List<String?> codigos,
+      DatosProducto? datos,
+      String rol = 'admin'}) async {
+    container.dispose();
+    container = await containerConSesion(db, rol: rol, overrides: [
+      lectorCodigoProvider.overrideWithValue(LectorFalso(codigos)),
+      consultaProductoProvider.overrideWithValue(_Consulta(datos)),
+    ]);
+    await abrirVenta(tester);
+  }
+
+  Future<void> escanear(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('boton_escanear_venta')));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('escanear un producto conocido lo suma al ticket', (tester) async {
+    final id = await ProductoRepository(db).guardarProducto(
+        nombre: 'Gaseosa',
+        precio: 4500,
+        detalles: const DetallesProducto(codigoBarras: '7702'));
+    await abrirVentaCon(tester, codigos: ['7702']);
+    await escanear(tester);
+    expect(container.read(ticketProvider).cantidadDe('p$id'), 1);
+    expect(find.text('Gaseosa agregado'), findsOneWidget);
+  });
+
+  testWidgets('el mismo código dos veces seguidas solo suma uno',
+      (tester) async {
+    final id = await ProductoRepository(db).guardarProducto(
+        nombre: 'Gaseosa',
+        precio: 4500,
+        detalles: const DetallesProducto(codigoBarras: '7702'));
+    await abrirVentaCon(tester, codigos: ['7702', '7702']);
+    await escanear(tester);
+    await escanear(tester);
+    expect(container.read(ticketProvider).cantidadDe('p$id'), 1);
+  });
+
+  testWidgets('un código desconocido abre la hoja, pide precio y lo agrega',
+      (tester) async {
+    await abrirVentaCon(tester,
+        codigos: ['7702'],
+        datos: const DatosProducto(
+            nombre: 'Gaseosa Colombiana', marca: 'Postobón', tipo: 'bebidas'));
+    await escanear(tester);
+    expect(find.byKey(const Key('hoja_producto_rapido')), findsOneWidget);
+    expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('campo_nombre_rapido')))
+            .controller!
+            .text,
+        'Gaseosa Colombiana');
+    await tester.tap(find.byKey(const Key('boton_guardar_producto_rapido')));
+    await tester.pumpAndSettle();
+    expect(find.text('Escribe un precio válido'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('campo_precio_rapido')), '4.500');
+    await tester.tap(find.byKey(const Key('boton_guardar_producto_rapido')));
+    await tester.pumpAndSettle();
+
+    final p = await db.select(db.productos).getSingle();
+    expect((p.nombre, p.precio, p.codigoBarras, p.marca, p.tipo),
+        ('Gaseosa Colombiana', 4500, '7702', 'Postobón', 'bebidas'));
+    expect(container.read(ticketProvider).cantidadDe('p${p.id}'), 1);
+  });
+
+  testWidgets('un vendedor también puede crear el producto escaneado',
+      (tester) async {
+    await abrirVentaCon(tester, codigos: ['555'], rol: 'vendedor');
+    await escanear(tester);
+    await tester.enterText(find.byKey(const Key('campo_nombre_rapido')), 'Arepa');
+    await tester.enterText(find.byKey(const Key('campo_precio_rapido')), '2.000');
+    await tester.tap(find.byKey(const Key('boton_guardar_producto_rapido')));
+    await tester.pumpAndSettle();
+    expect((await db.select(db.productos).getSingle()).codigoBarras, '555');
+  });
+
+  testWidgets('un código de un producto inactivo avisa y no crea otro',
+      (tester) async {
+    final repo = ProductoRepository(db);
+    final id = await repo.guardarProducto(
+        nombre: 'Pan viejo',
+        precio: 500,
+        detalles: const DetallesProducto(codigoBarras: '123'));
+    await repo.desactivarProducto(id);
+    await abrirVentaCon(tester, codigos: ['123']);
+    await escanear(tester);
+    expect(find.byKey(const Key('hoja_producto_rapido')), findsNothing);
+    expect(find.text('Ese código es de Pan viejo (inactivo). Reactívalo en '
+        'Productos'), findsOneWidget);
+    expect((await db.select(db.productos).get()).length, 1);
+  });
+
+  testWidgets('código exacto + Enter en el buscador agrega el producto',
+      (tester) async {
+    await crearProductos(siete);
+    final id = await ProductoRepository(db).guardarProducto(
+        nombre: 'Gaseosa',
+        precio: 4500,
+        detalles: const DetallesProducto(codigoBarras: '7702'));
+    await abrirVenta(tester);
+    await tester.enterText(find.byKey(const Key('buscador_productos')), '7702\n');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(container.read(ticketProvider).cantidadDe('p$id'), 1);
+    expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('buscador_productos')))
+            .controller!
+            .text,
+        '');
+  });
+
+  testWidgets('los chips de tipo filtran y el mosaico muestra el tamaño',
+      (tester) async {
+    await crearProductos(siete);
+    final repo = ProductoRepository(db);
+    final coca = await repo.guardarProducto(
+        nombre: 'Gaseosa',
+        precio: 4500,
+        detalles: const DetallesProducto(tipo: 'bebidas', tamano: '1,5 L'));
+    await repo.guardarProducto(
+        nombre: 'Yogur',
+        precio: 2500,
+        detalles: const DetallesProducto(tipo: 'lacteos'));
+    await abrirVenta(tester);
+    expect(find.text(r'1,5 L · $4.500'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('filtro_tipo_venta_bebidas')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(Key('producto_$coca')), findsOneWidget);
+    expect(find.text('Yogur'), findsNothing);
+    expect(find.text('Pan'), findsNothing);
+  });
+}
+
+class _Consulta implements ConsultaProducto {
+  _Consulta(this.datos);
+  final DatosProducto? datos;
+  @override
+  Future<DatosProducto?> buscar(String codigo) async => datos;
 }

@@ -14,6 +14,9 @@ import '../../ui/hoja_inferior.dart';
 import '../../ui/monto.dart';
 import '../../ui/mosaico.dart';
 import '../../ui/teclado_monto.dart';
+import '../../servicios/lector_codigo.dart';
+import '../../util/busqueda_producto.dart';
+import '../../util/catalogo_producto.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
 import '../../widgets/monto_rapido_grid.dart';
@@ -23,6 +26,7 @@ import '../../ui/recorrido/globos.dart';
 import '../../ui/recorrido/objetivo_recorrido.dart';
 import '../recorrido/globos_venta.dart';
 import 'hoja_como_paga.dart';
+import 'hoja_producto_rapido.dart';
 
 class RegistrarVentaScreen extends ConsumerStatefulWidget {
   const RegistrarVentaScreen({
@@ -51,6 +55,63 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
   static const _productosSinBuscador = 6;
   final _busqueda = TextEditingController();
   String _filtro = '';
+
+  /// Tipo elegido en los chips (null = todos).
+  String? _tipo;
+
+  /// Último código leído y cuándo, para no sumar dos veces la misma lectura.
+  String? _ultimoCodigo;
+  DateTime? _ultimaLectura;
+
+  Future<void> _escanear() async {
+    final codigo = await ref.read(lectorCodigoProvider).leer(context);
+    if (codigo == null || !mounted) return;
+    await _usarCodigo(codigo);
+  }
+
+  /// Agrega el producto con [codigo]; si no existe, ofrece crearlo.
+  Future<void> _usarCodigo(String codigo) async {
+    final limpio = codigo.trim();
+    final ahora = DateTime.now();
+    if (limpio == _ultimoCodigo &&
+        _ultimaLectura != null &&
+        ahora.difference(_ultimaLectura!) <
+            const Duration(milliseconds: 1500)) {
+      return;
+    }
+    _ultimoCodigo = limpio;
+    _ultimaLectura = ahora;
+    final notifier = ref.read(ticketProvider.notifier);
+    final producto = await ref
+        .read(productoRepositoryProvider)
+        .productoPorCodigo(limpio);
+    if (!mounted) return;
+    if (producto != null && producto.activo) {
+      notifier.agregarProducto(producto);
+      avisar(context, '${producto.nombre} agregado');
+    } else if (producto != null) {
+      avisar(
+        context,
+        'Ese código es de ${producto.nombre} (inactivo). Reactívalo en '
+        'Productos',
+        error: true,
+      );
+    } else {
+      final nuevo = await mostrarHojaProductoRapido(context, codigo: limpio);
+      if (nuevo != null && mounted) notifier.agregarProducto(nuevo);
+    }
+  }
+
+  /// Enter en el buscador con un código exacto (p. ej. un lector físico).
+  Future<void> _alEnviarBusqueda(String texto) async {
+    final p = await ref
+        .read(productoRepositoryProvider)
+        .productoPorCodigo(texto);
+    if (p == null || !p.activo || !mounted) return;
+    ref.read(ticketProvider.notifier).agregarProducto(p);
+    _busqueda.clear();
+    setState(() => _filtro = '');
+  }
 
   /// Globos de la venta de práctica (solo con [RegistrarVentaScreen.practica]).
   ControladorGlobos? _globos;
@@ -254,7 +315,9 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
           data: (productos) {
             final visibles = [
               for (final p in productos)
-                if (_filtro.isEmpty || sinTildes(p.nombre).contains(_filtro)) p,
+                if (coincideBusqueda(p, _busqueda.text) &&
+                    (_tipo == null || p.tipo == _tipo))
+                  p,
             ];
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -280,7 +343,9 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
                         child: Mosaico(
                           key: Key('producto_${p.id}'),
                           titulo: p.nombre,
-                          subtitulo: formatoMoneda(p.precio),
+                          subtitulo: p.tamano == null
+                              ? formatoMoneda(p.precio)
+                              : '${p.tamano} · ${formatoMoneda(p.precio)}',
                           cantidad: ticket.cantidadDe('p${p.id}'),
                           onTap: () => notifier.agregarProducto(p),
                           onRestar: () => notifier.restar('p${p.id}'),
@@ -311,9 +376,26 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     final c = ColoresApp.of(context);
     final conBuscador =
         (productosAsync.valueOrNull?.length ?? 0) > _productosSinBuscador;
+    final tiposEnUso = [
+      for (final t in tiposProducto.keys)
+        if ((productosAsync.valueOrNull ?? const <Producto>[]).any(
+          (p) => p.tipo == t,
+        ))
+          t,
+    ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nueva venta')),
+      appBar: AppBar(
+        title: const Text('Nueva venta'),
+        actions: [
+          IconButton(
+            key: const Key('boton_escanear_venta'),
+            tooltip: 'Escanear',
+            icon: const Icon(Icons.qr_code_scanner_rounded),
+            onPressed: _escanear,
+          ),
+        ],
+      ),
       body: Column(
         children: [
           if (widget.practica)
@@ -351,6 +433,37 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
                         ),
                 ),
                 onChanged: (t) => setState(() => _filtro = sinTildes(t.trim())),
+                textInputAction: TextInputAction.search,
+                onSubmitted: _alEnviarBusqueda,
+              ),
+            ),
+          if (conBuscador && tiposEnUso.length >= 2)
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      key: const Key('filtro_tipo_venta_todos'),
+                      label: const Text('Todos'),
+                      selected: _tipo == null,
+                      onSelected: (_) => setState(() => _tipo = null),
+                    ),
+                  ),
+                  for (final t in tiposEnUso)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        key: Key('filtro_tipo_venta_$t'),
+                        label: Text(nombreTipo(t)),
+                        selected: _tipo == t,
+                        onSelected: (_) => setState(() => _tipo = t),
+                      ),
+                    ),
+                ],
               ),
             ),
           Expanded(child: lista),
