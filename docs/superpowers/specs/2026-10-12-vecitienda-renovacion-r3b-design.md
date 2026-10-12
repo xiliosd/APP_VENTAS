@@ -1,7 +1,7 @@
 # Renovación de la interfaz — R3b: reportes, historial, corrección y cobro QR
 
 **Fecha:** 2026-10-12
-**Estado:** Diseño aprobado en conversación; pendiente revisión de esta especificación
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con R1, R2a, R2b y R3a (dac61ab, 667 pruebas).
 
 ## Contexto

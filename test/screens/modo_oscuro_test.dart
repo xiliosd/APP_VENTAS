@@ -4,6 +4,7 @@ import 'package:app_ventas/repositories/fiado_repository.dart';
 import 'package:app_ventas/screens/fiado/detalle_cliente_screen.dart';
 import 'package:app_ventas/screens/fiado/lista_fiado_screen.dart';
 import 'package:app_ventas/screens/gasto/registrar_gasto_screen.dart';
+import 'package:app_ventas/screens/historial/historial_screen.dart';
 import 'package:app_ventas/screens/home/home_screen.dart';
 import 'package:app_ventas/screens/login/ingresar_pin_screen.dart';
 import 'package:app_ventas/screens/login/seleccionar_usuario_screen.dart';
@@ -190,4 +191,17 @@ void main() {
     await montarOscuro(tester, const RegistrarGastoScreen());
     verificarOscuro(tester, find.byType(RegistrarGastoScreen));
   });
+
+  for (final escala in [1.0, 1.6]) {
+    testWidgets('el historial se dibuja en oscuro (letra $escala×)',
+        (tester) async {
+      await montarOscuro(tester, const Scaffold(body: HistorialScreen()),
+          escalaLetra: escala);
+      await db.into(db.gastos).insert(GastosCompanion.insert(
+          monto: 700, fecha: DateTime.now(), usuarioId: 1));
+      await tester.pumpAndSettle();
+      verificarOscuro(tester, find.byType(HistorialScreen));
+      expect(find.byKey(const Key('resumen_historial')), findsOneWidget);
+    });
+  }
 }
