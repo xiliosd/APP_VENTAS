@@ -290,7 +290,11 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
       if (mounted) Navigator.of(context).pop(true);
     } on CodigoRepetido catch (e) {
       if (mounted) {
-        setState(() => _errorCodigo = 'Ese código ya es de ${e.nombre}');
+        setState(() {
+          _errorCodigo = 'Ese código ya es de ${e.nombre}';
+          // Junto a Guardar, porque el campo del código queda arriba.
+          _error = 'Revisa el código de barras: ya es de ${e.nombre}';
+        });
       }
     } on ArgumentError {
       if (mounted) {

@@ -161,4 +161,47 @@ void main() {
       expect(await repo.marcasUsadas(), ['Alpina', 'Zenú']);
     });
   });
+
+
+  test('reactivar un producto cuyo código ya usa otro activo le quita el '
+      'código y dice de quién es', () async {
+    final repo = ProductoRepository(db);
+    final viejo = await repo.guardarProducto(
+        nombre: 'Coca vieja',
+        precio: 500,
+        detalles: const DetallesProducto(codigoBarras: '123'));
+    await repo.desactivarProducto(viejo);
+    final nuevo = await repo.guardarProducto(
+        nombre: 'Coca nueva',
+        precio: 600,
+        detalles: const DetallesProducto(codigoBarras: '123'));
+    expect(await repo.reactivarProducto(viejo), 'Coca nueva');
+    final p = await (db.select(db.productos)..where((x) => x.id.equals(viejo)))
+        .getSingle();
+    expect(p.activo, isTrue);
+    expect(p.codigoBarras, isNull);
+    expect((await repo.productoPorCodigo('123'))!.id, nuevo);
+  });
+
+  test('reactivar sin conflicto conserva el código', () async {
+    final repo = ProductoRepository(db);
+    final id = await repo.guardarProducto(
+        nombre: 'Pan',
+        precio: 500,
+        detalles: const DetallesProducto(codigoBarras: '123'));
+    await repo.desactivarProducto(id);
+    expect(await repo.reactivarProducto(id), isNull);
+    expect((await repo.productoPorCodigo('123'))!.id, id);
+  });
+
+  test('los espacios dentro del código se quitan al guardar y al buscar',
+      () async {
+    final repo = ProductoRepository(db);
+    final id = await repo.guardarProducto(
+        nombre: 'Gaseosa',
+        precio: 500,
+        detalles: const DetallesProducto(codigoBarras: '7702 0040 03508'));
+    expect((await repo.productoPorCodigo('7702004003508'))!.id, id);
+    expect((await repo.productoPorCodigo(' 7702 004003508\n'))!.id, id);
+  });
 }

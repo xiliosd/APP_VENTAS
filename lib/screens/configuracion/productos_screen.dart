@@ -205,9 +205,18 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                           subtitle: Text(formatoMoneda(p.precio)),
                           trailing: TextButton(
                             key: Key('boton_reactivar_${p.id}'),
-                            onPressed: () => ref
-                                .read(productoRepositoryProvider)
-                                .reactivarProducto(p.id),
+                            onPressed: () async {
+                              final otro = await ref
+                                  .read(productoRepositoryProvider)
+                                  .reactivarProducto(p.id);
+                              if (otro != null && context.mounted) {
+                                avisar(
+                                  context,
+                                  'Se reactivó sin código: ese código ya es '
+                                  'de $otro',
+                                );
+                              }
+                            },
                             child: const Text('Reactivar'),
                           ),
                         ),

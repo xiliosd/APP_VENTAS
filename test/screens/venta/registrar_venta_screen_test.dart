@@ -687,6 +687,18 @@ void main() {
     expect(find.text('Yogur'), findsNothing);
     expect(find.text('Pan'), findsNothing);
   });
+
+
+  testWidgets('en la venta de práctica no hay botón de escanear',
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(appDePrueba(container,
+        inicio: const RegistrarVentaScreen(practica: true, conGlobos: false)));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('boton_escanear_venta')), findsNothing);
+  });
 }
 
 class _Consulta implements ConsultaProducto {

@@ -40,6 +40,12 @@ class CodigoRepetido implements Exception {
   final String nombre;
 }
 
+/// El código sin ningún espacio ni salto de línea; null si queda vacío.
+String? limpiarCodigo(String? codigo) {
+  final c = codigo?.replaceAll(RegExp(r'\s'), '');
+  return c == null || c.isEmpty ? null : c;
+}
+
 String? _limpio(String? texto) {
   final t = texto?.trim();
   return t == null || t.isEmpty ? null : t;
@@ -51,16 +57,17 @@ class ProductoRepository {
   final AppDatabase _db;
 
   Stream<List<Producto>> observarProductosActivos() {
-    return (_db.select(_db.productos)..where((p) => p.activo.equals(true)))
-        .watch();
+    return (_db.select(
+      _db.productos,
+    )..where((p) => p.activo.equals(true))).watch();
   }
 
   Future<List<Producto>> listarTodos() => _db.select(_db.productos).get();
 
   Future<int> crearProducto({required String nombre, required int precio}) {
-    return _db.into(_db.productos).insert(
-          ProductosCompanion.insert(nombre: nombre, precio: precio),
-        );
+    return _db
+        .into(_db.productos)
+        .insert(ProductosCompanion.insert(nombre: nombre, precio: precio));
   }
 
   Future<void> actualizarProducto(int id, {String? nombre, int? precio}) {
@@ -73,18 +80,43 @@ class ProductoRepository {
   }
 
   Future<void> desactivarProducto(int id) {
-    return (_db.update(_db.productos)..where((p) => p.id.equals(id)))
-        .write(const ProductosCompanion(activo: Value(false)));
+    return (_db.update(_db.productos)..where((p) => p.id.equals(id))).write(
+      const ProductosCompanion(activo: Value(false)),
+    );
   }
 
   Stream<List<Producto>> observarProductosInactivos() {
-    return (_db.select(_db.productos)..where((p) => p.activo.equals(false)))
-        .watch();
+    return (_db.select(
+      _db.productos,
+    )..where((p) => p.activo.equals(false))).watch();
   }
 
-  Future<void> reactivarProducto(int id) {
-    return (_db.update(_db.productos)..where((p) => p.id.equals(id)))
-        .write(const ProductosCompanion(activo: Value(true)));
+  /// Lo vuelve a activos. Si otro producto activo ya tiene su código, lo
+  /// reactiva sin código (para no repetirlo) y devuelve el nombre del otro.
+  Future<String?> reactivarProducto(int id) {
+    return _db.transaction(() async {
+      final producto = await (_db.select(
+        _db.productos,
+      )..where((p) => p.id.equals(id))).getSingle();
+      final codigo = producto.codigoBarras;
+      final otro = codigo == null
+          ? null
+          : (await (_db.select(_db.productos)..where(
+                      (p) =>
+                          p.codigoBarras.equals(codigo) &
+                          p.activo.equals(true) &
+                          p.id.equals(id).not(),
+                    ))
+                    .get())
+                .firstOrNull;
+      await (_db.update(_db.productos)..where((p) => p.id.equals(id))).write(
+        ProductosCompanion(
+          activo: const Value(true),
+          codigoBarras: otro == null ? const Value.absent() : const Value(null),
+        ),
+      );
+      return otro?.nombre;
+    });
   }
 
   /// Proveedores de [productoId] en el orden en que se agregaron.
@@ -96,18 +128,19 @@ class ProductoRepository {
 
   /// Precio de compra del proveedor preferido; null sin proveedores.
   Future<int?> costoDe(int productoId) async {
-    final preferido = await (_db.select(_db.productosProveedores)
-          ..where((p) =>
-              p.productoId.equals(productoId) & p.preferido.equals(true)))
-        .getSingleOrNull();
+    final preferido =
+        await (_db.select(_db.productosProveedores)..where(
+              (p) => p.productoId.equals(productoId) & p.preferido.equals(true),
+            ))
+            .getSingleOrNull();
     return preferido?.precioCompra;
   }
 
   /// Producto → costo, solo de los productos con proveedor preferido.
   Future<Map<int, int>> costos() async {
-    final filas = await (_db.select(_db.productosProveedores)
-          ..where((p) => p.preferido.equals(true)))
-        .get();
+    final filas = await (_db.select(
+      _db.productosProveedores,
+    )..where((p) => p.preferido.equals(true))).get();
     return {for (final f in filas) f.productoId: f.precioCompra};
   }
 
@@ -140,21 +173,25 @@ class ProductoRepository {
           : (await proveedoresDe(id)).map((p) => p.proveedorId).toSet();
       for (final p in proveedores) {
         if (previos.contains(p.proveedorId)) continue;
-        final proveedor = await (_db.select(_db.proveedores)
-              ..where((x) => x.id.equals(p.proveedorId)))
-            .getSingleOrNull();
+        final proveedor = await (_db.select(
+          _db.proveedores,
+        )..where((x) => x.id.equals(p.proveedorId))).getSingleOrNull();
         if (proveedor == null || !proveedor.activo) {
           throw ArgumentError('Proveedor inactivo');
         }
       }
-      final codigo = _limpio(detalles?.codigoBarras);
+      final codigo = limpiarCodigo(detalles?.codigoBarras);
       if (codigo != null) {
-        final otro = await (_db.select(_db.productos)
-              ..where((p) =>
-                  p.codigoBarras.equals(codigo) &
-                  p.activo.equals(true) &
-                  (id == null ? const Constant(true) : p.id.equals(id).not())))
-            .getSingleOrNull();
+        final otro =
+            await (_db.select(_db.productos)..where(
+                  (p) =>
+                      p.codigoBarras.equals(codigo) &
+                      p.activo.equals(true) &
+                      (id == null
+                          ? const Constant(true)
+                          : p.id.equals(id).not()),
+                ))
+                .getSingleOrNull();
         if (otro != null) throw CodigoRepetido(otro.nombre);
       }
       final columnas = detalles == null
@@ -166,19 +203,25 @@ class ProductoRepository {
               envase: Value(_limpio(detalles.envase)),
               tipo: Value(_limpio(detalles.tipo)),
             );
-      final productoId = id ??
-          await _db.into(_db.productos).insert(columnas.copyWith(
-              nombre: Value(limpio), precio: Value(precio)));
+      final productoId =
+          id ??
+          await _db
+              .into(_db.productos)
+              .insert(
+                columnas.copyWith(nombre: Value(limpio), precio: Value(precio)),
+              );
       if (id != null) {
-        await (_db.update(_db.productos)..where((p) => p.id.equals(id)))
-            .write(columnas.copyWith(
-                nombre: Value(limpio), precio: Value(precio)));
+        await (_db.update(_db.productos)..where((p) => p.id.equals(id))).write(
+          columnas.copyWith(nombre: Value(limpio), precio: Value(precio)),
+        );
       }
-      await (_db.delete(_db.productosProveedores)
-            ..where((p) => p.productoId.equals(productoId)))
-          .go();
+      await (_db.delete(
+        _db.productosProveedores,
+      )..where((p) => p.productoId.equals(productoId))).go();
       for (final p in proveedores) {
-        await _db.into(_db.productosProveedores).insert(
+        await _db
+            .into(_db.productosProveedores)
+            .insert(
               ProductosProveedoresCompanion.insert(
                 productoId: productoId,
                 proveedorId: p.proveedorId,
@@ -193,19 +236,19 @@ class ProductoRepository {
 
   /// El producto con [codigo] (recortado); prefiere el activo.
   Future<Producto?> productoPorCodigo(String codigo) async {
-    final limpio = codigo.trim();
-    if (limpio.isEmpty) return null;
-    final filas = await (_db.select(_db.productos)
-          ..where((p) => p.codigoBarras.equals(limpio)))
-        .get();
+    final limpio = limpiarCodigo(codigo);
+    if (limpio == null) return null;
+    final filas = await (_db.select(
+      _db.productos,
+    )..where((p) => p.codigoBarras.equals(limpio))).get();
     return filas.where((p) => p.activo).firstOrNull ?? filas.firstOrNull;
   }
 
   /// Marcas de los productos activos, sin repetir y en orden alfabético.
   Future<List<String>> marcasUsadas() async {
-    final filas = await (_db.select(_db.productos)
-          ..where((p) => p.activo.equals(true) & p.marca.isNotNull()))
-        .get();
+    final filas = await (_db.select(
+      _db.productos,
+    )..where((p) => p.activo.equals(true) & p.marca.isNotNull())).get();
     return {for (final p in filas) p.marca!}.toList()..sort();
   }
 }

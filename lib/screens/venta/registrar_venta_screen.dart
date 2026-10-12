@@ -388,12 +388,14 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       appBar: AppBar(
         title: const Text('Nueva venta'),
         actions: [
-          IconButton(
-            key: const Key('boton_escanear_venta'),
-            tooltip: 'Escanear',
-            icon: const Icon(Icons.qr_code_scanner_rounded),
-            onPressed: _escanear,
-          ),
+          // En la práctica no se crean productos reales.
+          if (!widget.practica)
+            IconButton(
+              key: const Key('boton_escanear_venta'),
+              tooltip: 'Escanear',
+              icon: const Icon(Icons.qr_code_scanner_rounded),
+              onPressed: _escanear,
+            ),
         ],
       ),
       body: Column(

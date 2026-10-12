@@ -802,6 +802,44 @@ void main() {
     await montar(tester);
     expect(find.byKey(const Key('filtro_tipo_producto_todos')), findsNothing);
   });
+
+
+  testWidgets('reactivar con un código ya usado avisa que quedó sin código',
+      (tester) async {
+    final repo = ProductoRepository(db);
+    final viejo = await repo.guardarProducto(
+        nombre: 'Coca vieja',
+        precio: 500,
+        detalles: const DetallesProducto(codigoBarras: '123'));
+    await repo.desactivarProducto(viejo);
+    await repo.guardarProducto(
+        nombre: 'Coca nueva',
+        precio: 600,
+        detalles: const DetallesProducto(codigoBarras: '123'));
+    await montar(tester);
+    await tester.ensureVisible(find.byKey(Key('boton_reactivar_$viejo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('boton_reactivar_$viejo')));
+    await tester.pumpAndSettle();
+    expect(find.text('Se reactivó sin código: ese código ya es de Coca nueva'),
+        findsOneWidget);
+  });
+
+  testWidgets('el error de código repetido también se ve junto a Guardar',
+      (tester) async {
+    await ProductoRepository(db).guardarProducto(
+        nombre: 'Pan',
+        precio: 500,
+        detalles: const DetallesProducto(codigoBarras: '123'));
+    await montar(tester);
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('campo_nombre_producto')), 'Leche');
+    await tester.enterText(find.byKey(const Key('campo_precio_producto')), '3.000');
+    await tester.enterText(find.byKey(const Key('campo_codigo_producto')), '123');
+    await guardar(tester);
+    expect(find.text('Revisa el código de barras: ya es de Pan'), findsOneWidget);
+  });
 }
 
 /// Demora la carga de proveedores de un producto hasta [_espera].
