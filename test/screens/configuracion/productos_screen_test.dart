@@ -747,6 +747,61 @@ void main() {
             .text,
         'Mío');
   });
+
+  testWidgets('el buscador encuentra por marca y por código', (tester) async {
+    final repo = ProductoRepository(db);
+    final coca = await repo.guardarProducto(
+        nombre: 'Gaseosa',
+        precio: 4500,
+        detalles: const DetallesProducto(
+            codigoBarras: '7702', marca: 'Postobón', tamano: '1,5 L'));
+    final pan = await repo.guardarProducto(nombre: 'Pan', precio: 500);
+    await montar(tester);
+    expect(find.descendant(
+            of: find.byKey(Key('detalle_producto_$coca')),
+            matching: find.text('Postobón · 1,5 L'),
+            matchRoot: true),
+        findsOneWidget);
+    await tester.enterText(
+        find.byKey(const Key('campo_buscar_productos')), 'postobon');
+    await tester.pumpAndSettle();
+    expect(find.byKey(Key('producto_item_$coca')), findsOneWidget);
+    expect(find.byKey(Key('producto_item_$pan')), findsNothing);
+    await tester.enterText(find.byKey(const Key('campo_buscar_productos')), '7702');
+    await tester.pumpAndSettle();
+    expect(find.byKey(Key('producto_item_$coca')), findsOneWidget);
+  });
+
+  testWidgets('los chips de tipo filtran la lista', (tester) async {
+    final repo = ProductoRepository(db);
+    final coca = await repo.guardarProducto(
+        nombre: 'Gaseosa',
+        precio: 4500,
+        detalles: const DetallesProducto(tipo: 'bebidas'));
+    final leche = await repo.guardarProducto(
+        nombre: 'Leche',
+        precio: 3000,
+        detalles: const DetallesProducto(tipo: 'lacteos'));
+    final pan = await repo.guardarProducto(nombre: 'Pan', precio: 500);
+    await montar(tester);
+    await tester.tap(find.byKey(const Key('filtro_tipo_producto_bebidas')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(Key('producto_item_$coca')), findsOneWidget);
+    expect(find.byKey(Key('producto_item_$leche')), findsNothing);
+    expect(find.byKey(Key('producto_item_$pan')), findsNothing);
+    await tester.tap(find.byKey(const Key('filtro_tipo_producto_todos')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(Key('producto_item_$pan')), findsOneWidget);
+  });
+
+  testWidgets('con un solo tipo en uso no hay chips', (tester) async {
+    await ProductoRepository(db).guardarProducto(
+        nombre: 'Gaseosa',
+        precio: 4500,
+        detalles: const DetallesProducto(tipo: 'bebidas'));
+    await montar(tester);
+    expect(find.byKey(const Key('filtro_tipo_producto_todos')), findsNothing);
+  });
 }
 
 /// Demora la carga de proveedores de un producto hasta [_espera].

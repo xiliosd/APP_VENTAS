@@ -12,8 +12,9 @@ import '../../ui/estado_vacio.dart';
 import '../../ui/monto.dart';
 import '../../ui/pildora.dart';
 import '../../ui/titulo_seccion.dart';
+import '../../util/busqueda_producto.dart';
+import '../../util/catalogo_producto.dart';
 import '../../util/formato_moneda.dart';
-import '../../util/texto_util.dart';
 import 'producto_screen.dart';
 
 class ProductosScreen extends ConsumerStatefulWidget {
@@ -33,10 +34,10 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
     super.dispose();
   }
 
-  bool _coincide(Producto p) {
-    final q = sinTildes(claveNombre(_busqueda));
-    return q.isEmpty || sinTildes(claveNombre(p.nombre)).contains(q);
-  }
+  String? _tipo;
+
+  bool _coincide(Producto p) =>
+      coincideBusqueda(p, _busqueda) && (_tipo == null || p.tipo == _tipo);
 
   Future<void> _abrir({Producto? producto}) async {
     final guardado = await Navigator.of(context).push<bool>(
@@ -70,6 +71,10 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
             );
           }
           final c = ColoresApp.of(context);
+          final tiposEnUso = [
+            for (final t in tiposProducto.keys)
+              if ([...productos, ...inactivos].any((p) => p.tipo == t)) t,
+          ];
           final visibles = productos.where(_coincide).toList();
           final inactivosVisibles = inactivos.where(_coincide).toList();
           return ListView(
@@ -96,6 +101,36 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+              if (tiposEnUso.length >= 2) ...[
+                SizedBox(
+                  height: 40,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          key: const Key('filtro_tipo_producto_todos'),
+                          label: const Text('Todos'),
+                          selected: _tipo == null,
+                          onSelected: (_) => setState(() => _tipo = null),
+                        ),
+                      ),
+                      for (final t in tiposEnUso)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            key: Key('filtro_tipo_producto_$t'),
+                            label: Text(nombreTipo(t)),
+                            selected: _tipo == t,
+                            onSelected: (_) => setState(() => _tipo = t),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               if (visibles.isEmpty && inactivosVisibles.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(24),
@@ -127,6 +162,12 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                                 runSpacing: 4,
                                 crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
+                                  if (detalleProducto(p) case final d?)
+                                    Text(d,
+                                        key: Key('detalle_producto_${p.id}'),
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: c.textoSecundario)),
                                   Monto(p.precio, tamano: 15),
                                   _margen(c, p, costos[p.id]),
                                 ],
