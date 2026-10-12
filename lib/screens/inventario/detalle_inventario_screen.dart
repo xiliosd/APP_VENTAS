@@ -5,6 +5,10 @@ import '../../providers/inventario_providers.dart';
 import '../../repositories/inventario_repository.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/entrada_escalonada.dart';
+import '../../ui/icono_cuadrado.dart';
+import '../../ui/nivel_existencias.dart';
+import '../../ui/titulo_seccion.dart';
 import '../../ui/estado_vacio.dart';
 import '../../util/fecha_util.dart';
 import 'hoja_ajuste_conteo.dart';
@@ -53,25 +57,57 @@ class DetalleInventarioScreen extends ConsumerWidget {
             : const Center(child: CircularProgressIndicator()),
       );
     }
+    final c = ColoresApp.of(context);
+    final nivel = nivelExistencias(item.existencias, item.producto.minimo);
+    final pedirHasta = item.producto.pedirHasta;
     return Scaffold(
       appBar: AppBar(title: Text(item.producto.nombre)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(
-            textoExistencias(item.existencias),
-            key: const Key('existencias_detalle'),
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w800,
-              color: item.existencias <= item.producto.minimo
-                  ? ColoresApp.of(context).sale
-                  : ColoresApp.of(context).texto,
+          EntradaEscalonada(
+            indice: 0,
+            child: Card(
+              key: const Key('tarjeta_existencias'),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          textoExistencias(item.existencias),
+                          key: const Key('existencias_detalle'),
+                          style: TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.w800,
+                            color: item.existencias <= item.producto.minimo
+                                ? c.sale
+                                : c.texto,
+                          ),
+                        ),
+                        EtiquetaNivel(nivel: nivel),
+                      ],
+                    ),
+                    Text(
+                      'mín. ${item.producto.minimo}'
+                      '${pedirHasta == null ? '' : ' · pedir hasta $pedirHasta'}',
+                      style: TextStyle(color: c.textoSecundario),
+                    ),
+                    const SizedBox(height: 12),
+                    BarraNivel(
+                      fraccion: fraccionNivel(
+                          item.existencias, item.producto.minimo, pedirHasta),
+                      nivel: nivel,
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-          Text(
-            'mín. ${item.producto.minimo}',
-            style: TextStyle(color: ColoresApp.of(context).textoSecundario),
           ),
           const SizedBox(height: 16),
           BotonPrincipal(
@@ -80,18 +116,32 @@ class DetalleInventarioScreen extends ConsumerWidget {
             onPressed: () =>
                 mostrarHojaAjusteConteo(context, producto: item.producto),
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'Historial',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          for (final m in historial)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: Text(_textoMovimiento(m)),
-              subtitle: Text(formatoFechaHora(m.fecha)),
+          if (historial.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            const TituloSeccion('HISTORIAL'),
+            EntradaEscalonada(
+              indice: 1,
+              child: Card(
+                child: Column(
+                  children: [
+                    for (final (i, m) in historial.indexed)
+                      ListTile(
+                        key: Key('movimiento_inventario_$i'),
+                        leading: m.tipo == TipoMovimientoInventario.entrada
+                            ? IconoCuadrado(
+                                icono: Icons.call_received_rounded,
+                                color: c.entra)
+                            : IconoCuadrado(
+                                icono: Icons.edit_rounded,
+                                color: c.textoSecundario),
+                        title: Text(_textoMovimiento(m)),
+                        subtitle: Text(formatoFechaHora(m.fecha)),
+                      ),
+                  ],
+                ),
+              ),
             ),
+          ],
         ],
       ),
     );

@@ -140,6 +140,7 @@ void main() {
     await tester.tap(find.byKey(Key('entrada_$entrada')));
     await tester.pumpAndSettle();
     expect(find.text(r'24 × Pan · $400'), findsOneWidget);
+    expect(find.byKey(const Key('cabecera_entrada')), findsOneWidget);
     await tester.tap(find.byKey(const Key('boton_anular_entrada')));
     await tester.pumpAndSettle();
     expect(find.text('¿Anular esta entrada?'), findsOneWidget);
@@ -147,6 +148,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Entrada anulada'), findsWidgets);
+    expect(find.byKey(const Key('boton_anular_entrada')), findsNothing);
     expect(await InventarioRepository(db).existencias(pan), 2);
   });
 

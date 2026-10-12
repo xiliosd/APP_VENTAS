@@ -7,7 +7,9 @@ import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
+import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
+import '../../ui/tema_app.dart';
 
 /// Pide cuántas unidades hay de verdad y guarda el ajuste.
 Future<void> mostrarHojaAjusteConteo(
@@ -81,9 +83,29 @@ class _HojaAjusteConteoState extends ConsumerState<_HojaAjusteConteo> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (hay != null)
-          Text(
-            'Según la app hay $hay. ¿Cuántas hay?',
-            key: const Key('texto_segun_app'),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: ColoresApp.of(context).primarioSuave,
+              borderRadius: BorderRadius.circular(radioCampo),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.inventory_2_rounded,
+                    color: ColoresApp.of(context).primario),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Según la app hay $hay. ¿Cuántas hay?',
+                    key: const Key('texto_segun_app'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: ColoresApp.of(context).texto,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         const SizedBox(height: 12),
         TextField(

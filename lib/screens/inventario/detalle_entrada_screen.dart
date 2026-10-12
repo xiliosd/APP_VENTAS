@@ -5,7 +5,10 @@ import '../../providers/inventario_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../ui/avisos.dart';
+import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/icono_cuadrado.dart';
+import '../../ui/monto.dart';
 import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
 
@@ -62,46 +65,87 @@ class DetalleEntradaScreen extends ConsumerWidget {
       );
     }
     final entrada = detalle.resumen.entrada;
+    final c = ColoresApp.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(detalle.resumen.proveedor)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(
-            '${formatoFechaHora(entrada.fecha)} · ${detalle.resumen.usuario}',
-            style: TextStyle(color: ColoresApp.of(context).textoSecundario),
-          ),
-          const SizedBox(height: 12),
-          for (final l in detalle.lineas)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                '${l.linea.cantidad} × ${l.producto} · '
-                '${formatoMoneda(l.linea.precioCompra)}',
+          Card(
+            key: const Key('cabecera_entrada'),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      IconoCuadrado(
+                        icono: Icons.local_shipping_rounded,
+                        color:
+                            entrada.anulada ? c.textoSecundario : c.entra,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(detalle.resumen.proveedor,
+                                style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700)),
+                            Text(
+                              '${formatoFechaHora(entrada.fecha)} · '
+                              '${detalle.resumen.usuario}',
+                              style: TextStyle(
+                                  fontSize: 13, color: c.textoSecundario),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Monto(entrada.total, tamano: 28, tachado: entrada.anulada),
+                  if (entrada.anulada)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text('Entrada anulada',
+                          style: TextStyle(
+                              color: c.sale, fontWeight: FontWeight.w600)),
+                    ),
+                ],
               ),
             ),
-          const SizedBox(height: 8),
-          Text(
-            'Total ${formatoMoneda(entrada.total)}',
-            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Column(
+              children: [
+                for (final l in detalle.lineas)
+                  ListTile(
+                    dense: true,
+                    title: Text(
+                      '${l.linea.cantidad} × ${l.producto} · '
+                      '${formatoMoneda(l.linea.precioCompra)}',
+                    ),
+                  ),
+              ],
+            ),
           ),
           if (entrada.nota != null) ...[
-            const SizedBox(height: 8),
-            Text(entrada.nota!),
+            const SizedBox(height: 12),
+            Text(entrada.nota!, style: TextStyle(color: c.textoSecundario)),
           ],
-          const SizedBox(height: 24),
-          if (entrada.anulada)
-            Text(
-              'Entrada anulada',
-              style: TextStyle(color: ColoresApp.of(context).sale),
-            )
-          else
-            TextButton(
+          if (!entrada.anulada) ...[
+            const SizedBox(height: 24),
+            BotonPrincipal(
               key: const Key('boton_anular_entrada'),
-              style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
+              texto: 'Anular entrada',
+              variante: VarianteBoton.peligro,
               onPressed: () => _anular(context, ref),
-              child: const Text('Anular entrada'),
             ),
+          ],
         ],
       ),
     );
