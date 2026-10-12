@@ -128,4 +128,35 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('boton_qr_recibido')), findsOneWidget);
   });
+
+  testWidgets('el monto y el QR van en tarjetas; el QR sobre blanco',
+      (tester) async {
+    await ConfiguracionRepository(db).guardarImagenQr(pngDePrueba);
+    await abrir(tester, tema: temaOscuro());
+    expect(
+        find.descendant(
+            of: find.byKey(const Key('tarjeta_monto_qr')),
+            matching: find.text(r'$12.000')),
+        findsOneWidget);
+    final qr =
+        tester.widget<Container>(find.byKey(const Key('tarjeta_imagen_qr')));
+    expect((qr.decoration! as BoxDecoration).color, ColoresApp.blancoMarca);
+    expect(
+        find.descendant(
+            of: find.byKey(const Key('tarjeta_imagen_qr')),
+            matching: find.byKey(const Key('imagen_qr'))),
+        findsOneWidget);
+  });
+
+  testWidgets('en oscuro con letra grande en 360 dp no se desborda',
+      (tester) async {
+    tester.view.physicalSize = const Size(720, 1280);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await ConfiguracionRepository(db).guardarImagenQr(pngDePrueba);
+    await abrir(tester, tema: temaOscuro());
+    expect(tester.takeException(), isNull);
+  });
 }

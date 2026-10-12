@@ -58,7 +58,16 @@ class _CobroQrScreenState extends ConsumerState<CobroQrScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(child: Monto(widget.monto, tamano: 44)),
+                // Este context está fuera del Theme claro: paleta clara fija.
+                Container(
+                  key: const Key('tarjeta_monto_qr'),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: ColoresApp.claro.primarioSuave,
+                    borderRadius: BorderRadius.circular(radioTarjeta),
+                  ),
+                  child: Center(child: Monto(widget.monto, tamano: 44)),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   'Pide al cliente que escanee y digite este valor',
@@ -73,7 +82,23 @@ class _CobroQrScreenState extends ConsumerState<CobroQrScreen> {
                   child: imagen.when(
                     data: (bytes) => bytes == null
                         ? _SinQr(esAdmin: esAdmin)
-                        : _ImagenQr(bytes),
+                        : Container(
+                            key: const Key('tarjeta_imagen_qr'),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: ColoresApp.blancoMarca,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: ColoresApp.claro.texto
+                                      .withValues(alpha: 0.08),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: _ImagenQr(bytes),
+                          ),
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
                     error: (_, _) => const _QrIlegible(),
