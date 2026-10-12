@@ -89,7 +89,10 @@ class ProveedoresScreen extends ConsumerWidget {
                                           color: ColoresApp.of(context)
                                               .textoSecundario),
                                       const SizedBox(width: 4),
-                                      Text(p.telefono!),
+                                      Flexible(
+                                        child: Text(p.telefono!,
+                                            overflow: TextOverflow.ellipsis),
+                                      ),
                                     ],
                                   ),
                                 Pildora(

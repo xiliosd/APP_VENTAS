@@ -105,6 +105,8 @@ void main() {
     await tester.scrollUntilVisible(
         find.byKey(const Key('boton_repetir_recorrido')), 200,
         scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.byKey(const Key('boton_repetir_recorrido')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('boton_repetir_recorrido')));
     await tester.pumpAndSettle();
     expect(find.byType(PasoVentaScreen), findsOneWidget);
@@ -124,6 +126,8 @@ void main() {
     await tester.scrollUntilVisible(
         find.byKey(const Key('boton_repetir_recorrido')), 200,
         scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(find.byKey(const Key('boton_repetir_recorrido')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('boton_repetir_recorrido')));
     await tester.pumpAndSettle();
     expect(find.byType(PasoVentaScreen), findsOneWidget);

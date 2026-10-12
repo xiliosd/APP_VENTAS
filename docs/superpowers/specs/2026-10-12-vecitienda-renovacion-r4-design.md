@@ -1,7 +1,7 @@
 # Renovación de la interfaz — R4: administración
 
 **Fecha:** 2026-10-12
-**Estado:** Diseño aprobado en conversación; pendiente de revisar la spec escrita
+**Estado:** Implementado (falta el recorrido manual en un celular real)
 **Base:** master con R1–R3b (d9154a9, 684 pruebas).
 
 ## Contexto
