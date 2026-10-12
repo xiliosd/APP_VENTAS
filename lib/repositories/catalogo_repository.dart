@@ -58,6 +58,7 @@ class CatalogoRepository {
     ControlEnFormulario? control,
     required bool controlabaAntes,
     required Usuario por,
+    DetallesProducto? detalles,
   }) {
     return _db.transaction(() async {
       final vinculos = <ProveedorDeProducto>[];
@@ -76,6 +77,7 @@ class CatalogoRepository {
         nombre: nombre,
         precio: precio,
         proveedores: vinculos,
+        detalles: detalles,
       );
       if (control != null) {
         if (!controlabaAntes) {

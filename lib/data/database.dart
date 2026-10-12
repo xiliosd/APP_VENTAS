@@ -39,6 +39,18 @@ class Productos extends Table {
 
   /// Cuántas quiere tener después de pedir; sugiere la cantidad del pedido.
   IntColumn get pedirHasta => integer().nullable()();
+
+  /// Código de barras (Fase código de barras). Único entre los activos; lo
+  /// valida el repositorio para que un inactivo pueda conservar el suyo.
+  TextColumn get codigoBarras => text().nullable()();
+  TextColumn get marca => text().nullable()();
+
+  /// Libre: "1,5 L", "400 ml", "500 g".
+  TextColumn get tamano => text().nullable()();
+
+  /// Claves de `lib/util/catalogo_producto.dart`.
+  TextColumn get envase => text().nullable()();
+  TextColumn get tipo => text().nullable()();
 }
 
 /// A quién se le compran los productos.
@@ -226,7 +238,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -267,6 +279,13 @@ class AppDatabase extends _$AppDatabase {
           }
           if (desde < 7) {
             await m.addColumn(productos, productos.pedirHasta);
+          }
+          if (desde < 8) {
+            await m.addColumn(productos, productos.codigoBarras);
+            await m.addColumn(productos, productos.marca);
+            await m.addColumn(productos, productos.tamano);
+            await m.addColumn(productos, productos.envase);
+            await m.addColumn(productos, productos.tipo);
           }
         },
       );

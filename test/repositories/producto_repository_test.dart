@@ -56,4 +56,109 @@ void main() {
     expect((await repo.observarProductosActivos().first).single.id, id);
     expect(await repo.observarProductosInactivos().first, isEmpty);
   });
+
+  group('código y detalles', () {
+    test('guarda y lee los detalles; vacíos quedan nulos', () async {
+      final repo = ProductoRepository(db);
+      final id = await repo.guardarProducto(
+        nombre: 'Coca-Cola',
+        precio: 4500,
+        detalles: const DetallesProducto(
+          codigoBarras: ' 7702004003508\n',
+          marca: 'Postobón ',
+          tamano: '1,5 L',
+          envase: 'botella_plastica',
+          tipo: '  ',
+        ),
+      );
+      final p = (await repo.productoPorCodigo('7702004003508'))!;
+      expect(p.id, id);
+      expect(p.marca, 'Postobón');
+      expect(p.tamano, '1,5 L');
+      expect(p.envase, 'botella_plastica');
+      expect(p.tipo, isNull);
+    });
+
+    test('sin detalles, editar no borra los que había', () async {
+      final repo = ProductoRepository(db);
+      final id = await repo.guardarProducto(
+          nombre: 'Pan',
+          precio: 500,
+          detalles: const DetallesProducto(marca: 'Bimbo'));
+      await repo.guardarProducto(id: id, nombre: 'Pan tajado', precio: 600);
+      final p = await (db.select(db.productos)..where((x) => x.id.equals(id)))
+          .getSingle();
+      expect(p.marca, 'Bimbo');
+    });
+
+    test('un código de otro producto activo no se puede repetir', () async {
+      final repo = ProductoRepository(db);
+      await repo.guardarProducto(
+          nombre: 'Pan',
+          precio: 500,
+          detalles: const DetallesProducto(codigoBarras: '123'));
+      expect(
+        () => repo.guardarProducto(
+            nombre: 'Leche',
+            precio: 3000,
+            detalles: const DetallesProducto(codigoBarras: '123')),
+        throwsA(isA<CodigoRepetido>()
+            .having((e) => e.nombre, 'nombre', 'Pan')),
+      );
+    });
+
+    test('el mismo producto puede volver a guardar su código', () async {
+      final repo = ProductoRepository(db);
+      final id = await repo.guardarProducto(
+          nombre: 'Pan',
+          precio: 500,
+          detalles: const DetallesProducto(codigoBarras: '123'));
+      await repo.guardarProducto(
+          id: id,
+          nombre: 'Pan',
+          precio: 600,
+          detalles: const DetallesProducto(codigoBarras: '123'));
+      expect((await repo.productoPorCodigo('123'))!.precio, 600);
+    });
+
+    test('un producto inactivo no bloquea su código', () async {
+      final repo = ProductoRepository(db);
+      final viejo = await repo.guardarProducto(
+          nombre: 'Pan viejo',
+          precio: 500,
+          detalles: const DetallesProducto(codigoBarras: '123'));
+      await repo.desactivarProducto(viejo);
+      final nuevo = await repo.guardarProducto(
+          nombre: 'Pan nuevo',
+          precio: 600,
+          detalles: const DetallesProducto(codigoBarras: '123'));
+      expect((await repo.productoPorCodigo('123'))!.id, nuevo);
+    });
+
+    test('productoPorCodigo devuelve un inactivo si es el único', () async {
+      final repo = ProductoRepository(db);
+      final id = await repo.guardarProducto(
+          nombre: 'Pan',
+          precio: 500,
+          detalles: const DetallesProducto(codigoBarras: '123'));
+      await repo.desactivarProducto(id);
+      final p = await repo.productoPorCodigo(' 123 ');
+      expect(p!.activo, isFalse);
+      expect(await repo.productoPorCodigo('999'), isNull);
+    });
+
+    test('marcasUsadas da las marcas de los activos sin repetir', () async {
+      final repo = ProductoRepository(db);
+      await repo.guardarProducto(
+          nombre: 'A', precio: 1, detalles: const DetallesProducto(marca: 'Zenú'));
+      await repo.guardarProducto(
+          nombre: 'B', precio: 1, detalles: const DetallesProducto(marca: 'Alpina'));
+      await repo.guardarProducto(
+          nombre: 'C', precio: 1, detalles: const DetallesProducto(marca: 'Zenú'));
+      final d = await repo.guardarProducto(
+          nombre: 'D', precio: 1, detalles: const DetallesProducto(marca: 'Vieja'));
+      await repo.desactivarProducto(d);
+      expect(await repo.marcasUsadas(), ['Alpina', 'Zenú']);
+    });
+  });
 }

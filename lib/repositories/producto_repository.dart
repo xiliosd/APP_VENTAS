@@ -15,6 +15,36 @@ class ProveedorDeProducto {
   final bool preferido;
 }
 
+/// Código de barras, marca, tamaño, envase y tipo de un producto.
+class DetallesProducto {
+  const DetallesProducto({
+    this.codigoBarras,
+    this.marca,
+    this.tamano,
+    this.envase,
+    this.tipo,
+  });
+
+  final String? codigoBarras;
+  final String? marca;
+  final String? tamano;
+  final String? envase;
+  final String? tipo;
+}
+
+/// Otro producto activo ya tiene ese código de barras.
+class CodigoRepetido implements Exception {
+  const CodigoRepetido(this.nombre);
+
+  /// Nombre del producto que ya lo tiene.
+  final String nombre;
+}
+
+String? _limpio(String? texto) {
+  final t = texto?.trim();
+  return t == null || t.isEmpty ? null : t;
+}
+
 class ProductoRepository {
   ProductoRepository(this._db);
 
@@ -88,6 +118,7 @@ class ProductoRepository {
     required String nombre,
     required int precio,
     List<ProveedorDeProducto> proveedores = const [],
+    DetallesProducto? detalles,
   }) async {
     final limpio = nombre.trim();
     if (limpio.isEmpty) throw ArgumentError('Escribe un nombre');
@@ -116,12 +147,31 @@ class ProductoRepository {
           throw ArgumentError('Proveedor inactivo');
         }
       }
+      final codigo = _limpio(detalles?.codigoBarras);
+      if (codigo != null) {
+        final otro = await (_db.select(_db.productos)
+              ..where((p) =>
+                  p.codigoBarras.equals(codigo) &
+                  p.activo.equals(true) &
+                  (id == null ? const Constant(true) : p.id.equals(id).not())))
+            .getSingleOrNull();
+        if (otro != null) throw CodigoRepetido(otro.nombre);
+      }
+      final columnas = detalles == null
+          ? const ProductosCompanion()
+          : ProductosCompanion(
+              codigoBarras: Value(codigo),
+              marca: Value(_limpio(detalles.marca)),
+              tamano: Value(_limpio(detalles.tamano)),
+              envase: Value(_limpio(detalles.envase)),
+              tipo: Value(_limpio(detalles.tipo)),
+            );
       final productoId = id ??
-          await _db.into(_db.productos).insert(
-              ProductosCompanion.insert(nombre: limpio, precio: precio));
+          await _db.into(_db.productos).insert(columnas.copyWith(
+              nombre: Value(limpio), precio: Value(precio)));
       if (id != null) {
         await (_db.update(_db.productos)..where((p) => p.id.equals(id)))
-            .write(ProductosCompanion(
+            .write(columnas.copyWith(
                 nombre: Value(limpio), precio: Value(precio)));
       }
       await (_db.delete(_db.productosProveedores)
@@ -139,5 +189,23 @@ class ProductoRepository {
       }
       return productoId;
     });
+  }
+
+  /// El producto con [codigo] (recortado); prefiere el activo.
+  Future<Producto?> productoPorCodigo(String codigo) async {
+    final limpio = codigo.trim();
+    if (limpio.isEmpty) return null;
+    final filas = await (_db.select(_db.productos)
+          ..where((p) => p.codigoBarras.equals(limpio)))
+        .get();
+    return filas.where((p) => p.activo).firstOrNull ?? filas.firstOrNull;
+  }
+
+  /// Marcas de los productos activos, sin repetir y en orden alfabético.
+  Future<List<String>> marcasUsadas() async {
+    final filas = await (_db.select(_db.productos)
+          ..where((p) => p.activo.equals(true) & p.marca.isNotNull()))
+        .get();
+    return {for (final p in filas) p.marca!}.toList()..sort();
   }
 }

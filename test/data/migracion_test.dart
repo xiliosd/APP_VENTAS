@@ -12,6 +12,7 @@ import '../support/esquema_v3.dart';
 import '../support/esquema_v4.dart';
 import '../support/esquema_v5.dart';
 import '../support/esquema_v6.dart';
+import '../support/esquema_v7.dart';
 
 void main() {
   late Directory carpeta;
@@ -53,7 +54,7 @@ void main() {
         MedioPago.transferencia);
     expect((await db.select(db.configuracionTienda).getSingle()).imagenQr,
         [1, 2]);
-    expect(db.schemaVersion, 7);
+    expect(db.schemaVersion, 8);
   });
 
   test('una base v2 abre en v3 sin nada anulado y sin correcciones', () async {
@@ -276,5 +277,38 @@ void main() {
                 .getSingle())
             .pedirHasta,
         24);
+  });
+
+  test('una base v7 abre en v8 sin código ni detalles', () async {
+    final archivo = File('${carpeta.path}/v7.sqlite');
+    crearBaseV7(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    final producto = await db.select(db.productos).getSingle();
+    expect(producto.minimo, 5);
+    expect(producto.codigoBarras, isNull);
+    expect(producto.marca, isNull);
+    expect(producto.tamano, isNull);
+    expect(producto.envase, isNull);
+    expect(producto.tipo, isNull);
+  });
+
+  test('una base v1 abre en v8 y guarda código y detalles', () async {
+    final archivo = File('${carpeta.path}/v1d.sqlite');
+    crearBaseV1(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    final id = await db.into(db.productos).insert(ProductosCompanion.insert(
+        nombre: 'Coca-Cola',
+        precio: 4500,
+        codigoBarras: const Value('7702004003508'),
+        tipo: const Value('bebidas')));
+    final p = await (db.select(db.productos)..where((x) => x.id.equals(id)))
+        .getSingle();
+    expect((p.codigoBarras, p.tipo), ('7702004003508', 'bebidas'));
   });
 }
