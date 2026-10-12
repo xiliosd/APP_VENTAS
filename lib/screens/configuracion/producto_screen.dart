@@ -3,10 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/inventario_providers.dart';
+import '../../providers/productos_providers.dart';
 import '../../providers/proveedores_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../repositories/catalogo_repository.dart';
+import '../../repositories/producto_repository.dart';
+import '../../servicios/lector_codigo.dart';
+import '../../servicios/open_food_facts.dart';
+import '../../ui/avisos.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
@@ -16,6 +21,7 @@ import '../../ui/titulo_seccion.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
 import '../inventario/hoja_ajuste_conteo.dart';
+import 'campos_detalle_producto.dart';
 
 /// Un proveedor en edición dentro del formulario.
 class _Fila {
@@ -73,6 +79,15 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   String? _errorPrecio;
   String? _error;
   bool _guardando = false;
+  late final _codigo =
+      TextEditingController(text: widget.producto?.codigoBarras ?? '');
+  late final _marca = TextEditingController(text: widget.producto?.marca ?? '');
+  late final _tamano =
+      TextEditingController(text: widget.producto?.tamano ?? '');
+  late String? _envase = widget.producto?.envase;
+  late String? _tipo = widget.producto?.tipo;
+  String? _errorCodigo;
+  bool _buscando = false;
 
   /// Al editar, true hasta que llegan los proveedores del producto: guardar o
   /// agregar antes reemplazaría la lista con una incompleta.
@@ -83,6 +98,47 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     super.initState();
     final id = widget.producto?.id;
     if (id != null) _cargar(id);
+    // La vista previa muestra "Marca · Tamaño" mientras se escribe.
+    _marca.addListener(_refrescar);
+    _tamano.addListener(_refrescar);
+  }
+
+  void _refrescar() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _escanear() async {
+    final codigo = await ref.read(lectorCodigoProvider).leer(context);
+    if (codigo == null || !mounted) return;
+    setState(() {
+      _codigo.text = codigo;
+      _errorCodigo = null;
+    });
+    await _autocompletar(codigo);
+  }
+
+  /// Llena desde Open Food Facts solo los campos que sigan vacíos.
+  Future<void> _autocompletar(String codigo) async {
+    if (widget.producto != null && _nombre.text.trim().isNotEmpty) return;
+    setState(() => _buscando = true);
+    final datos = await ref.read(consultaProductoProvider).buscar(codigo);
+    if (!mounted) return;
+    setState(() {
+      _buscando = false;
+      if (datos == null) return;
+      void llenar(TextEditingController c, String? valor) {
+        if (c.text.trim().isEmpty && valor != null) c.text = valor;
+      }
+
+      llenar(_nombre, datos.nombre);
+      llenar(_marca, datos.marca);
+      llenar(_tamano, datos.tamano);
+      _envase ??= datos.envase;
+      _tipo ??= datos.tipo;
+    });
+    if (datos == null && mounted) {
+      avisar(context, 'No lo encontramos, llénalo a mano');
+    }
   }
 
   Future<void> _cargar(int id) async {
@@ -116,6 +172,9 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     _hayAhora.dispose();
     _minimo.dispose();
     _pedirHasta.dispose();
+    _codigo.dispose();
+    _marca.dispose();
+    _tamano.dispose();
     super.dispose();
   }
 
@@ -187,6 +246,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
           ? 'Debe ser mayor o igual que el mínimo'
           : null;
       _error = null;
+      _errorCodigo = null;
     });
     if (_errorNombre != null ||
         _errorPrecio != null ||
@@ -218,9 +278,20 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
                   )
                 : null,
             controlabaAntes: _controlabaAlAbrir,
+            detalles: DetallesProducto(
+              codigoBarras: _codigo.text,
+              marca: _marca.text,
+              tamano: _tamano.text,
+              envase: _envase,
+              tipo: _tipo,
+            ),
             por: ref.read(sesionProvider).usuarioActivo!,
           );
       if (mounted) Navigator.of(context).pop(true);
+    } on CodigoRepetido catch (e) {
+      if (mounted) {
+        setState(() => _errorCodigo = 'Ese código ya es de ${e.nombre}');
+      }
     } on ArgumentError {
       if (mounted) {
         setState(() => _error = 'No se pudo guardar, revisa los proveedores');
@@ -354,6 +425,17 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
                           style: const TextStyle(
                               fontSize: 18, fontWeight: FontWeight.w700),
                         ),
+                        if ([_marca.text.trim(), _tamano.text.trim()]
+                            .where((t) => t.isNotEmpty)
+                            .join(' · ')
+                            case final detalle when detalle.isNotEmpty)
+                          Text(
+                            detalle,
+                            key: const Key('detalle_vista_previa'),
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: ColoresApp.of(context).textoSecundario),
+                          ),
                         const SizedBox(height: 4),
                         Monto(parsearMonto(_precio.text) ?? 0,
                             tamano: 20, tono: TonoMonto.entra),
@@ -365,6 +447,53 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
             ),
           ),
           _tarjeta('DATOS', [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const Key('campo_codigo_producto'),
+                    controller: _codigo,
+                    keyboardType: TextInputType.number,
+                    onSubmitted: (t) {
+                      if (t.trim().isNotEmpty) _autocompletar(t.trim());
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Código de barras',
+                      errorText: _errorCodigo,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  key: const Key('boton_escanear_producto'),
+                  tooltip: 'Escanear',
+                  icon: const Icon(Icons.qr_code_scanner_rounded),
+                  onPressed: _escanear,
+                ),
+              ],
+            ),
+            if (_buscando)
+              Padding(
+                key: const Key('texto_buscando_producto'),
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Buscando…',
+                      style: TextStyle(
+                          color: ColoresApp.of(context).textoSecundario),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 12),
             TextField(
               key: const Key('campo_nombre_producto'),
               controller: _nombre,
@@ -385,6 +514,16 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
                 labelText: 'Precio de venta',
                 errorText: _errorPrecio,
               ),
+            ),
+            const SizedBox(height: 12),
+            CamposDetalleProducto(
+              marca: _marca,
+              tamano: _tamano,
+              envase: _envase,
+              tipo: _tipo,
+              onEnvase: (v) => setState(() => _envase = v),
+              onTipo: (v) => setState(() => _tipo = v),
+              marcas: ref.watch(marcasUsadasProvider).valueOrNull ?? const [],
             ),
           ]),
           _tarjeta('PROVEEDORES Y COSTO', [

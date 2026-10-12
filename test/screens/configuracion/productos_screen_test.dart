@@ -8,11 +8,14 @@ import 'package:app_ventas/repositories/producto_repository.dart';
 import 'package:app_ventas/repositories/proveedor_repository.dart';
 import 'package:app_ventas/screens/configuracion/producto_screen.dart';
 import 'package:app_ventas/screens/configuracion/productos_screen.dart';
+import 'package:app_ventas/servicios/lector_codigo.dart';
+import 'package:app_ventas/servicios/open_food_facts.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/lector_falso.dart';
 import '../../support/montaje.dart';
 
 void main() {
@@ -38,6 +41,9 @@ void main() {
       );
 
   Future<void> guardar(WidgetTester tester) async {
+    // Un campo enfocado arriba haría volver el desplazamiento hacia él.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
     await tester.ensureVisible(find.byKey(const Key('boton_guardar_producto')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('boton_guardar_producto')));
@@ -653,6 +659,94 @@ void main() {
     expect(find.text('EXISTENCIAS'), findsOneWidget);
   });
 
+
+  /// Consulta que responde lo dado; cuenta las búsquedas.
+  ConsultaProducto consulta(DatosProducto? datos) => _ConsultaFalsa(datos);
+
+  testWidgets('escanear en un producto nuevo llena solo lo vacío',
+      (tester) async {
+    await montar(tester, overrides: [
+      lectorCodigoProvider.overrideWithValue(LectorFalso(['7702004003508'])),
+      consultaProductoProvider.overrideWithValue(consulta(const DatosProducto(
+          nombre: 'Gaseosa Colombiana',
+          marca: 'Postobón',
+          tamano: '1,5 L',
+          envase: 'botella_plastica',
+          tipo: 'bebidas'))),
+    ]);
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('campo_tamano')), '2 L');
+    await tester.tap(find.byKey(const Key('boton_escanear_producto')));
+    await tester.pumpAndSettle();
+
+    String texto(String clave) =>
+        tester.widget<TextField>(find.byKey(Key(clave))).controller!.text;
+    expect(texto('campo_codigo_producto'), '7702004003508');
+    expect(texto('campo_nombre_producto'), 'Gaseosa Colombiana');
+    expect(texto('campo_marca'), 'Postobón');
+    expect(texto('campo_tamano'), '2 L'); // ya estaba escrito
+    expect(find.text('Botella plástica'), findsOneWidget);
+    expect(find.text('Bebidas'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('campo_precio_producto')), '4.500');
+    await guardar(tester);
+    final p = await db.select(db.productos).getSingle();
+    expect((p.codigoBarras, p.marca, p.tamano, p.envase, p.tipo),
+        ('7702004003508', 'Postobón', '2 L', 'botella_plastica', 'bebidas'));
+  });
+
+  testWidgets('si Open Food Facts no lo tiene, avisa', (tester) async {
+    await montar(tester, overrides: [
+      lectorCodigoProvider.overrideWithValue(LectorFalso(['111'])),
+      consultaProductoProvider.overrideWithValue(consulta(null)),
+    ]);
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_escanear_producto')));
+    await tester.pumpAndSettle();
+    expect(find.text('No lo encontramos, llénalo a mano'), findsOneWidget);
+  });
+
+  testWidgets('un código de otro producto muestra el error y no guarda',
+      (tester) async {
+    await ProductoRepository(db).guardarProducto(
+        nombre: 'Pan',
+        precio: 500,
+        detalles: const DetallesProducto(codigoBarras: '123'));
+    await montar(tester);
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('campo_nombre_producto')), 'Leche');
+    await tester.enterText(find.byKey(const Key('campo_precio_producto')), '3.000');
+    await tester.enterText(find.byKey(const Key('campo_codigo_producto')), '123');
+    await guardar(tester);
+    expect(find.text('Ese código ya es de Pan'), findsOneWidget);
+    expect((await db.select(db.productos).get()).length, 1);
+  });
+
+  testWidgets('la consulta que llega tarde no pisa el nombre escrito',
+      (tester) async {
+    final lenta = _ConsultaLenta(const DatosProducto(nombre: 'De internet'));
+    await montar(tester, overrides: [
+      lectorCodigoProvider.overrideWithValue(LectorFalso(['999'])),
+      consultaProductoProvider.overrideWithValue(lenta),
+    ]);
+    await tester.tap(find.byKey(const Key('boton_agregar_producto')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_escanear_producto')));
+    await tester.pump();
+    expect(find.byKey(const Key('texto_buscando_producto')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('campo_nombre_producto')), 'Mío');
+    lenta.completar();
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('campo_nombre_producto')))
+            .controller!
+            .text,
+        'Mío');
+  });
 }
 
 /// Demora la carga de proveedores de un producto hasta [_espera].
@@ -681,10 +775,15 @@ class _ProductoRepositoryLento extends ProductoRepository {
     required String nombre,
     required int precio,
     List<ProveedorDeProducto> proveedores = const [],
+    DetallesProducto? detalles,
   }) async {
     await _espera;
     return super.guardarProducto(
-        id: id, nombre: nombre, precio: precio, proveedores: proveedores);
+        id: id,
+        nombre: nombre,
+        precio: precio,
+        proveedores: proveedores,
+        detalles: detalles);
   }
 }
 
@@ -707,5 +806,24 @@ class _InventarioQueFallaUnaVez extends InventarioRepository {
     }
     return super.activarControl(productoId,
         cantidad: cantidad, minimo: minimo, por: por);
+  }
+}
+
+class _ConsultaFalsa implements ConsultaProducto {
+  _ConsultaFalsa(this.datos);
+  final DatosProducto? datos;
+  @override
+  Future<DatosProducto?> buscar(String codigo) async => datos;
+}
+
+class _ConsultaLenta implements ConsultaProducto {
+  _ConsultaLenta(this.datos);
+  final DatosProducto datos;
+  final _listo = Completer<void>();
+  void completar() => _listo.complete();
+  @override
+  Future<DatosProducto?> buscar(String codigo) async {
+    await _listo.future;
+    return datos;
   }
 }

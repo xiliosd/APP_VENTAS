@@ -22,3 +22,7 @@ final costosProductosProvider = FutureProvider<Map<int, int>>((ref) {
   ref.watch(_cambiosCostosProvider);
   return ref.watch(productoRepositoryProvider).costos();
 });
+
+/// Marcas ya usadas, para sugerirlas al escribir.
+final marcasUsadasProvider = FutureProvider.autoDispose<List<String>>(
+    (ref) => ref.watch(productoRepositoryProvider).marcasUsadas());
