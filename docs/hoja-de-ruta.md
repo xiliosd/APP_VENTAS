@@ -31,6 +31,17 @@ Actualizada: 2026-10-12. Cada fase pasa por especificación (`docs/superpowers/s
 
 ## Después
 
+- Búsqueda por voz en Nueva venta (diseño aprobado en conversación el 2026-10-13, sin
+  implementar; aplica los lineamientos UNIMINUTO): botón de micrófono en el buscador fijo con
+  `speech_to_text` 7.5.0 (es-CO, hasta 8 s o 3 s de silencio), texto en vivo que filtra la
+  lista, búsqueda tolerante (ignora guiones y exige todas las palabras en nombre, marca o
+  tamaño), avisos sin permiso / sin reconocimiento / sin texto, permiso `RECORD_AUDIO`, sin
+  guardar audio ni texto. Rama `feature/busqueda-por-voz`. Segunda etapa posible: "dos coca
+  colas y un pan" agrega al ticket con confirmación.
+- Monetización sin cobrarle al tendero (ideas presentadas el 2026-10-13): pedido digital al
+  distribuidor (recomendado para empezar), promociones de marca, crédito y pagos con
+  bancos/billeteras, recargas y pagos de servicios, datos agregados a escala; requiere
+  sincronización con consentimiento y cumplir la Ley 1581 de 2012.
 - Preparar para uso real: llave de firma propia, compilar con las claves de Supabase y, si se
   publica, requisitos de Play Store.
 
