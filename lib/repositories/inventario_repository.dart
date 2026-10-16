@@ -43,10 +43,17 @@ class EntradaResumen {
 
 /// Un producto en "Por pedir".
 class ProductoPorPedir {
-  const ProductoPorPedir({required this.producto, required this.existencias});
+  const ProductoPorPedir({
+    required this.producto,
+    required this.existencias,
+    this.porLlegar = 0,
+  });
 
   final Producto producto;
   final int existencias;
+
+  /// Unidades en pedidos que aún no llegan.
+  final int porLlegar;
 }
 
 /// Productos por pedir de un mismo proveedor preferido (null = sin proveedor).
@@ -91,13 +98,18 @@ class LineaSugerida {
     required this.existencias,
     required this.sugerido,
     this.precio,
+    this.porLlegar = 0,
   });
 
   final Producto producto;
   final int existencias;
 
-  /// (pedirHasta ?? 2 × mínimo) − existencias, nunca menos de 1.
+  /// (pedirHasta ?? 2 × mínimo) − existencias − por llegar; sin nada por
+  /// llegar, nunca menos de 1.
   final int sugerido;
+
+  /// Unidades en pedidos que aún no llegan.
+  final int porLlegar;
 
   /// Precio de compra con ese proveedor; null si no lo tiene.
   final int? precio;
@@ -575,10 +587,15 @@ class InventarioRepository {
   /// Productos activos con control y existencias ≤ mínimo, por proveedor
   /// preferido.
   Future<List<GrupoPorPedir>> porPedir() async {
+    final porLlegar = await cantidadesPorLlegar(_db);
     final faltan = [
       for (final p in await productosConControl())
         if (p.existencias <= p.producto.minimo)
-          ProductoPorPedir(producto: p.producto, existencias: p.existencias),
+          ProductoPorPedir(
+            producto: p.producto,
+            existencias: p.existencias,
+            porLlegar: porLlegar[p.producto.id] ?? 0,
+          ),
     ];
     final preferidos = {
       for (final v in await (_db.select(
@@ -681,6 +698,15 @@ class InventarioRepository {
         .write(ProductosCompanion(pedirHasta: Value(pedirHasta)));
   }
 
+  /// Cuánto pedir de [p]; 0 o menos si lo que viene en camino ya alcanza.
+  static int sugeridoDe(ProductoPorPedir p) {
+    final falta =
+        (p.producto.pedirHasta ?? 2 * p.producto.minimo) - p.existencias;
+    // Sin pedidos en camino se pide al menos uno: el producto está en su mínimo.
+    if (p.porLlegar == 0) return falta < 1 ? 1 : falta;
+    return falta - p.porLlegar;
+  }
+
   /// Pedido sugerido para el grupo de "Por pedir" de [proveedorId] (null =
   /// "Sin proveedor"), en el mismo orden.
   Future<List<LineaSugerida>> sugerenciaPedido(int? proveedorId) async {
@@ -698,14 +724,14 @@ class InventarioRepository {
           };
     return [
       for (final p in grupo.productos)
-        LineaSugerida(
-          producto: p.producto,
-          existencias: p.existencias,
-          sugerido:
-              ((p.producto.pedirHasta ?? 2 * p.producto.minimo) - p.existencias)
-                  .clamp(1, 1 << 30),
-          precio: precios[p.producto.id],
-        ),
+        if (sugeridoDe(p) > 0)
+          LineaSugerida(
+            producto: p.producto,
+            existencias: p.existencias,
+            sugerido: sugeridoDe(p),
+            precio: precios[p.producto.id],
+            porLlegar: p.porLlegar,
+          ),
     ];
   }
 }

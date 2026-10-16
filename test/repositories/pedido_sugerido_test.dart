@@ -1,5 +1,6 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/repositories/inventario_repository.dart';
+import 'package:app_ventas/repositories/pedido_repository.dart';
 import 'package:app_ventas/repositories/producto_repository.dart';
 import 'package:app_ventas/repositories/proveedor_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
@@ -96,5 +97,67 @@ void main() {
     await expectLater(repo.cambiarPedirHasta(pan, -1), throwsArgumentError);
     await expectLater(repo.cambiarPedirHasta(pan, 2), throwsArgumentError);
     expect(await leer(), isNull);
+  });
+
+  group('con pedidos por llegar', () {
+    late int coca;
+    late PedidoRepository pedidos;
+
+    /// Coca de Postobón: quedan 2, mín. 6, hasta 24 → 22 sin pedidos.
+    setUp(() async {
+      pedidos = PedidoRepository(db, reloj: () => DateTime(2026, 10, 7, 8));
+      coca = await producto('Coca',
+          proveedores: [de(postobon, 900, preferido: true)]);
+      await repo.activarControl(coca, cantidad: 2, minimo: 6, por: ana);
+      await repo.cambiarPedirHasta(coca, 24);
+    });
+
+    Future<int> pedir(int cantidad) => pedidos.guardarPedido(
+        proveedorId: postobon,
+        lineas: [LineaPedidoNueva(productoId: coca, cantidad: cantidad)],
+        por: ana);
+
+    test('descuenta lo que ya viene en camino', () async {
+      await pedir(10);
+
+      final linea = (await repo.sugerenciaPedido(postobon)).single;
+      expect((linea.sugerido, linea.porLlegar), (12, 10));
+    });
+
+    test('si lo pedido alcanza, sale de la sugerencia pero sigue por pedir',
+        () async {
+      await pedir(22);
+
+      expect(await repo.sugerenciaPedido(postobon), isEmpty);
+      final porPedir = (await repo.porPedir()).single.productos.single;
+      expect((porPedir.producto.id, porPedir.porLlegar), (coca, 22));
+    });
+
+    test('suma varios pedidos e ignora los anulados', () async {
+      await pedir(8);
+      await pedir(6);
+      final anulado = await pedir(5);
+      await pedidos.anularPedido(anulado, por: ana);
+
+      final linea = (await repo.sugerenciaPedido(postobon)).single;
+      expect((linea.sugerido, linea.porLlegar), (8, 14));
+    });
+
+    test('lo que faltó vuelve solo cuando las existencias bajan al mínimo',
+        () async {
+      final id = await pedir(22);
+      // Una hora después del conteo inicial, para que la entrada sume.
+      await InventarioRepository(db, reloj: () => DateTime(2026, 10, 7, 9))
+          .recibirMercancia(
+        proveedorId: postobon,
+        lineas: [LineaRecibida(productoId: coca, cantidad: 10, precioCompra: 900)],
+        por: ana,
+        pedidoId: id,
+      );
+
+      // Quedan 12, más que el mínimo de 6: no se pide (decisión del usuario).
+      expect(await repo.porPedir(), isEmpty);
+      expect(await repo.sugerenciaPedido(postobon), isEmpty);
+    });
   });
 }
