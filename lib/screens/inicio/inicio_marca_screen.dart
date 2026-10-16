@@ -256,11 +256,11 @@ class _Insignia extends StatelessWidget {
     decoration: BoxDecoration(
       color: ColoresApp.blancoMarca,
       borderRadius: BorderRadius.circular(26),
-      boxShadow: const [
+      boxShadow: [
         BoxShadow(
-          color: Color(0x401A539B),
+          color: ColoresApp.of(context).primario.withValues(alpha: 0.25),
           blurRadius: 18,
-          offset: Offset(0, 6),
+          offset: const Offset(0, 6),
         ),
       ],
     ),
