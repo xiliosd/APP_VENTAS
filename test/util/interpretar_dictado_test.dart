@@ -136,4 +136,49 @@ void main() {
       ]);
     });
   });
+
+  group('palabras parecidas', () {
+    test('palabras pegadas: "cocacolas" halla Coca-Cola', () {
+      expect(resumen('dos cocacolas'), [
+        (2, TipoParteDictada.dudosa, 'Coca-Cola 400 ml | Coca-Cola 1,5 L'),
+      ]);
+    });
+
+    test('una letra distinta: "lece" y "guevos"', () {
+      expect(resumen('una lece y tres guevos'), [
+        (1, TipoParteDictada.reconocida, 'Leche'),
+        (3, TipoParteDictada.reconocida, 'Huevos'),
+      ]);
+    });
+
+    test('palabras de más: pregunta con lo más parecido', () {
+      expect(resumen('una leche entera'), [
+        (1, TipoParteDictada.dudosa, 'Leche'),
+      ]);
+    });
+
+    test('ignora "dame", "regálame" y "quiero"', () {
+      expect(resumen('dame un pan'), [(1, TipoParteDictada.reconocida, 'Pan')]);
+      expect(resumen('regálame dos huevos'), [
+        (2, TipoParteDictada.reconocida, 'Huevos'),
+      ]);
+      expect(resumen('quiero una leche'), [
+        (1, TipoParteDictada.reconocida, 'Leche'),
+      ]);
+    });
+
+    test('lo exacto gana a lo parecido', () {
+      expect(resumen('un pan'), [(1, TipoParteDictada.reconocida, 'Pan')]);
+    });
+
+    test('las palabras cortas no se aproximan', () {
+      expect(resumen('dos pin'), [(2, TipoParteDictada.noEncontrada, '')]);
+    });
+
+    test('si casi nada coincide no inventa', () {
+      expect(resumen('un destornillador grande'), [
+        (1, TipoParteDictada.noEncontrada, ''),
+      ]);
+    });
+  });
 }

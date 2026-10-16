@@ -39,7 +39,10 @@ const _prefijo = {
 
 const _separadores = {'y', 'mas'};
 
-const _vacias = {'de', 'del', 'la', 'el', 'los', 'las', 'con', 'por', 'favor'};
+const _vacias = {
+  'de', 'del', 'la', 'el', 'los', 'las', 'con', 'por', 'favor', 'porfa', //
+  'dame', 'deme', 'regalame', 'regaleme', 'quiero', 'me', 'vendi', 'vendo',
+};
 
 const _numeros = {
   'un': 1, 'una': 1, 'uno': 1, 'otra': 1, 'otro': 1, //
@@ -82,6 +85,46 @@ String _raiz(String palabra) {
     return palabra.substring(0, palabra.length - 1);
   }
   return palabra;
+}
+
+/// Cuántas letras distintas tolera [dicha] (las cortas no se aproximan:
+/// "pin" no es "pan").
+int _tolerancia(String dicha) => dicha.length >= 8
+    ? 2
+    : dicha.length >= 4
+    ? 1
+    : 0;
+
+/// Letras que hay que cambiar, quitar o poner para pasar de [a] a [b].
+int _distancia(String a, String b) {
+  var anterior = List<int>.generate(b.length + 1, (j) => j);
+  for (var i = 1; i <= a.length; i++) {
+    final actual = List<int>.filled(b.length + 1, 0)..[0] = i;
+    for (var j = 1; j <= b.length; j++) {
+      final cambio = a[i - 1] == b[j - 1] ? 0 : 1;
+      actual[j] = [
+        anterior[j] + 1,
+        actual[j - 1] + 1,
+        anterior[j - 1] + cambio,
+      ].reduce((x, y) => x < y ? x : y);
+    }
+    anterior = actual;
+  }
+  return anterior[b.length];
+}
+
+/// [dicha] se parece al inicio de [palabra] ("lece" ~ "leche").
+bool _pareceInicio(String dicha, String palabra) {
+  final tolerancia = _tolerancia(dicha);
+  if (tolerancia == 0) return false;
+  // El inicio de la palabra con el largo de lo dicho, o uno más o menos.
+  for (final largo in [dicha.length - 1, dicha.length, dicha.length + 1]) {
+    if (largo < 1 || largo > palabra.length) continue;
+    if (_distancia(dicha, palabra.substring(0, largo)) <= tolerancia) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /// Lee la cantidad al inicio de [palabras]: (cantidad, palabras usadas).
@@ -132,6 +175,9 @@ class _Pedazo {
   late List<Producto> coincidencias;
   late List<Producto> exactos;
 
+  /// Se halló ignorando palabras dichas: siempre se pregunta.
+  bool aproximado = false;
+
   void evaluar(
     List<({Producto p, List<String> palabras, List<String> nombre})> catalogo,
   ) {
@@ -156,12 +202,59 @@ class _Pedazo {
         ))
           c.p,
     ];
+    aproximado = false;
+    if (coincidencias.isEmpty) coincidencias = _parecidos(catalogo);
+    if (coincidencias.isEmpty) {
+      coincidencias = _ignorandoPalabras(catalogo);
+      aproximado = coincidencias.isNotEmpty;
+    }
     exactos = [
       for (final c in catalogo)
         if (coincidencias.contains(c.p) &&
             c.nombre.join(' ') == producto.join(' '))
           c.p,
     ];
+  }
+}
+
+extension on _Pedazo {
+  bool _seParece(String dicha, List<String> palabras) =>
+      palabras.any((w) => w.startsWith(dicha) || _pareceInicio(dicha, w));
+
+  /// Con una letra distinta por palabra, o con palabras pegadas
+  /// ("cocacola" es "coca cola").
+  List<Producto> _parecidos(
+    List<({Producto p, List<String> palabras, List<String> nombre})> catalogo,
+  ) {
+    final pegado = producto.join();
+    return [
+      for (final c in catalogo)
+        if (producto.every((dicha) => _seParece(dicha, c.palabras)) ||
+            (pegado.length >= 4 && c.palabras.join().startsWith(pegado)))
+          c.p,
+    ];
+  }
+
+  /// Los que más palabras comparten, si al menos la mitad de lo dicho
+  /// coincide ("leche entera" halla Leche).
+  List<Producto> _ignorandoPalabras(
+    List<({Producto p, List<String> palabras, List<String> nombre})> catalogo,
+  ) {
+    var mejor = 0;
+    var mejores = <Producto>[];
+    for (final c in catalogo) {
+      final iguales = producto
+          .where((dicha) => _seParece(dicha, c.palabras))
+          .length;
+      if (iguales == 0 || iguales * 2 < producto.length) continue;
+      if (iguales > mejor) {
+        mejor = iguales;
+        mejores = [c.p];
+      } else if (iguales == mejor) {
+        mejores.add(c.p);
+      }
+    }
+    return mejores;
   }
 }
 
@@ -226,7 +319,9 @@ List<ParteDictada> interpretarDictado(String dicho, List<Producto> activos) {
   final partes = <ParteDictada>[];
   for (final p in pedazos.where((p) => p.producto.isNotEmpty)) {
     final cantidad = (p.cantidad ?? 1).clamp(1, _cantidadMaxima);
-    final unico = p.coincidencias.length == 1
+    final unico = p.aproximado
+        ? null
+        : p.coincidencias.length == 1
         ? p.coincidencias.single
         : p.exactos.length == 1
         ? p.exactos.single
