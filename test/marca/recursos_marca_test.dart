@@ -155,4 +155,11 @@ void main() {
           contains('windowSplashScreenAnimatedIcon'));
     });
   });
+
+  test('Android pide el micrófono y declara el reconocedor de voz', () {
+    final manifiesto =
+        File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
+    expect(manifiesto, contains('android.permission.RECORD_AUDIO'));
+    expect(manifiesto, contains('android.speech.RecognitionService'));
+  });
 }
