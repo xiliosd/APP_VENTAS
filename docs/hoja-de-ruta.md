@@ -36,7 +36,7 @@ Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/s
   1. **Pedido recibido = gasto** (rama `feature/pedido-como-gasto`). Al guardar en Recibir
      mercancía se crea, en la misma transacción, un gasto "Mercancía · <proveedor>" por el total,
      enlazado a la entrada (columna nueva `entradaId` en `Gastos`, BD v9 con migración). Interruptor
-     "Lo pagué de la caja" (encendido por defecto) para pedidos a crédito o pagados por fuera.
+     "Lo pagué de la caja" (siempre encendido por defecto, decidido el 2026-10-16) para pedidos a crédito o pagados por fuera.
      Anular la entrada anula su gasto; el gasto enlazado no se corrige suelto (se corrige la
      entrada). Reportes y resumen ya restan gastos, así que la ganancia queda en vista de caja.
      Riesgo: doble conteo si el tendero ya registraba la mercancía a mano; avisar una vez.
@@ -44,8 +44,8 @@ Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/s
      pantalla completa con el color de la marca, isotipo grande, nombre VeciTienda en tipografía
      fuerte y el eslogan, con animación corta (≈1,5 s, entrada con escala y desvanecido) y luego
      pasa a Bienvenida / crear tienda. Splash nativo del mismo color para evitar el destello
-     blanco. Respeta "reducir movimiento", se puede saltar tocando y tiene `Semantics`. Por
-     decidir: versión completa solo en el primer uso y una breve en cada arranque.
+     blanco. Respeta "reducir movimiento", se puede saltar tocando y tiene `Semantics`. Decidido
+     (2026-10-16): versión completa solo en el primer uso y una breve en cada arranque.
   3. **Huella digital al ingresar** (rama `feature/ingreso-con-huella`). Paquete `local_auth`
      (versión fijada tras verificarla en pub.dev); `MainActivity` pasa a `FlutterFragmentActivity`
      y se agrega `USE_BIOMETRIC`. Cada usuario la activa en Ajustes después de ingresar con su
