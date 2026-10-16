@@ -19,13 +19,20 @@ void main() {
 
   /// Pedido de 24 Coca y 12 Pony a Postobón; llegan 20 Coca a $900 y 6
   /// Manzana a $800 (extra): total $22.800.
-  Future<int> preparar(WidgetTester tester, {bool conPedido = true}) async {
+  Future<int> preparar(WidgetTester tester,
+      {bool conPedido = true, String rol = 'admin', bool otroRecibe = false}) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
-    final container = await containerConSesion(db);
+    final container = await containerConSesion(db, rol: rol);
     addTearDown(container.dispose);
-    final ana = container.read(sesionProvider).usuarioActivo!;
+    var ana = container.read(sesionProvider).usuarioActivo!;
+    if (otroRecibe) {
+      final id = await db.into(db.usuarios).insert(UsuariosCompanion.insert(
+          nombre: 'Beto', rol: 'vendedor', pinHash: 'x'));
+      ana = await (db.select(db.usuarios)..where((u) => u.id.equals(id)))
+          .getSingle();
+    }
     final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
     final productos = ProductoRepository(db);
     final coca = await productos.guardarProducto(nombre: 'Coca', precio: 1500);
@@ -89,5 +96,12 @@ void main() {
 
     expect(find.text('Gasto anulado'), findsOneWidget);
     expect((await db.select(db.gastos).getSingle()).anulado, isTrue);
+  });
+
+  testWidgets('con gasto, quien no puede anularla no ve Anular entrada',
+      (tester) async {
+    await preparar(tester, conPedido: false, rol: 'vendedor', otroRecibe: true);
+
+    expect(find.byKey(const Key('boton_anular_entrada')), findsNothing);
   });
 }

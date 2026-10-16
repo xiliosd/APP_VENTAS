@@ -23,6 +23,8 @@ import 'hoja_productos.dart';
 /// Preferencia: ya se avisó que la mercancía se anota sola como gasto.
 const _claveAvisoGasto = 'aviso_mercancia_gasto';
 
+const _pedidoCerradoTexto = 'Este pedido ya se recibió o se anuló';
+
 class _Linea {
   _Linea(this.producto, String precio, {this.pedido, this.precioEsperado})
     : precio = TextEditingController(text: precio);
@@ -95,6 +97,12 @@ class _RecibirMercanciaScreenState
   int? _pedidoId;
   int _totalPedido = 0;
   bool _cargandoPedido = false;
+
+  /// Proveedor del pedido cargado; con pedido no se cambia.
+  Proveedor? _proveedorPedido;
+
+  /// El pedido ya se recibió o se anuló (en otro toque o pantalla).
+  bool _pedidoCerrado = false;
   bool _pagadoDeCaja = true;
 
   @override
@@ -144,7 +152,10 @@ class _RecibirMercanciaScreenState
         ]);
       final proveedor = detalle.resumen.proveedor;
       _proveedor = proveedor.activo ? proveedor : null;
+      _proveedorPedido = proveedor;
       _pedidoId = pedidoId;
+      _pedidoCerrado = detalle.resumen.pedido.estado != EstadoPedido.porLlegar;
+      if (_pedidoCerrado) _error = _pedidoCerradoTexto;
       _totalPedido = detalle.resumen.totalEstimado;
       _cargandoPedido = false;
     });
@@ -236,6 +247,7 @@ class _RecibirMercanciaScreenState
   bool get _puedeGuardar =>
       !_guardando &&
       !_cargandoPedido &&
+      !_pedidoCerrado &&
       _proveedor != null &&
       _llegaron.isNotEmpty &&
       _llegaron.every((l) => l.precioValido != null);
@@ -243,8 +255,9 @@ class _RecibirMercanciaScreenState
   Future<void> _guardar() async {
     if (!_puedeGuardar) return;
     setState(() => _guardando = true);
+    final total = _total;
+    var guardado = false;
     try {
-      final total = _total;
       await ref
           .read(inventarioRepositoryProvider)
           .recibirMercancia(
@@ -262,8 +275,17 @@ class _RecibirMercanciaScreenState
             pedidoId: _pedidoId,
             pagadoDeCaja: _pagadoDeCaja,
           );
-      if (_pagadoDeCaja) await _avisarGastoUnaVez();
-      if (mounted) Navigator.of(context).pop(total);
+      guardado = true;
+    } on ArgumentError catch (e) {
+      if (mounted) {
+        final cerrado = e.message == 'El pedido ya no está por llegar';
+        setState(() {
+          _pedidoCerrado = cerrado;
+          _error = cerrado
+              ? _pedidoCerradoTexto
+              : 'No se pudo guardar, intenta de nuevo';
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(() => _error = 'No se pudo guardar, intenta de nuevo');
@@ -271,6 +293,13 @@ class _RecibirMercanciaScreenState
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
+    if (!guardado) return;
+    // Ya se guardó: si el aviso falla no se puede ofrecer reintentar, porque
+    // duplicaría la entrada y el gasto.
+    try {
+      if (_pagadoDeCaja) await _avisarGastoUnaVez();
+    } catch (_) {}
+    if (mounted) Navigator.of(context).pop(total);
   }
 
   Future<void> _avisarGastoUnaVez() async {
@@ -297,6 +326,28 @@ class _RecibirMercanciaScreenState
   }
 
   Future<void> _anularPedido() async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (contexto) => AlertDialog(
+        title: const Text('¿Anular este pedido?'),
+        content: const Text('Deja de contar como mercancía por llegar.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(contexto, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            key: const Key('confirmar_anular_pedido'),
+            style: TextButton.styleFrom(
+              foregroundColor: ColoresApp.of(context).sale,
+            ),
+            onPressed: () => Navigator.pop(contexto, true),
+            child: const Text('Anular'),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true || !mounted) return;
     try {
       await ref
           .read(pedidoRepositoryProvider)
@@ -389,19 +440,38 @@ class _RecibirMercanciaScreenState
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final p in proveedores)
-                ChoiceChip(
-                  key: Key('opcion_proveedor_recibir_${p.id}'),
-                  label: Text(p.nombre),
-                  selected: _proveedor?.id == p.id,
-                  onSelected: (_) => _elegirProveedor(p),
+          // Con pedido el proveedor es el del pedido: cambiarlo dejaría la
+          // entrada sin poder guardarse.
+          if (conPedido)
+            Column(
+              key: const Key('proveedor_fijo_recibir'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _proveedorPedido?.nombre ?? '',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-            ],
-          ),
+                if (_proveedorPedido != null && !_proveedorPedido!.activo)
+                  Text(
+                    'Proveedor inactivo: actívalo para recibir',
+                    style: TextStyle(color: c.sale),
+                  ),
+              ],
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final p in proveedores)
+                  ChoiceChip(
+                    key: Key('opcion_proveedor_recibir_${p.id}'),
+                    label: Text(p.nombre),
+                    selected: _proveedor?.id == p.id,
+                    onSelected: (_) => _elegirProveedor(p),
+                  ),
+              ],
+            ),
           const SizedBox(height: 16),
           if (_cargandoPedido)
             const Center(child: CircularProgressIndicator()),
@@ -594,7 +664,10 @@ class _RecibirMercanciaScreenState
             controller: _nota,
             decoration: const InputDecoration(labelText: 'Nota'),
           ),
-          if (conPedido && _llegaron.isEmpty && !_cargandoPedido) ...[
+          if (conPedido &&
+              _llegaron.isEmpty &&
+              !_cargandoPedido &&
+              !_pedidoCerrado) ...[
             const SizedBox(height: 24),
             Text(
               'No llegó nada de este pedido',

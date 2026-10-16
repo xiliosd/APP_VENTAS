@@ -16,6 +16,7 @@ import '../../ui/pildora.dart';
 import '../../util/diferencia_pedido.dart';
 import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
+import '../../util/permisos.dart';
 
 /// Líneas de una entrada de mercancía y "Anular entrada".
 class DetalleEntradaScreen extends ConsumerWidget {
@@ -70,6 +71,19 @@ class DetalleEntradaScreen extends ConsumerWidget {
       // Otro toque o dispositivo ya la anuló: el dato está bien.
       if (context.mounted) avisar(context, 'La entrada ya estaba anulada', error: true);
     }
+  }
+
+  /// Con un gasto vigente, anular mueve la caja: misma regla que un gasto.
+  bool _puedeAnular(WidgetRef ref, EntradaMercancia entrada, Gasto? gasto) {
+    if (gasto == null || gasto.anulado) return true;
+    final usuario = ref.watch(sesionProvider).usuarioActivo;
+    return usuario != null &&
+        puedeCorregir(
+          usuario: usuario,
+          duenoId: entrada.usuarioId,
+          fechaMovimiento: entrada.fecha,
+          ahora: DateTime.now(),
+        );
   }
 
   @override
@@ -182,7 +196,7 @@ class DetalleEntradaScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             Text(entrada.nota!, style: TextStyle(color: c.textoSecundario)),
           ],
-          if (!entrada.anulada) ...[
+          if (!entrada.anulada && _puedeAnular(ref, entrada, detalle.gasto)) ...[
             const SizedBox(height: 24),
             BotonPrincipal(
               key: const Key('boton_anular_entrada'),

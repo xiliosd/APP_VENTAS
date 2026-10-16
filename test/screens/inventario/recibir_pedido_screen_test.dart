@@ -5,6 +5,8 @@ import 'package:app_ventas/repositories/producto_repository.dart';
 import 'package:app_ventas/repositories/proveedor_repository.dart';
 import 'package:app_ventas/screens/inventario/recibir_mercancia_screen.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
+import 'package:app_ventas/respaldo/respaldo_provider.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,13 +86,18 @@ void main() {
   }
 
   /// La lista se arma al desplazarse: baja (o sube con [delta] negativo)
-  /// hasta que [finder] se vea.
-  Future<void> ver(WidgetTester tester, Finder finder, {double delta = 200}) =>
-      tester.scrollUntilVisible(finder, delta,
-          scrollable: find
-              .descendant(
-                  of: find.byType(ListView), matching: find.byType(Scrollable))
-              .first);
+  /// hasta que [finder] se vea, y lo deja al centro.
+  Future<void> ver(WidgetTester tester, Finder finder,
+      {double delta = 200}) async {
+    await tester.scrollUntilVisible(finder, delta,
+        scrollable: find
+            .descendant(
+                of: find.byType(ListView), matching: find.byType(Scrollable))
+            .first);
+    // Al centro: pegado abajo quedaría detrás de la barra fija de Guardar.
+    await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
+    await tester.pumpAndSettle();
+  }
 
   Future<void> cantidad(WidgetTester tester, int producto, int n) async {
     await ver(tester, find.byKey(Key('cantidad_recibir_$producto')));
@@ -250,6 +257,12 @@ void main() {
     await ver(tester, find.byKey(const Key('boton_anular_pedido_recibir')));
     await tester.tap(find.byKey(const Key('boton_anular_pedido_recibir')));
     await tester.pumpAndSettle();
+    // Anular no se deshace: pide confirmación.
+    expect(find.byType(RecibirMercanciaScreen), findsOneWidget);
+    expect((await db.select(db.pedidos).getSingle()).estado,
+        EstadoPedido.porLlegar);
+    await tester.tap(find.byKey(const Key('confirmar_anular_pedido')));
+    await tester.pumpAndSettle();
 
     expect(find.byType(RecibirMercanciaScreen), findsNothing);
     expect((await db.select(db.pedidos).getSingle()).estado,
@@ -299,4 +312,94 @@ void main() {
     expect(find.textContaining('pedido 24'), findsNothing);
     expect(find.byKey(const Key('resumen_recepcion')), findsNothing);
   });
+
+  testWidgets('un pedido ya recibido lo dice y no deja guardar',
+      (tester) async {
+    final p = await preparar(tester, abrirConPedido: false);
+    await (db.update(db.pedidos)..where((x) => x.id.equals(p.pedido)))
+        .write(const PedidosCompanion(estado: Value(EstadoPedido.recibido)));
+    // preparar dejó Recibir abierto sin pedido: se cierra antes de abrirlo.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(appDePrueba(container,
+        inicio: RecibirMercanciaScreen(pedidoId: p.pedido)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Este pedido ya se recibió o se anuló'), findsOneWidget);
+    expect(habilitado(tester, 'boton_guardar_recibir'), isFalse);
+  });
+
+  testWidgets('si el pedido se cierra mientras está abierto, el error lo dice',
+      (tester) async {
+    final p = await preparar(tester);
+    await (db.update(db.pedidos)..where((x) => x.id.equals(p.pedido)))
+        .write(const PedidosCompanion(estado: Value(EstadoPedido.anulado)));
+
+    await guardar(tester);
+
+    expect(find.text('Este pedido ya se recibió o se anuló'), findsOneWidget);
+    expect(find.text('No se pudo guardar, intenta de nuevo'), findsNothing);
+    expect(await db.select(db.entradasMercancia).get(), isEmpty);
+  });
+
+  testWidgets('con pedido el proveedor queda fijo', (tester) async {
+    final p = await preparar(tester);
+
+    expect(find.byKey(Key('opcion_proveedor_recibir_${p.postobon}')),
+        findsNothing);
+    expect(find.byKey(const Key('proveedor_fijo_recibir')), findsOneWidget);
+    expect(find.text('Postobón'), findsWidgets);
+  });
+
+  testWidgets('con pedido de un proveedor inactivo no deja guardar',
+      (tester) async {
+    final p = await preparar(tester, abrirConPedido: false);
+    await ProveedorRepository(db).desactivar(p.postobon);
+    // preparar dejó Recibir abierto sin pedido: se cierra antes de abrirlo.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(appDePrueba(container,
+        inicio: RecibirMercanciaScreen(pedidoId: p.pedido)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Proveedor inactivo: actívalo para recibir'),
+        findsOneWidget);
+    expect(habilitado(tester, 'boton_guardar_recibir'), isFalse);
+  });
+
+  testWidgets('si el aviso de una vez falla, lo guardado no se da por fallido',
+      (tester) async {
+    final p = await preparar(tester, abrirConPedido: false);
+    final falla = ProviderContainer(
+      parent: container,
+      overrides: [preferenciasProvider.overrideWithValue(_PreferenciasRotas())],
+    );
+    addTearDown(falla.dispose);
+    // preparar dejó Recibir abierto sin pedido: se cierra antes de abrirlo.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(appDePrueba(falla,
+        inicio: RecibirMercanciaScreen(pedidoId: p.pedido)));
+    await tester.pumpAndSettle();
+
+    await guardar(tester);
+
+    expect(find.text('No se pudo guardar, intenta de nuevo'), findsNothing);
+    expect(await db.select(db.entradasMercancia).get(), hasLength(1));
+    expect(await db.select(db.gastos).get(), hasLength(1));
+  });
+}
+
+/// Preferencias que fallan al escribir, para probar el aviso de una vez.
+class _PreferenciasRotas implements SharedPreferences {
+  @override
+  bool? getBool(String key) => null;
+
+  @override
+  Future<bool> setBool(String key, bool value) =>
+      Future.error(Exception('disco lleno'));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
