@@ -171,7 +171,20 @@ class _BarraAcciones extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                key: const Key('boton_vender_por_voz'),
+                tooltip: 'Vender por voz',
+                iconSize: 28,
+                icon: const Icon(Icons.mic_rounded),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const RegistrarVentaScreen(dictarAlAbrir: true),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               Expanded(
                 flex: 3,
                 child: BotonPrincipal(
