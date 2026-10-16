@@ -54,7 +54,9 @@ cobrar sigue igual. La venta puede ser **mixta**: tocar, escanear y dictar en la
 1. Se quita el prefijo si está: "vecitienda", "registra/registrar venta", "vender", "venta".
 2. Se separa en partes por "y", "," y "más", y también donde empieza una cantidad en palabra ("dos
    coca colas un pan" → "dos coca colas" | "un pan"), porque el reconocedor casi nunca escribe comas.
-   Las cifras ("400", "2") no parten, para no romper tamaños y nombres con números. Una parte sin
+   Las cifras también parten (el celular suele escribir "2 cocas 3 panes"), pero solo si lo de
+   antes y lo de después hallan producto y no les sigue una unidad ("400 ml" sigue siendo tamaño)
+   (decidido por el usuario el 2026-10-16, tras la revisión). Una parte sin
    cantidad que no encuentre producto se vuelve a unir a la anterior y se reintenta ("litro y medio")
    (*decisión mía*).
 3. En cada parte, la cantidad al inicio: número ("2", "12") o palabra ("un/una/uno" 1, "dos"…"doce",

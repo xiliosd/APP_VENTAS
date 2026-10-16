@@ -46,12 +46,23 @@ const _numeros = {
   'dos': 2, 'tres': 3, 'cuatro': 4, 'cinco': 5, 'seis': 6, 'siete': 7,
   'ocho': 8, 'nueve': 9, 'diez': 10, 'once': 11, 'doce': 12, 'trece': 13,
   'catorce': 14, 'quince': 15, 'dieciseis': 16, 'diecisiete': 17,
-  'dieciocho': 18, 'diecinueve': 19, 'veinte': 20, 'treinta': 30,
+  'dieciocho': 18, 'diecinueve': 19, 'veinte': 20, 'veintiun': 21,
+  'veintiuno': 21, 'veintiuna': 21, 'veintidos': 22, 'veintitres': 23,
+  'veinticuatro': 24, 'veinticinco': 25, 'veintiseis': 26,
+  'veintisiete': 27, 'veintiocho': 28, 'veintinueve': 29, 'treinta': 30,
   'cuarenta': 40, 'cincuenta': 50, 'cien': 100, 'ciento': 100,
   'doscientos': 200, 'trescientos': 300,
 };
 
 bool _esDocena(String? t) => t == 'docena' || t == 'docenas';
+
+/// Unidades de tamaño: una cifra seguida de una de estas es un tamaño
+/// ("400 ml"), no la cantidad de otro producto.
+const _unidades = {
+  'ml', 'l', 'lt', 'lts', 'litro', 'litros', 'cc', 'g', 'gr', 'grs', //
+  'gramo', 'gramos', 'kg', 'kilo', 'kilos', 'lb', 'libra', 'libras', 'oz',
+  'onza', 'onzas', 'x',
+};
 
 /// Palabras normalizadas: minúsculas, sin tildes, sin signos ni guiones.
 List<String> _palabras(String texto) =>
@@ -154,6 +165,27 @@ class _Pedazo {
   }
 }
 
+/// El celular suele escribir cifras ("2 cocas 3 panes"): una cifra a mitad
+/// del pedazo empieza otro producto si lo de antes y lo de después hallan
+/// producto y no le sigue una unidad ("coca cola 400 ml" sigue entera).
+List<List<String>> _partirEnCifras(
+  List<String> palabras,
+  List<({Producto p, List<String> palabras, List<String> nombre})> catalogo,
+) {
+  for (var i = 1; i < palabras.length - 1; i++) {
+    if (int.tryParse(palabras[i]) == null ||
+        _unidades.contains(palabras[i + 1])) {
+      continue;
+    }
+    final antes = _Pedazo(palabras.sublist(0, i))..evaluar(catalogo);
+    final despues = _Pedazo(palabras.sublist(i))..evaluar(catalogo);
+    if (antes.coincidencias.isNotEmpty && despues.coincidencias.isNotEmpty) {
+      return [antes.palabras, ..._partirEnCifras(despues.palabras, catalogo)];
+    }
+  }
+  return [palabras];
+}
+
 /// Lo que se dictó, en partes con su cantidad y los productos [activos] que
 /// le corresponden. Nada se agrega al ticket desde aquí: la hoja de
 /// confirmación decide.
@@ -174,7 +206,9 @@ List<ParteDictada> interpretarDictado(String dicho, List<Producto> activos) {
   ];
 
   final pedazos = <_Pedazo>[];
-  for (final palabrasPedazo in _pedazos(palabras)) {
+  for (final palabrasPedazo in [
+    for (final p in _pedazos(palabras)) ..._partirEnCifras(p, catalogo),
+  ]) {
     final pedazo = _Pedazo(palabrasPedazo)..evaluar(catalogo);
     final anterior = pedazos.isEmpty ? null : pedazos.last;
     // Un pedazo sin cantidad que no halla nada era parte del anterior

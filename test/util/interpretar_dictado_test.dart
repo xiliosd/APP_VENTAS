@@ -112,4 +112,28 @@ void main() {
     expect(interpretarDictado('', activos), isEmpty);
     expect(interpretarDictado('VeciTienda, registra venta', activos), isEmpty);
   });
+
+  group('cifras como las escribe el celular', () {
+    test('una cifra a mitad de frase empieza otro producto', () {
+      expect(resumen('2 cocas 3 panes'), [
+        (2, TipoParteDictada.dudosa, 'Coca-Cola 400 ml | Coca-Cola 1,5 L'),
+        (3, TipoParteDictada.reconocida, 'Pan'),
+      ]);
+    });
+
+    test('un tamaño con unidad no parte el producto', () {
+      expect(resumen('una coca cola 400 ml'), [
+        (1, TipoParteDictada.reconocida, 'Coca-Cola 400 ml'),
+      ]);
+      expect(resumen('coca cola de 400'), [
+        (1, TipoParteDictada.reconocida, 'Coca-Cola 400 ml'),
+      ]);
+    });
+
+    test('entiende del veintiuno al veintinueve', () {
+      expect(resumen('veinticinco panes'), [
+        (25, TipoParteDictada.reconocida, 'Pan'),
+      ]);
+    });
+  });
 }
