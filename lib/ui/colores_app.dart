@@ -134,6 +134,9 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
   /// debe ser blanco para escanearse. También el texto de los avatares.
   static const blancoMarca = Color(0xFFFFFFFF);
 
+  /// Verde fijo del toldo de la marca (no cambia por tema, como [blancoMarca]).
+  static const verdeMarca = Color(0xFF16A34A);
+
   /// Colores de los avatares (iguales en ambos modos, texto [blancoMarca]).
   static const paletaAvatar = [
     Color(0xFF1A539B),
