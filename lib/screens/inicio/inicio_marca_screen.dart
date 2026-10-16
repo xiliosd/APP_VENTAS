@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../ui/colores_app.dart';
@@ -5,8 +7,9 @@ import '../../ui/marca_app.dart';
 import '../../ui/movimiento.dart';
 import '../../ui/tipografia.dart';
 
-const _duracionCompleta = Duration(milliseconds: 1500);
-const _duracionBreve = Duration(milliseconds: 500);
+// 2 s también en la breve: con menos no alcanzaba a verse la marca.
+const _duracionCompleta = Duration(seconds: 2);
+const _duracionBreve = Duration(seconds: 2);
 const _duracionQuieta = Duration(milliseconds: 300);
 
 /// Entrada de la app: el toldo de la tienda se abre y aparece la marca.
@@ -115,7 +118,8 @@ class _InicioMarcaScreenState extends State<InicioMarcaScreen>
                             child: ConstrainedBox(
                               // Ancho fijo: el eslogan se parte en líneas en vez de encoger todo.
                               constraints: BoxConstraints(
-                                maxWidth: medidas.maxWidth - 48,
+                                // En el primer cuadro Android puede dar ancho 0.
+                                maxWidth: math.max(0, medidas.maxWidth - 48),
                               ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,

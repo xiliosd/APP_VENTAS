@@ -35,7 +35,7 @@ void main() {
     );
   }
 
-  testWidgets('la versión completa muestra la marca y termina a los 1,5 s', (
+  testWidgets('la versión completa muestra la marca y termina a los 2 s', (
     tester,
   ) async {
     await montar(tester, completa: true);
@@ -48,19 +48,32 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1000));
     // El logo ya apareció (mientras es invisible no se anuncia).
     expect(find.bySemanticsLabel('Logo de VeciTienda'), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 900));
     expect(terminados, 0);
     await tester.pump(const Duration(milliseconds: 150));
     expect(terminados, 1);
   });
 
-  testWidgets('la versión breve termina a los 0,5 s', (tester) async {
+  testWidgets('la versión breve también dura 2 s, para alcanzar a verla', (
+    tester,
+  ) async {
     await montar(tester, completa: false);
 
-    await tester.pump(const Duration(milliseconds: 450));
+    await tester.pump(const Duration(milliseconds: 1950));
     expect(terminados, 0);
     await tester.pump(const Duration(milliseconds: 100));
     expect(terminados, 1);
+  });
+
+  testWidgets('sin ancho todavía (primer cuadro en Android) no falla', (
+    tester,
+  ) async {
+    tester.view.physicalSize = Size.zero;
+    addTearDown(tester.view.reset);
+
+    await montar(tester, completa: true);
+
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('tocar salta enseguida y una sola vez', (tester) async {
