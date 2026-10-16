@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
+import '../../providers/orden_productos_provider.dart';
 import '../../providers/productos_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../ui/avatar_inicial.dart';
@@ -15,6 +16,8 @@ import '../../ui/titulo_seccion.dart';
 import '../../util/busqueda_producto.dart';
 import '../../util/catalogo_producto.dart';
 import '../../util/formato_moneda.dart';
+import '../../util/orden_productos.dart';
+import '../../widgets/hoja_orden_productos.dart';
 import 'producto_screen.dart';
 
 class ProductosScreen extends ConsumerStatefulWidget {
@@ -54,7 +57,15 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
     final costos =
         ref.watch(costosProductosProvider).valueOrNull ?? const <int, int>{};
     return Scaffold(
-      appBar: AppBar(title: const Text('Productos')),
+      appBar: AppBar(
+        title: const Text('Productos'),
+        actions: const [
+          BotonOrdenProductos(
+            key: Key('boton_orden_productos'),
+            listado: ListadoProductos.ajustes,
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('boton_agregar_producto'),
         onPressed: () => _abrir(),
@@ -75,7 +86,10 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
             for (final t in tiposProducto.keys)
               if ([...productos, ...inactivos].any((p) => p.tipo == t)) t,
           ];
-          final visibles = productos.where(_coincide).toList();
+          final visibles = ordenarProductos(
+            productos,
+            ref.watch(ordenProductosProvider(ListadoProductos.ajustes)),
+          ).where(_coincide).toList();
           final inactivosVisibles = inactivos.where(_coincide).toList();
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),

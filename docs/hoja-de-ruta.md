@@ -32,6 +32,8 @@ Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/s
   Ajustes (aviso de celular compartido y confirmación); el PIN sigue siempre; se olvida al restaurar.
 - Vender por voz — micrófono en Nueva venta y en el Inicio, reconocimiento solo en el celular,
   hoja "¿Agrego esto?" con lo reconocido, lo dudoso y lo no encontrado; se suma al ticket (venta mixta).
+- Ordenar productos — botón "Ordenar" en Nueva venta (A–Z, como los creé, más vendidos de 30 días) y
+  en Ajustes → Productos (A–Z, como los creé); cada listado recuerda su orden; arranca en A–Z.
 - Renovación R4 — administración: Ajustes con cabecera de tienda, inventario con resumen y niveles, barra de total fija al recibir y pedir, productos con buscador y margen, proveedores y usuarios con avatar y chips, respaldo y QR con el estilo nuevo.
 
 ## En curso
@@ -53,5 +55,5 @@ Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/s
 
 - Recorrido manual en un celular real de: Cargar QR (2D), corregir y anular (3A) y reportes
   (3B), detalle de tickets (3C) y catálogo, proveedores y nombre de la tienda (4A), inventario (4B), pedido sugerido (4C), pulido tanda 1 y pulido tanda 2 (incluido el ícono temático en
-  Android 13+), renovación R1 en claro y oscuro (incluida la vibración) renovación R2a, renovación R2b (recorrido completo en un celular nuevo), renovación R3a, renovación R3b, renovación R4 y código de barras con productos reales (cámara), pedidos guardados con recepción como gasto, inicio de marca (claro, oscuro, Android 12+ y anteriores), ingreso con huella (activar, entrar, bloqueo, sin huellas) y venta por voz (con y sin el español
-  sin conexión descargado).
+  Android 13+), renovación R1 en claro y oscuro (incluida la vibración) renovación R2a, renovación R2b (recorrido completo en un celular nuevo), renovación R3a, renovación R3b, renovación R4 y código de barras con productos reales (cámara), pedidos guardados con recepción como gasto, inicio de marca (claro, oscuro, Android 12+ y anteriores), ingreso con huella (activar, entrar, bloqueo, sin huellas) venta por voz (con y sin el español
+  sin conexión descargado) y orden de productos.

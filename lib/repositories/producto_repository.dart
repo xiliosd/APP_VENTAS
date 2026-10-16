@@ -64,6 +64,26 @@ class ProductoRepository {
 
   Future<List<Producto>> listarTodos() => _db.select(_db.productos).get();
 
+  /// Unidades vendidas de cada producto desde [desde], sin lo anulado
+  /// (id → unidades). Para ordenar por "más vendidos".
+  Future<Map<int, int>> unidadesVendidas({required DateTime desde}) async {
+    final filas =
+        await (_db.select(_db.lineasVenta).join([
+          innerJoin(_db.ventas, _db.ventas.id.equalsExp(_db.lineasVenta.ventaId)),
+        ])..where(
+              _db.ventas.anulado.equals(false) &
+                  _db.ventas.fecha.isBiggerOrEqualValue(desde) &
+                  _db.lineasVenta.productoId.isNotNull(),
+            ))
+            .get();
+    final total = <int, int>{};
+    for (final f in filas) {
+      final l = f.readTable(_db.lineasVenta);
+      total[l.productoId!] = (total[l.productoId!] ?? 0) + l.cantidad;
+    }
+    return total;
+  }
+
   Future<int> crearProducto({required String nombre, required int precio}) {
     return _db
         .into(_db.productos)

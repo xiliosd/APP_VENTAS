@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
+import '../../providers/orden_productos_provider.dart';
 import '../../providers/productos_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
@@ -21,6 +22,8 @@ import '../../util/catalogo_producto.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/interpretar_dictado.dart';
 import '../../util/texto_util.dart';
+import '../../util/orden_productos.dart';
+import '../../widgets/hoja_orden_productos.dart';
 import '../../widgets/monto_rapido_grid.dart';
 import '../qr/cobro_qr_screen.dart';
 import '../../providers/recorrido_provider.dart';
@@ -435,8 +438,19 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
         const _Seccion('PRODUCTOS'),
         productosAsync.when(
           data: (productos) {
+            final orden = ref.watch(
+              ordenProductosProvider(ListadoProductos.venta),
+            );
+            final ordenados = ordenarProductos(
+              productos,
+              orden,
+              vendidos: orden == OrdenProductos.masVendidos
+                  ? ref.watch(unidadesVendidasProvider).valueOrNull ??
+                        const {}
+                  : const {},
+            );
             final visibles = [
-              for (final p in productos)
+              for (final p in ordenados)
                 if (coincideBusqueda(p, _busqueda.text) &&
                     (_tipo == null || p.tipo == _tipo))
                   p,
@@ -511,6 +525,12 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
         title: const Text('Nueva venta'),
         actions: [
           // En la práctica no se crean productos reales.
+          if (!widget.practica)
+            const BotonOrdenProductos(
+              key: Key('boton_orden_venta'),
+              listado: ListadoProductos.venta,
+              conMasVendidos: true,
+            ),
           if (!widget.practica)
             IconButton(
               key: const Key('boton_dictar'),
