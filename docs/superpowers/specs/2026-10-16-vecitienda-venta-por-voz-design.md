@@ -103,8 +103,15 @@ cobrar sigue igual. La venta puede ser **mixta**: tocar, escanear y dictar en la
 
 ## Técnica
 
-- Paquete verificado en pub.dev el 2026-10-16: `speech_to_text: 7.5.0` (csdcorp.com verificado,
-  publicado hace 31 días, Dart ≥ 3.12). Versión fija.
+- ~~`speech_to_text: 7.5.0`~~ retirado el 2026-10-16 tras probar en un Redmi Note 13 (Android
+  15): con el reconocedor local dejaba la sesión de Android abierta tras el silencio (el siguiente
+  dictado fallaba con `error_client`) y no permitía cerrarla. Ahora el reconocedor es propio:
+  `DictadoLocal.kt` crea un `createOnDeviceSpeechRecognizer` por dictado y lo destruye al
+  terminar; `MainActivity` pide el micrófono y responde los idiomas **descargados**
+  (`installedOnDeviceLanguages`, Android 13+), porque pedir uno solo "soportado" (p. ej. es-ES
+  sin descargar) corta la escucha al instante (error 11).
+- Lo dictado se busca por niveles: exacto; parecido (una letra distinta en palabras de 4+ letras,
+  palabras pegadas); y, si nada, ignorando palabras de más (siempre se pregunta).
 - Android: permiso `android.permission.RECORD_AUDIO` y la consulta
   `android.speech.RecognitionService` en `<queries>` del manifiesto.
 - Escucha con `onDevice: true` (solo en el celular, decisión del usuario).

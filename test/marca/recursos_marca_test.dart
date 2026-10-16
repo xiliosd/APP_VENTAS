@@ -169,5 +169,18 @@ void main() {
     ).readAsStringSync();
     expect(actividad, contains('vecitienda/voz'));
     expect(actividad, contains('isOnDeviceRecognitionAvailable'));
+    // Solo los idiomas descargados sirven para dictar sin conexión.
+    expect(actividad, contains('idiomasDescargados'));
+    expect(actividad, contains('installedOnDeviceLanguages'));
+  });
+
+  test('cada dictado usa un reconocedor local nuevo y lo destruye', () {
+    // Si el reconocedor queda vivo, el siguiente dictado choca con su sesión.
+    final dictado = File(
+      'android/app/src/main/kotlin/com/appventas/app_ventas/DictadoLocal.kt',
+    ).readAsStringSync();
+    expect(dictado, contains('createOnDeviceSpeechRecognizer'));
+    expect(dictado, contains('destroy()'));
+    expect(dictado, isNot(contains('createSpeechRecognizer(')));
   });
 }

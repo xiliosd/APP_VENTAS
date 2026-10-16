@@ -2,9 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:speech_to_text/speech_recognition_error.dart';
-import 'package:speech_to_text/speech_recognition_result.dart';
-import 'package:speech_to_text/speech_to_text.dart';
 
 /// Si se puede dictar en este celular. [sinDictadoLocal]: Android no
 /// reconoce la voz dentro del celular (antes de Android 12, o sin el
@@ -30,44 +27,164 @@ abstract class Dictado {
   Future<void> detener();
 }
 
-/// Errores del reconocedor de Android que significan "no hay español sin
-/// conexión" (no "no te entendí").
-const _sinIdioma = {
-  'error_language_not_supported',
-  'error_language_unavailable',
-  'error_server_disconnected',
-};
+/// Lo que avisa el reconocedor de Android mientras escucha.
+sealed class EventoVoz {
+  const EventoVoz();
+}
 
-const _canalVoz = MethodChannel('vecitienda/voz');
+class TextoParcial extends EventoVoz {
+  const TextoParcial(this.texto);
 
-/// Pregunta a Android (MainActivity) si hay reconocimiento de voz local.
-Future<bool> _hayReconocimientoLocalEnAndroid() async {
-  try {
-    return await _canalVoz.invokeMethod<bool>('hayReconocimientoLocal') ??
-        false;
-  } catch (_) {
-    return false;
+  final String texto;
+}
+
+/// Lo último que entendió; después de esto el reconocedor ya se apagó.
+class TextoFinal extends EventoVoz {
+  const TextoFinal(this.texto);
+
+  final String texto;
+}
+
+/// Error de `SpeechRecognizer`; después de esto el reconocedor ya se apagó.
+class ErrorVoz extends EventoVoz {
+  const ErrorVoz(this.codigo);
+
+  final int codigo;
+
+  static const silencio = 6;
+  static const sinCoincidencia = 7;
+  static const servidorDesconectado = 11;
+  static const idiomaNoSoportado = 12;
+  static const idiomaNoDisponible = 13;
+
+  /// Errores que significan "no hay español sin conexión" (no "no te
+  /// entendí"): el reconocedor local se cae si el idioma no está descargado.
+  bool get sinIdioma =>
+      codigo == servidorDesconectado ||
+      codigo == idiomaNoSoportado ||
+      codigo == idiomaNoDisponible;
+}
+
+/// El reconocedor de voz local de Android (MainActivity y DictadoLocal).
+abstract class ReconocedorLocal {
+  Future<bool> hayReconocimientoLocal();
+
+  /// Idiomas descargados (p. ej. "es-US"), o null si Android no lo dice
+  /// (antes de Android 13).
+  Future<List<String>?> idiomasDescargados();
+
+  /// Pide el micrófono si hace falta; true si quedó permitido.
+  Future<bool> pedirPermiso();
+
+  /// Empieza a escuchar en [idioma] (null: el del celular) y pasa a
+  /// [alEvento] lo que va pasando, hasta un [TextoFinal] o un [ErrorVoz].
+  Future<void> escuchar({
+    required String? idioma,
+    required void Function(EventoVoz evento) alEvento,
+  });
+
+  /// Deja de oír; lo final llega después por `alEvento`.
+  Future<void> detener();
+}
+
+class CanalVoz implements ReconocedorLocal {
+  CanalVoz() {
+    _canal.setMethodCallHandler(_recibir);
   }
+
+  static const _canal = MethodChannel('vecitienda/voz');
+
+  /// Silencio que da por terminado el dictado.
+  static const _silencio = Duration(seconds: 3);
+
+  void Function(EventoVoz evento)? _alEvento;
+
+  Future<void> _recibir(MethodCall llamada) async {
+    final evento = switch (llamada.method) {
+      'parcial' => TextoParcial(llamada.arguments as String),
+      'final' => TextoFinal(llamada.arguments as String),
+      'error' => ErrorVoz(llamada.arguments as int),
+      _ => null,
+    };
+    if (evento != null) _alEvento?.call(evento);
+  }
+
+  @override
+  Future<bool> hayReconocimientoLocal() async {
+    try {
+      return await _canal.invokeMethod<bool>('hayReconocimientoLocal') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  Future<List<String>?> idiomasDescargados() async {
+    try {
+      return await _canal.invokeListMethod<String>('idiomasDescargados');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<bool> pedirPermiso() async =>
+      await _canal.invokeMethod<bool>('pedirPermiso') ?? false;
+
+  @override
+  Future<void> escuchar({
+    required String? idioma,
+    required void Function(EventoVoz evento) alEvento,
+  }) async {
+    _alEvento = alEvento;
+    await _canal.invokeMethod<void>('escuchar', {
+      'idioma': idioma,
+      'silencioMs': _silencio.inMilliseconds,
+    });
+  }
+
+  @override
+  Future<void> detener() => _canal.invokeMethod<void>('detener');
+}
+
+/// Español preferido: el de Colombia, luego el latino de Estados Unidos,
+/// luego cualquiera.
+const _espanolPreferido = ['es-co', 'es-us'];
+
+/// El español de [ids] que se va a usar, o null si no hay ninguno.
+String? _elegirEspanol(Iterable<String> ids) {
+  final espanol = ids
+      .map((id) => id.replaceAll('_', '-'))
+      .where((id) => id.toLowerCase().startsWith('es'))
+      .toList();
+  for (final preferido in _espanolPreferido) {
+    for (final id in espanol) {
+      if (id.toLowerCase() == preferido) return id;
+    }
+  }
+  return espanol.firstOrNull;
 }
 
 class DictadoDelCelular implements Dictado {
   DictadoDelCelular(
-    SpeechToText? voz, {
-    Future<bool> Function()? hayReconocimientoLocal,
+    ReconocedorLocal? reconocedor, {
     this.esperaIdiomas = const Duration(seconds: 3),
-  }) : _voz = voz ?? SpeechToText(),
-       _hayReconocimientoLocal =
-           hayReconocimientoLocal ?? _hayReconocimientoLocalEnAndroid;
+    this.duracionEscucha = const Duration(seconds: 8),
+    this.esperaMaxima = const Duration(seconds: 12),
+  }) : _reconocedor = reconocedor ?? CanalVoz();
 
-  final SpeechToText _voz;
-  final Future<bool> Function() _hayReconocimientoLocal;
+  final ReconocedorLocal _reconocedor;
 
-  /// El plugin puede no responder nunca la lista de idiomas.
+  /// Android puede no responder nunca la lista de idiomas.
   final Duration esperaIdiomas;
 
-  /// Si el reconocedor no avisa que terminó: escucha (8 s) + resultado
-  /// final del plugin (2 s) + margen.
-  static const _esperaMaxima = Duration(seconds: 12);
+  /// Lo más que se escucha antes de pedir lo final.
+  final Duration duracionEscucha;
+
+  /// Si el reconocedor no avisa que terminó: escucha + lo final + margen.
+  final Duration esperaMaxima;
+
+  Timer? _limiteEscucha;
   Timer? _plazo;
   String? _idioma;
   Completer<String?>? _escucha;
@@ -76,28 +193,21 @@ class DictadoDelCelular implements Dictado {
   @override
   Future<EstadoDictado> preparar() async {
     try {
-      // speech_to_text con onDevice cae en silencio al servicio en línea si
-      // no hay reconocedor local: aquí se exige que exista.
-      if (!await _hayReconocimientoLocal()) {
+      if (!await _reconocedor.hayReconocimientoLocal()) {
         return EstadoDictado.sinDictadoLocal;
       }
-      final ok = await _voz.initialize(onError: _alError, onStatus: _alEstado);
-      if (!ok) {
-        return await _voz.hasPermission
-            ? EstadoDictado.noDisponible
-            : EstadoDictado.sinPermiso;
-      }
-      final idiomas = await _voz.locales().timeout(esperaIdiomas);
-      final espanol = idiomas
-          .map((l) => l.localeId)
-          .where((id) => id.toLowerCase().startsWith('es'))
-          .toList();
-      if (espanol.isEmpty) return EstadoDictado.noDisponible;
-      _idioma = espanol.firstWhere(
-        (id) => id.replaceAll('-', '_') == 'es_CO',
-        orElse: () => espanol.first,
+      if (!await _reconocedor.pedirPermiso()) return EstadoDictado.sinPermiso;
+      // Android lista como soportados idiomas que no están descargados, y
+      // pedir uno de esos corta la escucha al instante.
+      final descargados = await _reconocedor.idiomasDescargados().timeout(
+        esperaIdiomas,
       );
-      return EstadoDictado.listo;
+      if (descargados == null) {
+        _idioma = null;
+        return EstadoDictado.listo;
+      }
+      _idioma = _elegirEspanol(descargados);
+      return _idioma == null ? EstadoDictado.noDisponible : EstadoDictado.listo;
     } catch (_) {
       return EstadoDictado.noDisponible;
     }
@@ -109,25 +219,35 @@ class DictadoDelCelular implements Dictado {
   }) async {
     final escucha = _escucha = Completer<String?>();
     _ultimo = '';
-    _plazo?.cancel();
-    _plazo = Timer(_esperaMaxima, () => _terminar(_ultimo));
+    _cancelarPlazos();
+    _limiteEscucha = Timer(duracionEscucha, _reconocedor.detener);
+    _plazo = Timer(esperaMaxima, () => _terminar(_ultimo));
     try {
-      await _voz.listen(
-        onResult: (SpeechRecognitionResult r) {
-          // Tras "Listo" el plugin aún entrega el resultado: ya no cuenta.
+      await _reconocedor.escuchar(
+        idioma: _idioma,
+        alEvento: (evento) {
+          // Tras "Listo" el reconocedor aún entrega lo final: ya no cuenta.
           if (escucha.isCompleted) return;
-          _ultimo = r.recognizedWords;
-          alOir(_ultimo);
-          if (r.finalResult) _terminar(_ultimo);
+          switch (evento) {
+            case TextoParcial(:final texto):
+              // El reconocedor local manda "" antes de terminar: no borra
+              // lo que ya oyó.
+              if (texto.trim().isEmpty) return;
+              _ultimo = texto;
+              alOir(texto);
+            case TextoFinal(:final texto):
+              if (texto.trim().isNotEmpty) {
+                _ultimo = texto;
+                alOir(texto);
+              }
+              _terminar(_ultimo);
+            case ErrorVoz() when evento.sinIdioma:
+              _cancelarPlazos();
+              escucha.completeError(const DictadoNoDisponible());
+            case ErrorVoz():
+              _terminar(_ultimo);
+          }
         },
-        listenOptions: SpeechListenOptions(
-          onDevice: true,
-          partialResults: true,
-          cancelOnError: true,
-          listenFor: const Duration(seconds: 8),
-          pauseFor: const Duration(seconds: 3),
-          localeId: _idioma,
-        ),
       );
     } catch (_) {
       _terminar('');
@@ -137,29 +257,19 @@ class DictadoDelCelular implements Dictado {
 
   @override
   Future<void> detener() async {
-    await _voz.stop();
     _terminar(_ultimo);
+    await _reconocedor.detener();
   }
 
-  void _alError(SpeechRecognitionError error) {
-    final escucha = _escucha;
-    if (escucha == null || escucha.isCompleted) return;
-    if (_sinIdioma.contains(error.errorMsg)) {
-      _plazo?.cancel();
-      escucha.completeError(const DictadoNoDisponible());
-    } else {
-      _terminar(_ultimo);
-    }
-  }
-
-  void _alEstado(String estado) {
-    if (estado == SpeechToText.doneStatus) _terminar(_ultimo);
+  void _cancelarPlazos() {
+    _limiteEscucha?.cancel();
+    _plazo?.cancel();
   }
 
   void _terminar(String texto) {
     final escucha = _escucha;
     if (escucha == null || escucha.isCompleted) return;
-    _plazo?.cancel();
+    _cancelarPlazos();
     escucha.complete(texto.trim().isEmpty ? null : texto.trim());
   }
 }
