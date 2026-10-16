@@ -36,7 +36,8 @@ Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/s
   1. **Pedido recibido = gasto** (rama `feature/pedido-como-gasto`). Al guardar en Recibir
      mercancía se crea, en la misma transacción, un gasto "Mercancía · <proveedor>" por el total,
      enlazado a la entrada (columna nueva `entradaId` en `Gastos`, BD v9 con migración). Interruptor
-     "Lo pagué de la caja" (siempre encendido por defecto, decidido el 2026-10-16) para pedidos a crédito o pagados por fuera.
+     "Lo pagué de la caja" (siempre encendido por defecto, decidido el 2026-10-16) para pedidos
+     a crédito o pagados por fuera.
      Anular la entrada anula su gasto; el gasto enlazado no se corrige suelto (se corrige la
      entrada). Reportes y resumen ya restan gastos, así que la ganancia queda en vista de caja.
      Riesgo: doble conteo si el tendero ya registraba la mercancía a mano; avisar una vez.
