@@ -47,7 +47,11 @@ class _RaizAppState extends ConsumerState<RaizApp> {
 
     // El inicio sigue quieto en su final si la consulta aún no responde.
     final Widget pantalla;
-    final esperando = !_yaMostrada && !hayUsuariosAsync.hasValue;
+    // Un error no se espera: se muestra, para no dejar la app quieta.
+    final esperando =
+        !_yaMostrada &&
+        !hayUsuariosAsync.hasValue &&
+        !hayUsuariosAsync.hasError;
     if (pendiente || (esperando && !sesion.haySesion)) {
       pantalla = InicioMarcaScreen(
         key: const ValueKey('inicio_marca'),

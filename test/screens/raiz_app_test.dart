@@ -105,4 +105,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Crear tienda nueva'), findsOneWidget);
   });
+
+  testWidgets('si la consulta falla, muestra el error en vez de quedarse', (
+    tester,
+  ) async {
+    await abrir(
+      tester,
+      overrides: [
+        haySesionUsuariosProvider.overrideWith(
+          (ref) => Future<bool>.error(StateError('base dañada')),
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('toldo_marca')), findsNothing);
+    expect(find.textContaining('base dañada'), findsOneWidget);
+  });
 }

@@ -112,52 +112,58 @@ class _InicioMarcaScreenState extends State<InicioMarcaScreen>
                           // Con letra muy grande se encoge en vez de desbordar.
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Opacity(
-                                  opacity: insignia.clamp(0, 1),
-                                  child: Transform.scale(
-                                    scale: completa
-                                        ? insignia
-                                        : 0.6 + 0.4 * insignia,
-                                    child: const _Insignia(),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                ExcludeSemantics(
-                                  child: _Aparecer(
-                                    valor: nombre,
-                                    child: Text(
-                                      'VeciTienda',
-                                      style:
-                                          estiloTitulo(
-                                            tamano: 34,
-                                            color: c.primario,
-                                          ).copyWith(
-                                            fontWeight: FontWeight.w900,
-                                            fontVariations: const [
-                                              FontVariation('wght', 900),
-                                            ],
-                                          ),
+                            child: ConstrainedBox(
+                              // Ancho fijo: el eslogan se parte en líneas en vez de encoger todo.
+                              constraints: BoxConstraints(
+                                maxWidth: medidas.maxWidth - 48,
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Opacity(
+                                    opacity: insignia.clamp(0, 1),
+                                    child: Transform.scale(
+                                      scale: completa
+                                          ? insignia
+                                          : 0.6 + 0.4 * insignia,
+                                      child: const _Insignia(),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: 6),
-                                ExcludeSemantics(
-                                  child: _Aparecer(
-                                    valor: eslogan,
-                                    child: Text(
-                                      MarcaApp.slogan,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        color: c.textoSecundario,
+                                  const SizedBox(height: 20),
+                                  ExcludeSemantics(
+                                    child: _Aparecer(
+                                      valor: nombre,
+                                      child: Text(
+                                        'VeciTienda',
+                                        style:
+                                            estiloTitulo(
+                                              tamano: 34,
+                                              color: c.primario,
+                                            ).copyWith(
+                                              fontWeight: FontWeight.w900,
+                                              fontVariations: const [
+                                                FontVariation('wght', 900),
+                                              ],
+                                            ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 6),
+                                  ExcludeSemantics(
+                                    child: _Aparecer(
+                                      valor: eslogan,
+                                      child: Text(
+                                        MarcaApp.slogan,
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: c.textoSecundario,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),

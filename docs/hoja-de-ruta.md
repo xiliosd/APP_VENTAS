@@ -67,4 +67,4 @@ Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/s
 
 - Recorrido manual en un celular real de: Cargar QR (2D), corregir y anular (3A) y reportes
   (3B), detalle de tickets (3C) y catálogo, proveedores y nombre de la tienda (4A), inventario (4B), pedido sugerido (4C), pulido tanda 1 y pulido tanda 2 (incluido el ícono temático en
-  Android 13+), renovación R1 en claro y oscuro (incluida la vibración) renovación R2a, renovación R2b (recorrido completo en un celular nuevo), renovación R3a, renovación R3b, renovación R4 y código de barras con productos reales (cámara) pedidos guardados con recepción como gasto e inicio de marca (claro, oscuro, Android 12+ y anteriores).
+  Android 13+), renovación R1 en claro y oscuro (incluida la vibración) renovación R2a, renovación R2b (recorrido completo en un celular nuevo), renovación R3a, renovación R3b, renovación R4 y código de barras con productos reales (cámara), pedidos guardados con recepción como gasto e inicio de marca (claro, oscuro, Android 12+ y anteriores).

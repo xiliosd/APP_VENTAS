@@ -115,4 +115,22 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('con letra 2,0× el eslogan se parte en líneas sin salirse', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await montar(tester, completa: false, escala: 2);
+    await tester.pumpAndSettle();
+
+    // Si todo el bloque se encogiera, el eslogan quedaría en una línea más
+    // ancha que la pantalla y la letra grande no se notaría.
+    expect(
+      tester.getSize(find.text(MarcaApp.slogan)).width,
+      lessThanOrEqualTo(360 - 48),
+    );
+  });
 }
