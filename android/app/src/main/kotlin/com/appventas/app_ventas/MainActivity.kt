@@ -1,5 +1,6 @@
 package com.appventas.app_ventas
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// FragmentActivity: la necesita local_auth para mostrar el diálogo de huella.
+class MainActivity : FlutterFragmentActivity()

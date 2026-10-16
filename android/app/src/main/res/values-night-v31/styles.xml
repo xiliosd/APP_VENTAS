@@ -2,7 +2,7 @@
 <resources>
     <!-- Android 12+ con el modo oscuro del sistema on: solo el color de fondo del
          inicio de marca, sin el ícono del sistema. -->
-    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+    <style name="LaunchTheme" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowBackground">@drawable/launch_background</item>
         <item name="android:windowSplashScreenBackground">@color/fondo_inicio</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/icono_transparente</item>

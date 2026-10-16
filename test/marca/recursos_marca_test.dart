@@ -120,4 +120,39 @@ void main() {
           contains('@android:color/transparent'));
     });
   });
+
+  group('Android está listo para entrar con huella', () {
+    const res = 'android/app/src/main/res';
+
+    test('la actividad es FlutterFragmentActivity', () {
+      final actividad = File(
+              'android/app/src/main/kotlin/com/appventas/app_ventas/MainActivity.kt')
+          .readAsStringSync();
+      expect(actividad, contains('FlutterFragmentActivity()'));
+    });
+
+    test('pide el permiso de biometría', () {
+      expect(
+          File('android/app/src/main/AndroidManifest.xml').readAsStringSync(),
+          contains('android.permission.USE_BIOMETRIC'));
+    });
+
+    test('los temas de arranque son AppCompat y conservan la pantalla de carga',
+        () {
+      const padres = {
+        'values': 'Theme.AppCompat.Light.NoActionBar',
+        'values-night': 'Theme.AppCompat.NoActionBar',
+        'values-v31': 'Theme.AppCompat.Light.NoActionBar',
+        'values-night-v31': 'Theme.AppCompat.NoActionBar',
+      };
+      padres.forEach((carpeta, padre) {
+        final xml = File('$res/$carpeta/styles.xml').readAsStringSync();
+        expect(xml, contains('<style name="LaunchTheme" parent="$padre">'),
+            reason: carpeta);
+        expect(xml, contains('@drawable/launch_background'), reason: carpeta);
+      });
+      expect(File('$res/values-v31/styles.xml').readAsStringSync(),
+          contains('windowSplashScreenAnimatedIcon'));
+    });
+  });
 }
