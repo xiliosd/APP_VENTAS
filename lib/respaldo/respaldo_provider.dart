@@ -241,6 +241,10 @@ class RespaldoNotifier extends Notifier<EstadoRespaldo> {
   /// si el respaldo es inválido, se desconecta para no pisarlo.
   Future<ResultadoRestauracion> restaurar() async {
     _temporizador?.cancel();
+    // Antes de tocar la base: si la app se cerrara a mitad, ningún id viejo
+    // con huella apuntaría a otra persona de la base nueva. Si la
+    // restauración falla, cada quien vuelve a activar su huella.
+    await ref.read(usuariosConHuellaProvider.notifier).borrarTodas();
     final ResultadoRestauracion resultado;
     try {
       resultado = await ref
@@ -254,8 +258,6 @@ class RespaldoNotifier extends Notifier<EstadoRespaldo> {
     switch (resultado) {
       case ResultadoRestauracion.restaurado:
         await _marcarHabilitado(true);
-        // La base nueva puede traer otras personas con los mismos ids.
-        await ref.read(usuariosConHuellaProvider.notifier).borrarTodas();
         ref.read(sesionProvider.notifier).cerrarSesion();
         ref.invalidate(databaseProvider);
       case ResultadoRestauracion.sinRespaldo:

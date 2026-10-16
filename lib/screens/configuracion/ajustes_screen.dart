@@ -266,8 +266,9 @@ class _FilaHuella extends ConsumerWidget {
       builder: (contexto) => AlertDialog(
         title: const Text('¿Entrar con huella?'),
         content: const Text(
-          'Cualquier huella registrada en este celular podrá abrir tu usuario. '
-          'Actívalo solo si el celular es tuyo.',
+          // El rostro también cuenta como biometría en muchos celulares.
+          'Cualquier huella o rostro registrado en este celular podrá abrir '
+          'tu usuario. Actívalo solo si el celular es tuyo.',
         ),
         actions: [
           TextButton(

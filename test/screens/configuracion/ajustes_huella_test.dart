@@ -78,7 +78,8 @@ void main() {
 
     expect(
       find.text(
-        'Cualquier huella registrada en este celular podrá abrir '
+        // El rostro también cuenta como biometría en muchos celulares.
+        'Cualquier huella o rostro registrado en este celular podrá abrir '
         'tu usuario. Actívalo solo si el celular es tuyo.',
       ),
       findsOneWidget,

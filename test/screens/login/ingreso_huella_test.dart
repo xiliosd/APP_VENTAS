@@ -186,4 +186,18 @@ void main() {
       expect(c.read(usuariosConHuellaProvider), isNot(contains(99)));
     },
   );
+
+  test('la huella no abre a un usuario que no la activó', () async {
+    final c = await containerConSesion(db);
+    addTearDown(c.dispose);
+    final otro = c.read(sesionProvider).usuarioActivo!;
+    c.read(sesionProvider.notifier).cerrarSesion();
+
+    final ok = await c
+        .read(sesionProvider.notifier)
+        .iniciarSesionConHuella(otro.id);
+
+    expect(ok, isFalse);
+    expect(c.read(sesionProvider).haySesion, isFalse);
+  });
 }

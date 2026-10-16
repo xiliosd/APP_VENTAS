@@ -224,6 +224,29 @@ void main() {
     container.dispose();
   });
 
+  testWidgets('las huellas se olvidan antes de reemplazar la base', (
+    tester,
+  ) async {
+    late ProviderContainer container;
+    Set<int>? alRestaurar;
+    final restaurador = _RestauradorQueMira(
+      () => alRestaurar = container.read(usuariosConHuellaProvider),
+    );
+    container = await containerRespaldo(
+      db,
+      NubeRespaldoFalsa(conSesion: true),
+      restaurador: restaurador,
+    );
+    await container.read(usuariosConHuellaProvider.notifier).activar(ana);
+
+    await container.read(respaldoProvider.notifier).restaurar();
+
+    // Si la app se cerrara a mitad, ningún id viejo apuntaría a la base nueva.
+    expect(alRestaurar, isEmpty);
+    await tester.pump(const Duration(seconds: 31));
+    container.dispose();
+  });
+
   testWidgets('una sesión sin activar (flujo abandonado) no sube nada y se '
       'cierra', (tester) async {
     final nube = NubeRespaldoFalsa(conSesion: true);
@@ -396,5 +419,21 @@ class _RestauradorQueFalla extends RestauradorFalso {
     AppDatabase db,
   ) async {
     throw const FileSystemException('disco lleno');
+  }
+}
+
+/// Restaurador que anota el estado justo cuando va a reemplazar la base.
+class _RestauradorQueMira extends RestauradorFalso {
+  _RestauradorQueMira(this.mirar) : super(ResultadoRestauracion.restaurado);
+
+  final void Function() mirar;
+
+  @override
+  Future<ResultadoRestauracion> restaurar(
+    NubeRespaldo nube,
+    AppDatabase db,
+  ) async {
+    mirar();
+    return super.restaurar(nube, db);
   }
 }

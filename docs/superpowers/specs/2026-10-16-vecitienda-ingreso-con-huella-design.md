@@ -40,9 +40,10 @@ método de autenticación más rápido".
 
 - En Ajustes, una fila "Entrar con huella" con interruptor para el **usuario con sesión**. Solo
   aparece si el celular tiene biometría disponible y registrada.
-- Al encenderlo: aviso "Cualquier huella registrada en este celular podrá abrir tu usuario. Actívalo
-  solo si el celular es tuyo." con "Activar" / "Cancelar"; luego se pide la huella una vez para
-  confirmar. Solo si la huella se confirma queda activado.
+- Al encenderlo: aviso "Cualquier huella o rostro registrado en este celular podrá abrir tu usuario.
+  Actívalo solo si el celular es tuyo." con "Activar" / "Cancelar"; luego se pide la huella una vez
+  para confirmar. Solo si la huella se confirma queda activado. (Ajustado tras la revisión: en muchos
+  celulares el desbloqueo facial cuenta como biometría.)
 - Apagarlo no pide nada.
 - Se guarda en las preferencias del celular (`SharedPreferences`, clave `usuarios_con_huella`, lista
   de ids). No va en la base de datos: la huella es de este celular, y un respaldo restaurado en otro
