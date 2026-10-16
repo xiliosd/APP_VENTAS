@@ -87,6 +87,9 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('boton_guardar_recibir')));
     await tester.tap(find.byKey(const Key('boton_guardar_recibir')));
     await tester.pumpAndSettle();
+    // Primera recepción pagada de la caja: avisa una vez que ya es gasto.
+    await tester.tap(find.byKey(const Key('entendido_aviso_gasto')));
+    await tester.pumpAndSettle();
 
     expect(devuelto, 7800);
     expect(find.byType(RecibirMercanciaScreen), findsNothing);
