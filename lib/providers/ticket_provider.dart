@@ -88,11 +88,14 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
   @override
   Ticket build() => const Ticket();
 
-  void agregarProducto(Producto producto) => _agregar(
+  /// Suma [cantidad] de [producto]; si ya estaba en el ticket, se suma a
+  /// su línea (venta mixta: tocar, escanear y dictar).
+  void agregarProducto(Producto producto, {int cantidad = 1}) => _agregar(
     LineaTicket(
       clave: 'p${producto.id}',
       etiqueta: producto.nombre,
       precio: producto.precio,
+      cantidad: cantidad,
       productoId: producto.id,
     ),
   );
@@ -158,7 +161,7 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
 
   void _agregar(LineaTicket nueva) {
     if (state.cantidadDe(nueva.clave) > 0) {
-      _cambiarCantidad(nueva.clave, 1);
+      _cambiarCantidad(nueva.clave, nueva.cantidad);
     } else {
       _conLineas([...state.lineas, nueva]);
     }

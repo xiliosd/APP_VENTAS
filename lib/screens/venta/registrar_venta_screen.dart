@@ -14,10 +14,12 @@ import '../../ui/hoja_inferior.dart';
 import '../../ui/monto.dart';
 import '../../ui/mosaico.dart';
 import '../../ui/teclado_monto.dart';
+import '../../servicios/dictado.dart';
 import '../../servicios/lector_codigo.dart';
 import '../../util/busqueda_producto.dart';
 import '../../util/catalogo_producto.dart';
 import '../../util/formato_moneda.dart';
+import '../../util/interpretar_dictado.dart';
 import '../../util/texto_util.dart';
 import '../../widgets/monto_rapido_grid.dart';
 import '../qr/cobro_qr_screen.dart';
@@ -26,6 +28,7 @@ import '../../ui/recorrido/globos.dart';
 import '../../ui/recorrido/objetivo_recorrido.dart';
 import '../recorrido/globos_venta.dart';
 import 'hoja_como_paga.dart';
+import 'hoja_dictado.dart';
 import 'hoja_producto_rapido.dart';
 
 class RegistrarVentaScreen extends ConsumerStatefulWidget {
@@ -33,6 +36,7 @@ class RegistrarVentaScreen extends ConsumerStatefulWidget {
     super.key,
     this.practica = false,
     this.conGlobos = true,
+    this.dictarAlAbrir = false,
   });
 
   /// Venta de práctica del recorrido: guía con globos y no guarda nada.
@@ -41,6 +45,9 @@ class RegistrarVentaScreen extends ConsumerStatefulWidget {
   /// Solo para pruebas: práctica sin guía, para probar otras formas de pago
   /// (con la guía solo se puede tocar Efectivo).
   final bool conGlobos;
+
+  /// Desde "Vender por voz" del Inicio: empieza a escuchar al abrir.
+  final bool dictarAlAbrir;
 
   @override
   ConsumerState<RegistrarVentaScreen> createState() =>
@@ -113,12 +120,117 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     setState(() => _filtro = '');
   }
 
+  /// El dictado en curso, para detenerlo si se cierra la pantalla.
+  Dictado? _dictado;
+
+  /// Lo que va oyendo el dictado (null = no está escuchando).
+  String? _oyendo;
+
+  Future<void> _dictar() async {
+    final dictado = ref.read(dictadoProvider);
+    final estado = await dictado.preparar();
+    if (!mounted) return;
+    switch (estado) {
+      case EstadoDictado.sinPermiso:
+        avisar(
+          context,
+          'Para dictar, permite el micrófono en Ajustes del celular → Apps → '
+          'VeciTienda → Permisos',
+          error: true,
+        );
+        return;
+      case EstadoDictado.noDisponible:
+        _avisarSinDictado();
+        return;
+      case EstadoDictado.listo:
+    }
+    setState(() {
+      _dictado = dictado;
+      _oyendo = '';
+    });
+    String? texto;
+    try {
+      texto = await dictado.escuchar(
+        alOir: (t) {
+          if (mounted) setState(() => _oyendo = t);
+        },
+      );
+    } on DictadoNoDisponible {
+      if (mounted) _avisarSinDictado();
+      texto = null;
+      if (mounted) setState(() => _oyendo = null);
+      _dictado = null;
+      return;
+    }
+    _dictado = null;
+    if (!mounted) return;
+    setState(() => _oyendo = null);
+    if (texto == null || texto.trim().isEmpty) {
+      avisar(context, 'No te escuché, intenta de nuevo', error: true);
+      return;
+    }
+    final productos = await ref.read(productosActivosProvider.future);
+    if (!mounted) return;
+    final partes = interpretarDictado(texto, productos);
+    // Si no reconoció nada, lo oído sirve como búsqueda a mano.
+    if (partes.every((p) => p.tipo == TipoParteDictada.noEncontrada)) {
+      _buscarTexto(
+        partes.isEmpty ? texto : partes.map((p) => p.texto).join(' '),
+      );
+      return;
+    }
+    final respuesta = await mostrarHojaDictado(
+      context,
+      oido: texto,
+      partes: partes,
+    );
+    if (!mounted) return;
+    switch (respuesta) {
+      case AgregarDictado(:final lineas):
+        final ticket = ref.read(ticketProvider.notifier);
+        for (final l in lineas) {
+          ticket.agregarProducto(l.producto, cantidad: l.cantidad);
+        }
+      case BuscarDictado(:final texto):
+        _buscarTexto(texto);
+      case DictarOtraVez():
+        await _dictar();
+      case null:
+    }
+  }
+
+  void _avisarSinDictado() => avisar(
+    context,
+    'El dictado no está disponible. Descarga el español sin conexión en los '
+    'ajustes de voz de Google del celular',
+    error: true,
+  );
+
+  /// Pone [texto] en el buscador; con pocos productos no hay buscador y se
+  /// avisa lo que no se encontró.
+  void _buscarTexto(String texto) {
+    final hayBuscador =
+        (ref.read(productosActivosProvider).valueOrNull?.length ?? 0) >
+        _productosSinBuscador;
+    if (!hayBuscador) {
+      avisar(context, 'No encontré: $texto', error: true);
+      return;
+    }
+    _busqueda.text = texto;
+    setState(() => _filtro = sinTildes(texto.trim()));
+  }
+
   /// Globos de la venta de práctica (solo con [RegistrarVentaScreen.practica]).
   ControladorGlobos? _globos;
 
   @override
   void initState() {
     super.initState();
+    if (widget.dictarAlAbrir && !widget.practica) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _dictar();
+      });
+    }
     if (widget.practica && widget.conGlobos) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -133,6 +245,8 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
 
   @override
   void dispose() {
+    // Cerrar la pantalla mientras escucha apaga el micrófono.
+    _dictado?.detener();
     _globos?.cerrar();
     _busqueda.dispose();
     super.dispose();
@@ -391,6 +505,13 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
           // En la práctica no se crean productos reales.
           if (!widget.practica)
             IconButton(
+              key: const Key('boton_dictar'),
+              tooltip: 'Dictar venta',
+              icon: const Icon(Icons.mic_rounded),
+              onPressed: _oyendo == null ? _dictar : null,
+            ),
+          if (!widget.practica)
+            IconButton(
               key: const Key('boton_escanear_venta'),
               tooltip: 'Escanear',
               icon: const Icon(Icons.qr_code_scanner_rounded),
@@ -400,6 +521,33 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       ),
       body: Column(
         children: [
+          if (_oyendo != null)
+            Container(
+              key: const Key('franja_dictado'),
+              width: double.infinity,
+              color: c.primarioSuave,
+              padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+              child: Row(
+                children: [
+                  Icon(Icons.mic_rounded, color: c.primario),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        _oyendo!.isEmpty ? 'Te escucho…' : _oyendo!,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    key: const Key('boton_listo_dictado'),
+                    onPressed: () => _dictado?.detener(),
+                    child: const Text('Listo'),
+                  ),
+                ],
+              ),
+            ),
           if (widget.practica)
             Container(
               key: const Key('franja_practica'),

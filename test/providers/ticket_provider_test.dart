@@ -128,4 +128,14 @@ void main() {
     notifier().vaciar();
     expect(ticket().medioPago, MedioPago.efectivo);
   });
+
+  test('agregar con cantidad suma a la línea que ya estaba', () {
+    notifier().agregarProducto(pan);
+    notifier().agregarProducto(pan, cantidad: 3);
+    notifier().agregarProducto(arepa, cantidad: 2);
+
+    expect(ticket().cantidadDe('p2'), 4);
+    expect(ticket().cantidadDe('p1'), 2);
+    expect(ticket().total, 4 * 500 + 2 * 3500);
+  });
 }
