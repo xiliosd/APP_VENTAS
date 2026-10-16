@@ -154,84 +154,89 @@ class _HojaDictadoState extends State<_HojaDictado> {
     }
     final elegido = f.elegido;
     final id = elegido?.id;
+    // La clave por producto va adentro: dos filas pueden terminar con el
+    // mismo producto y entre hermanas las claves no se pueden repetir.
     return Card(
-      key: elegido == null
-          ? Key('parte_dudosa_$i')
-          : Key('parte_reconocida_$id'),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (f.parte.tipo == TipoParteDictada.dudosa) ...[
-              Text(
-                '¿Cuál ${f.parte.texto}?',
-                style: TextStyle(color: c.textoSecundario),
-              ),
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final p in f.parte.opciones)
-                    ChoiceChip(
-                      key: Key('opcion_dictado_${i}_${p.id}'),
-                      label: Text(
-                        [p.nombre, p.tamano].whereType<String>().join(' '),
+      key: ObjectKey(f),
+      child: KeyedSubtree(
+        key: elegido == null
+            ? Key('parte_dudosa_$i')
+            : Key('parte_reconocida_$id'),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (f.parte.tipo == TipoParteDictada.dudosa) ...[
+                Text(
+                  '¿Cuál ${f.parte.texto}?',
+                  style: TextStyle(color: c.textoSecundario),
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final p in f.parte.opciones)
+                      ChoiceChip(
+                        key: Key('opcion_dictado_${i}_${p.id}'),
+                        label: Text(
+                          [p.nombre, p.tamano].whereType<String>().join(' '),
+                        ),
+                        selected: elegido?.id == p.id,
+                        onSelected: (_) => setState(() => f.elegido = p),
                       ),
-                      selected: elegido?.id == p.id,
-                      onSelected: (_) => setState(() => f.elegido = p),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      elegido == null
+                          ? 'Elige una opción'
+                          : '${[elegido.nombre, elegido.tamano].whereType<String>().join(' ')} · '
+                                '${formatoMoneda(elegido.precio)}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
+                  ),
+                  BotonCantidad(
+                    key: Key('restar_dictado_${id ?? 'd$i'}'),
+                    icono: Icons.remove_rounded,
+                    tooltip: 'Restar',
+                    onPressed: f.cantidad > 1
+                        ? () => setState(() => f.cantidad--)
+                        : null,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      '${f.cantidad}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  BotonCantidad(
+                    key: Key('sumar_dictado_${id ?? 'd$i'}'),
+                    icono: Icons.add_rounded,
+                    tooltip: 'Sumar',
+                    onPressed: f.cantidad < 99
+                        ? () => setState(() => f.cantidad++)
+                        : null,
+                  ),
+                  IconButton(
+                    key: Key('quitar_dictado_${id ?? 'd$i'}'),
+                    tooltip: 'Quitar',
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => setState(() => _filas.remove(f)),
+                  ),
                 ],
               ),
-              const SizedBox(height: 8),
             ],
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    elegido == null
-                        ? 'Elige una opción'
-                        : '${[elegido.nombre, elegido.tamano].whereType<String>().join(' ')} · '
-                              '${formatoMoneda(elegido.precio)}',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                BotonCantidad(
-                  key: Key('restar_dictado_${id ?? 'd$i'}'),
-                  icono: Icons.remove_rounded,
-                  tooltip: 'Restar',
-                  onPressed: f.cantidad > 1
-                      ? () => setState(() => f.cantidad--)
-                      : null,
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text(
-                    '${f.cantidad}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                BotonCantidad(
-                  key: Key('sumar_dictado_${id ?? 'd$i'}'),
-                  icono: Icons.add_rounded,
-                  tooltip: 'Sumar',
-                  onPressed: f.cantidad < 99
-                      ? () => setState(() => f.cantidad++)
-                      : null,
-                ),
-                IconButton(
-                  key: Key('quitar_dictado_${id ?? 'd$i'}'),
-                  tooltip: 'Quitar',
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () => setState(() => _filas.remove(f)),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );

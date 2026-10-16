@@ -15,6 +15,9 @@ class DictadoFalso implements Dictado {
   int escuchas = 0;
   int detenciones = 0;
 
+  /// Como el plugin real: tras detener aún entrega lo que oyó.
+  String? oyeDespuesDeDetener;
+
   @override
   Future<EstadoDictado> preparar() async => estado;
 
@@ -31,6 +34,8 @@ class DictadoFalso implements Dictado {
   @override
   Future<void> detener() async {
     detenciones++;
+    final tardio = oyeDespuesDeDetener;
     if (pendiente != null && !pendiente!.isCompleted) pendiente!.complete(null);
+    if (tardio != null) alOir?.call(tardio);
   }
 }

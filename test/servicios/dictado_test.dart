@@ -18,6 +18,8 @@ class _VozFalsa extends SpeechToText {
   SpeechErrorListener? alError;
   SpeechStatusListener? alEstado;
   bool detenido = false;
+  Completer<List<LocaleName>>? idiomasPendientes;
+  Object? errorAlEscuchar;
 
   @override
   Future<bool> initialize({
@@ -36,7 +38,8 @@ class _VozFalsa extends SpeechToText {
   Future<bool> get hasPermission async => permiso;
 
   @override
-  Future<List<LocaleName>> locales() async => idiomas;
+  Future<List<LocaleName>> locales() =>
+      idiomasPendientes?.future ?? Future.value(idiomas);
 
   @override
   Future listen({
@@ -54,6 +57,7 @@ class _VozFalsa extends SpeechToText {
   }) async {
     oyente = onResult;
     opciones = listenOptions;
+    if (errorAlEscuchar != null) throw errorAlEscuchar!;
   }
 
   @override
@@ -72,7 +76,7 @@ void main() {
 
   setUp(() {
     voz = _VozFalsa();
-    dictado = DictadoDelCelular(voz);
+    dictado = DictadoDelCelular(voz, hayReconocimientoLocal: () async => true);
   });
 
   group('preparar', () {
@@ -95,7 +99,10 @@ void main() {
         ..inicia = true
         ..idiomas = [LocaleName('en_US', 'English')];
       expect(
-        await DictadoDelCelular(voz).preparar(),
+        await DictadoDelCelular(
+          voz,
+          hayReconocimientoLocal: () async => true,
+        ).preparar(),
         EstadoDictado.noDisponible,
       );
     });
@@ -171,6 +178,46 @@ void main() {
       unawaited(dictado.escuchar(alOir: (_) {}));
       await dictado.detener();
       expect(voz.detenido, isTrue);
+    });
+  });
+
+  group('revisión final', () {
+    test('sin reconocimiento local no dicta: el audio no sale del celular', () async {
+      final sinLocal = DictadoDelCelular(
+        voz,
+        hayReconocimientoLocal: () async => false,
+      );
+      expect(await sinLocal.preparar(), EstadoDictado.sinDictadoLocal);
+    });
+
+    test('si los idiomas no responden, no está disponible', () async {
+      voz.idiomasPendientes = Completer();
+      final lento = DictadoDelCelular(
+        voz,
+        hayReconocimientoLocal: () async => true,
+        esperaIdiomas: const Duration(milliseconds: 10),
+      );
+      expect(await lento.preparar(), EstadoDictado.noDisponible);
+    });
+
+    test('lo que llega después de detener se ignora', () async {
+      await dictado.preparar();
+      final oidos = <String>[];
+      final resultado = dictado.escuchar(alOir: oidos.add);
+      await Future<void>.delayed(Duration.zero);
+      voz.oir('un pan');
+
+      await dictado.detener();
+      voz.oir('un pan y leche', final_: true);
+
+      expect(await resultado, 'un pan');
+      expect(oidos, ['un pan']);
+    });
+
+    test('si el reconocedor falla al empezar devuelve null', () async {
+      await dictado.preparar();
+      voz.errorAlEscuchar = StateError('ocupado');
+      expect(await dictado.escuchar(alOir: (_) {}), isNull);
     });
   });
 }

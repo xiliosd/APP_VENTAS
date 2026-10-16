@@ -162,4 +162,12 @@ void main() {
     expect(manifiesto, contains('android.permission.RECORD_AUDIO'));
     expect(manifiesto, contains('android.speech.RecognitionService'));
   });
+
+  test('MainActivity responde si hay reconocimiento de voz local', () {
+    final actividad = File(
+      'android/app/src/main/kotlin/com/appventas/app_ventas/MainActivity.kt',
+    ).readAsStringSync();
+    expect(actividad, contains('vecitienda/voz'));
+    expect(actividad, contains('isOnDeviceRecognitionAvailable'));
+  });
 }

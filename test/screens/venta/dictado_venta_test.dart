@@ -271,4 +271,53 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('¿Agrego esto?'), findsOneWidget);
   });
+
+  testWidgets('tras "Listo" la franja no vuelve y se puede dictar de nuevo', (
+    tester,
+  ) async {
+    dictado
+      ..pendiente = Completer()
+      ..oyeDespuesDeDetener = 'un pan';
+    await abrir(tester);
+    await tester.tap(find.byKey(const Key('boton_dictar')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('boton_listo_dictado')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('franja_dictado')), findsNothing);
+    expect(
+      tester.widget<IconButton>(find.byKey(const Key('boton_dictar'))).onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('sin reconocimiento local avisa que no dicta sin internet', (
+    tester,
+  ) async {
+    dictado.estado = EstadoDictado.sinDictadoLocal;
+    await abrir(tester);
+    await dictar(tester, 'un pan');
+
+    expect(
+      find.text('Este celular no permite dictar sin internet'),
+      findsOneWidget,
+    );
+    expect(dictado.escuchas, 0);
+  });
+
+  testWidgets('dos filas con el mismo producto no rompen la hoja', (
+    tester,
+  ) async {
+    await abrir(tester);
+    await dictar(tester, 'una coca cola 400 y dos coca colas');
+
+    await tester.tap(
+      find.byKey(Key('opcion_dictado_1_${ids['Coca-Cola 400 ml']}')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Agregar al ticket (3)'), findsOneWidget);
+  });
 }

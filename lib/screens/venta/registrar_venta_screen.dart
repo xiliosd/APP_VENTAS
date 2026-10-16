@@ -142,6 +142,13 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       case EstadoDictado.noDisponible:
         _avisarSinDictado();
         return;
+      case EstadoDictado.sinDictadoLocal:
+        avisar(
+          context,
+          'Este celular no permite dictar sin internet',
+          error: true,
+        );
+        return;
       case EstadoDictado.listo:
     }
     setState(() {
@@ -152,7 +159,8 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     try {
       texto = await dictado.escuchar(
         alOir: (t) {
-          if (mounted) setState(() => _oyendo = t);
+          // Lo que llega después de "Listo" ya no se muestra.
+          if (mounted && _dictado != null) setState(() => _oyendo = t);
         },
       );
     } on DictadoNoDisponible {
@@ -542,7 +550,11 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
                   ),
                   TextButton(
                     key: const Key('boton_listo_dictado'),
-                    onPressed: () => _dictado?.detener(),
+                    onPressed: () {
+                      final dictado = _dictado;
+                      _dictado = null;
+                      dictado?.detener();
+                    },
                     child: const Text('Listo'),
                   ),
                 ],
