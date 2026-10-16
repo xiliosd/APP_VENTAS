@@ -13,6 +13,7 @@ import '../support/esquema_v4.dart';
 import '../support/esquema_v5.dart';
 import '../support/esquema_v6.dart';
 import '../support/esquema_v7.dart';
+import '../support/esquema_v8.dart';
 
 void main() {
   late Directory carpeta;
@@ -54,7 +55,7 @@ void main() {
         MedioPago.transferencia);
     expect((await db.select(db.configuracionTienda).getSingle()).imagenQr,
         [1, 2]);
-    expect(db.schemaVersion, 8);
+    expect(db.schemaVersion, 9);
   });
 
   test('una base v2 abre en v3 sin nada anulado y sin correcciones', () async {
@@ -310,5 +311,60 @@ void main() {
     final p = await (db.select(db.productos)..where((x) => x.id.equals(id)))
         .getSingle();
     expect((p.codigoBarras, p.tipo), ('7702004003508', 'bebidas'));
+  });
+
+  test('una base v8 abre en v9 sin pedidos y con gastos sin entrada', () async {
+    final archivo = File('${carpeta.path}/v8.sqlite');
+    crearBaseV8(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    final gasto = await db.select(db.gastos).getSingle();
+    expect(gasto.entradaId, isNull);
+    expect(await db.select(db.pedidos).get(), isEmpty);
+    expect(await db.select(db.lineasPedido).get(), isEmpty);
+  });
+
+  test('una base v1 abre en v9 y guarda pedidos y gastos con entrada',
+      () async {
+    final archivo = File('${carpeta.path}/v1p.sqlite');
+    crearBaseV1(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    final usuario = (await db.select(db.usuarios).get()).first.id;
+    final proveedor = await db
+        .into(db.proveedores)
+        .insert(ProveedoresCompanion.insert(nombre: 'Postobón'));
+    final producto = await db
+        .into(db.productos)
+        .insert(ProductosCompanion.insert(nombre: 'Coca', precio: 1500));
+    final pedido = await db.into(db.pedidos).insert(PedidosCompanion.insert(
+        proveedorId: proveedor,
+        usuarioId: usuario,
+        fecha: DateTime(2026, 10, 16)));
+    await db.into(db.lineasPedido).insert(LineasPedidoCompanion.insert(
+        pedidoId: pedido, productoId: producto, cantidad: 24));
+    final entrada = await db.into(db.entradasMercancia).insert(
+        EntradasMercanciaCompanion.insert(
+            proveedorId: proveedor,
+            usuarioId: usuario,
+            fecha: DateTime(2026, 10, 18),
+            total: 21600));
+    await db.into(db.gastos).insert(GastosCompanion.insert(
+        monto: 21600,
+        fecha: DateTime(2026, 10, 18),
+        usuarioId: usuario,
+        entradaId: Value(entrada)));
+
+    final guardado = await db.select(db.pedidos).getSingle();
+    expect(guardado.estado, EstadoPedido.porLlegar);
+    expect(guardado.entradaId, isNull);
+    expect(
+        (await db.select(db.lineasPedido).getSingle()).precioEsperado, isNull);
+    final gastos = await db.select(db.gastos).get();
+    expect(gastos.last.entradaId, entrada);
   });
 }

@@ -118,6 +118,32 @@ class LineasEntrada extends Table {
   IntColumn get precioCompra => integer()();
 }
 
+/// Pedido hecho a un proveedor desde el pedido sugerido; la mercancía llega
+/// días después.
+@DataClassName('Pedido')
+class Pedidos extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get proveedorId => integer().references(Proveedores, #id)();
+  IntColumn get usuarioId => integer().references(Usuarios, #id)();
+  DateTimeColumn get fecha => dateTime()();
+  TextColumn get estado => textEnum<EstadoPedido>()
+      .withDefault(Constant(EstadoPedido.porLlegar.name))();
+
+  /// La entrada con la que se recibió; null mientras no llega.
+  IntColumn get entradaId =>
+      integer().nullable().references(EntradasMercancia, #id)();
+}
+
+/// Un producto de un pedido, con el precio que se esperaba pagar.
+@DataClassName('LineaPedido')
+class LineasPedido extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get pedidoId => integer().references(Pedidos, #id)();
+  IntColumn get productoId => integer().references(Productos, #id)();
+  IntColumn get cantidad => integer()();
+  IntColumn get precioEsperado => integer().nullable()();
+}
+
 @DataClassName('Cliente')
 class Clientes extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -178,6 +204,11 @@ class Gastos extends Table {
   DateTimeColumn get fecha => dateTime()();
   IntColumn get usuarioId => integer().references(Usuarios, #id)();
   BoolColumn get anulado => boolean().withDefault(const Constant(false))();
+
+  /// La mercancía recibida que lo generó; esos gastos solo cambian anulando
+  /// la entrada.
+  IntColumn get entradaId =>
+      integer().nullable().references(EntradasMercancia, #id)();
 }
 
 /// Configuración de la tienda: una sola fila (id 1).
@@ -219,6 +250,8 @@ class Correcciones extends Table {
     ConteosInventario,
     EntradasMercancia,
     LineasEntrada,
+    Pedidos,
+    LineasPedido,
     Clientes,
     Ventas,
     LineasVenta,
@@ -238,7 +271,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -286,6 +319,11 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(productos, productos.tamano);
             await m.addColumn(productos, productos.envase);
             await m.addColumn(productos, productos.tipo);
+          }
+          if (desde < 9) {
+            await m.createTable(pedidos);
+            await m.createTable(lineasPedido);
+            await m.addColumn(gastos, gastos.entradaId);
           }
         },
       );
