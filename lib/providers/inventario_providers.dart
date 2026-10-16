@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../repositories/inventario_repository.dart';
+import '../repositories/pedido_repository.dart';
 import 'database_provider.dart';
 import 'repository_providers.dart';
 
@@ -39,13 +40,7 @@ final historialInventarioProvider = FutureProvider.autoDispose
     });
 
 final detalleEntradaProvider = FutureProvider.autoDispose
-    .family<
-      ({
-        EntradaResumen resumen,
-        List<({LineaEntrada linea, String producto})> lineas,
-      }),
-      int
-    >((ref, entradaId) {
+    .family<DetalleEntrada, int>((ref, entradaId) {
       ref.watch(_cambiosInventarioProvider);
       return ref.watch(inventarioRepositoryProvider).detalleEntrada(entradaId);
     });
@@ -56,4 +51,18 @@ final sugerenciaPedidoProvider = FutureProvider.autoDispose
       return ref
           .watch(inventarioRepositoryProvider)
           .sugerenciaPedido(proveedorId);
+    });
+
+final pedidosPorLlegarProvider = FutureProvider<List<PedidoResumen>>((ref) {
+  ref.watch(_cambiosInventarioProvider);
+  return ref.watch(pedidoRepositoryProvider).pedidosPorLlegar();
+});
+
+final detallePedidoProvider = FutureProvider.autoDispose
+    .family<({PedidoResumen resumen, List<LineaPedidoDetalle> lineas}), int>((
+      ref,
+      pedidoId,
+    ) {
+      ref.watch(_cambiosInventarioProvider);
+      return ref.watch(pedidoRepositoryProvider).detallePedido(pedidoId);
     });

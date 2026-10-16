@@ -1,6 +1,10 @@
 import 'package:drift/drift.dart';
 
 import '../data/database.dart';
+import '../util/categorias_gasto.dart';
+import '../util/permisos.dart';
+import 'correccion_repository.dart';
+import 'pedido_repository.dart';
 
 /// Un producto recibido en una entrada.
 class LineaRecibida {
@@ -14,6 +18,15 @@ class LineaRecibida {
   final int cantidad;
   final int precioCompra;
 }
+
+/// Una entrada con sus líneas y nombres, el gasto que generó y, si vino de un
+/// pedido, las líneas que se pidieron.
+typedef DetalleEntrada = ({
+  EntradaResumen resumen,
+  List<({LineaEntrada linea, String producto})> lineas,
+  Gasto? gasto,
+  List<LineaPedidoDetalle>? lineasPedido,
+});
 
 /// Una entrada con los nombres de su proveedor y de quien la recibió.
 class EntradaResumen {
@@ -288,12 +301,16 @@ class InventarioRepository {
   // ---- Entradas de mercancía ----
 
   /// Registra mercancía de [proveedorId] y actualiza los precios de ese
-  /// proveedor en cada producto (o lo agrega). Devuelve el id de la entrada.
+  /// proveedor en cada producto (o lo agrega). Con [pedidoId] cierra ese
+  /// pedido; con [pagadoDeCaja] anota el total como gasto de mercancía.
+  /// Devuelve el id de la entrada.
   Future<int> recibirMercancia({
     required int proveedorId,
     required List<LineaRecibida> lineas,
     String? nota,
     required Usuario por,
+    int? pedidoId,
+    bool pagadoDeCaja = true,
   }) async {
     if (lineas.isEmpty) throw ArgumentError('Agrega al menos un producto');
     if (lineas.any((l) => l.cantidad <= 0 || l.precioCompra <= 0)) {
@@ -309,7 +326,18 @@ class InventarioRepository {
       if (proveedor == null || !proveedor.activo) {
         throw ArgumentError('Proveedor inactivo');
       }
+      if (pedidoId != null) {
+        final pedido = await (_db.select(
+          _db.pedidos,
+        )..where((p) => p.id.equals(pedidoId))).getSingleOrNull();
+        if (pedido == null ||
+            pedido.estado != EstadoPedido.porLlegar ||
+            pedido.proveedorId != proveedorId) {
+          throw ArgumentError('El pedido ya no está por llegar');
+        }
+      }
       final limpia = nota?.trim() ?? '';
+      final total = lineas.fold(0, (s, l) => s + l.cantidad * l.precioCompra);
       final id = await _db
           .into(_db.entradasMercancia)
           .insert(
@@ -317,7 +345,7 @@ class InventarioRepository {
               proveedorId: proveedorId,
               usuarioId: por.id,
               fecha: _reloj(),
-              total: lineas.fold(0, (s, l) => s + l.cantidad * l.precioCompra),
+              total: total,
               nota: Value(limpia.isEmpty ? null : limpia),
             ),
           );
@@ -370,17 +398,55 @@ class InventarioRepository {
               );
         }
       }
+      if (pedidoId != null) {
+        await (_db.update(
+          _db.pedidos,
+        )..where((p) => p.id.equals(pedidoId))).write(
+          PedidosCompanion(
+            estado: const Value(EstadoPedido.recibido),
+            entradaId: Value(id),
+          ),
+        );
+      }
+      if (pagadoDeCaja) {
+        await _db
+            .into(_db.gastos)
+            .insert(
+              GastosCompanion.insert(
+                monto: total,
+                descripcion: Value(
+                  aplicarCategoria(proveedor.nombre, 'Mercancía'),
+                ),
+                fecha: _reloj(),
+                usuarioId: por.id,
+                entradaId: Value(id),
+              ),
+            );
+      }
       return id;
     });
   }
 
-  /// La entrada deja de sumar existencias; los precios no se revierten.
+  /// La entrada deja de sumar existencias; los precios no se revierten. Su
+  /// gasto se anula y su pedido vuelve a estar por llegar.
   Future<void> anularEntrada(int entradaId, {required Usuario por}) async {
     await _db.transaction(() async {
       final entrada = await (_db.select(
         _db.entradasMercancia,
       )..where((e) => e.id.equals(entradaId))).getSingle();
       if (entrada.anulada) throw ArgumentError('La entrada ya está anulada');
+      final gasto = await _gastoDe(entradaId);
+      // Anular la entrada mueve la caja: misma regla que anular un gasto.
+      if (gasto != null &&
+          !gasto.anulado &&
+          !puedeCorregir(
+            usuario: por,
+            duenoId: entrada.usuarioId,
+            fechaMovimiento: entrada.fecha,
+            ahora: _reloj(),
+          )) {
+        throw const PermisoDenegado();
+      }
       await (_db.update(
         _db.entradasMercancia,
       )..where((e) => e.id.equals(entradaId))).write(
@@ -389,8 +455,26 @@ class InventarioRepository {
           anuladaPorId: Value(por.id),
         ),
       );
+      if (gasto != null) {
+        await CorreccionRepository(
+          _db,
+          reloj: _reloj,
+        ).anularGastoDeEntrada(gasto.id, por: por);
+      }
+      await (_db.update(
+        _db.pedidos,
+      )..where((p) => p.entradaId.equals(entradaId))).write(
+        const PedidosCompanion(
+          estado: Value(EstadoPedido.porLlegar),
+          entradaId: Value(null),
+        ),
+      );
     });
   }
+
+  Future<Gasto?> _gastoDe(int entradaId) => (_db.select(
+    _db.gastos,
+  )..where((g) => g.entradaId.equals(entradaId))).getSingleOrNull();
 
   /// Las [limite] entradas más recientes, con nombres.
   Future<List<EntradaResumen>> entradasRecientes({int limite = 20}) async {
@@ -423,14 +507,7 @@ class InventarioRepository {
     ];
   }
 
-  /// Una entrada con sus líneas y el nombre de cada producto.
-  Future<
-    ({
-      EntradaResumen resumen,
-      List<({LineaEntrada linea, String producto})> lineas,
-    })
-  >
-  detalleEntrada(int entradaId) async {
+  Future<DetalleEntrada> detalleEntrada(int entradaId) async {
     final f = await (_db.select(_db.entradasMercancia).join([
       innerJoin(
         _db.proveedores,
@@ -451,6 +528,9 @@ class InventarioRepository {
               ..where(_db.lineasEntrada.entradaId.equals(entradaId))
               ..orderBy([OrderingTerm.asc(_db.lineasEntrada.id)]))
             .get();
+    final pedido = await (_db.select(
+      _db.pedidos,
+    )..where((p) => p.entradaId.equals(entradaId))).getSingleOrNull();
     return (
       resumen: EntradaResumen(
         entrada: f.readTable(_db.entradasMercancia),
@@ -464,6 +544,10 @@ class InventarioRepository {
             producto: l.readTable(_db.productos).nombre,
           ),
       ],
+      gasto: await _gastoDe(entradaId),
+      lineasPedido: pedido == null
+          ? null
+          : (await PedidoRepository(_db).detallePedido(pedido.id)).lineas,
     );
   }
 

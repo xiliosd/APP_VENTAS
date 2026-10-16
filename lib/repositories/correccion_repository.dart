@@ -179,6 +179,7 @@ class CorreccionRepository {
   Future<void> anularGasto(int id, {required Usuario por}) async {
     await _db.transaction(() async {
       final gasto = await _gasto(id);
+      _sinEntrada(gasto);
       _comprobar(por, gasto.usuarioId, gasto.fecha, gasto.anulado);
       await (_db.update(_db.gastos)..where((g) => g.id.equals(id)))
           .write(const GastosCompanion(anulado: Value(true)));
@@ -196,6 +197,7 @@ class CorreccionRepository {
     _validarMonto(monto);
     await _db.transaction(() async {
       final gasto = await _gasto(id);
+      _sinEntrada(gasto);
       _comprobar(por, gasto.usuarioId, gasto.fecha, gasto.anulado);
       final igual = monto == gasto.monto &&
           (descripcion?.trim() ?? '') == (gasto.descripcion?.trim() ?? '');
@@ -204,6 +206,19 @@ class CorreccionRepository {
           GastosCompanion(monto: Value(monto), descripcion: Value(descripcion)));
       await _registrar(TipoMovimiento.gasto, id, AccionCorreccion.corregido,
           por, _antesGasto(gasto));
+    });
+  }
+
+  /// Solo para `InventarioRepository.anularEntrada`, que ya comprobó los
+  /// permisos: anula el gasto de la mercancía recibida y lo registra.
+  Future<void> anularGastoDeEntrada(int id, {required Usuario por}) async {
+    await _db.transaction(() async {
+      final gasto = await _gasto(id);
+      if (gasto.anulado) return;
+      await (_db.update(_db.gastos)..where((g) => g.id.equals(id)))
+          .write(const GastosCompanion(anulado: Value(true)));
+      await _registrar(TipoMovimiento.gasto, id, AccionCorreccion.anulado, por,
+          _antesGasto(gasto));
     });
   }
 
@@ -241,6 +256,15 @@ class CorreccionRepository {
   void _validarMonto(int monto) {
     if (monto <= 0) {
       throw const CorreccionInvalida('El monto debe ser mayor que 0');
+    }
+  }
+
+  /// El gasto de una mercancía recibida cambia solo anulando la entrada, para
+  /// que la caja y la entrada no se contradigan.
+  void _sinEntrada(Gasto gasto) {
+    if (gasto.entradaId != null) {
+      throw const CorreccionInvalida(
+          'Viene de la mercancía recibida; para cambiarlo anula la entrada');
     }
   }
 
