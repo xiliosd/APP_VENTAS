@@ -81,4 +81,43 @@ void main() {
     expect(tester.widget<MaterialApp>(find.byType(MaterialApp)).title,
         'VeciTienda');
   });
+
+  group('la pantalla de carga de Android usa el fondo del inicio', () {
+    const res = 'android/app/src/main/res';
+    String leer(String ruta) => File('$res/$ruta').readAsStringSync();
+
+    test('los fondos de carga usan fondo_inicio y no el blanco', () {
+      for (final ruta in [
+        'drawable/launch_background.xml',
+        'drawable-v21/launch_background.xml',
+      ]) {
+        final xml = leer(ruta);
+        expect(xml, contains('@color/fondo_inicio'), reason: ruta);
+        expect(xml, isNot(contains('@android:color/white')), reason: ruta);
+      }
+    });
+
+    test('fondo_inicio es el fondo claro y el azul noche', () {
+      expect(leer('values/colors.xml'),
+          contains('<color name="fondo_inicio">#F8FAFC</color>'));
+      expect(leer('values-night/colors.xml'),
+          contains('<color name="fondo_inicio">#0B1220</color>'));
+    });
+
+    test('en Android 12+ solo se ve el color, sin ícono', () {
+      for (final carpeta in ['values-v31', 'values-night-v31']) {
+        final xml = leer('$carpeta/styles.xml');
+        expect(xml,
+            contains('<item name="android:windowSplashScreenBackground">'
+                '@color/fondo_inicio</item>'),
+            reason: carpeta);
+        expect(xml,
+            contains('<item name="android:windowSplashScreenAnimatedIcon">'
+                '@drawable/icono_transparente</item>'),
+            reason: carpeta);
+      }
+      expect(leer('drawable/icono_transparente.xml'),
+          contains('@android:color/transparent'));
+    });
+  });
 }
