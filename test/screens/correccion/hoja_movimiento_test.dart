@@ -259,6 +259,35 @@ void main() {
     expect(find.text('Gasto corregido'), findsOneWidget);
   });
 
+  testWidgets('un gasto de mercancía recibida no se corrige ni se anula suelto',
+      (tester) async {
+    final (container, ana) = await sesion();
+    final fecha = DateTime.now();
+    final id = await GastoRepository(db).registrarGasto(
+        monto: 20000,
+        descripcion: 'Mercancía · Postobón',
+        usuarioId: ana.id,
+        fecha: fecha);
+    await abrir(
+        tester,
+        container,
+        MovimientoEditable(
+            tipo: TipoMovimiento.gasto,
+            id: id,
+            monto: 20000,
+            fecha: fecha,
+            usuarioId: ana.id,
+            descripcion: 'Mercancía · Postobón',
+            entradaId: 7));
+
+    expect(find.byKey(const Key('boton_corregir')), findsNothing);
+    expect(find.byKey(const Key('boton_anular')), findsNothing);
+    expect(
+        find.text(
+            'Viene de la mercancía recibida; para cambiarlo anula la entrada'),
+        findsOneWidget);
+  });
+
   testWidgets('un movimiento anulado dice quién lo anuló y no deja corregir',
       (tester) async {
     final (container, ana) = await sesion();

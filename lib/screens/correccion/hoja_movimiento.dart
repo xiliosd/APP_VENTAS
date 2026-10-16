@@ -38,6 +38,7 @@ class MovimientoEditable {
     this.descripcion,
     this.anulado = false,
     this.ultimaCorreccion,
+    this.entradaId,
   });
 
   factory MovimientoEditable.desdeHistorial(
@@ -59,6 +60,7 @@ class MovimientoEditable {
         descripcion: m.descripcion,
         anulado: m.anulado,
         ultimaCorreccion: m.ultimaCorreccion,
+        entradaId: m.entradaId,
       );
 
   factory MovimientoEditable.desdeFiado(
@@ -96,6 +98,9 @@ class MovimientoEditable {
   final String? descripcion;
   final bool anulado;
   final Correccion? ultimaCorreccion;
+
+  /// Gasto de mercancía recibida: solo cambia anulando esa entrada.
+  final int? entradaId;
 }
 
 String _titulo(TipoMovimiento tipo) => switch (tipo) {
@@ -346,8 +351,10 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
         ref.watch(listaUsuariosProvider).valueOrNull ?? const <Usuario>[];
     final nombres = {for (final u in usuarios) u.id: u.nombre};
     final usuario = ref.watch(sesionProvider).usuarioActivo;
+    final deEntrada = _m.entradaId != null;
     final puede = usuario != null &&
         !_m.anulado &&
+        !deEntrada &&
         puedeCorregir(
           usuario: usuario,
           duenoId: _m.usuarioId,
@@ -383,6 +390,14 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
           ),
         ],
         ?error,
+        if (deEntrada && !_m.anulado) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Viene de la mercancía recibida; para cambiarlo anula la entrada',
+            key: const Key('bloqueo_gasto_entrada'),
+            style: TextStyle(color: ColoresApp.of(context).textoSecundario),
+          ),
+        ],
         if (puede) ...[
           const SizedBox(height: 16),
           // Una venta se corrige solo con sus líneas ya cargadas: si no, se

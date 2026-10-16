@@ -4,11 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/inventario_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
+import '../../repositories/correccion_repository.dart';
+import '../../repositories/pedido_repository.dart';
 import '../../ui/avisos.dart';
+import '../../data/database.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/icono_cuadrado.dart';
 import '../../ui/monto.dart';
+import '../../ui/pildora.dart';
+import '../../util/diferencia_pedido.dart';
 import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
 
@@ -18,13 +23,15 @@ class DetalleEntradaScreen extends ConsumerWidget {
 
   final int entradaId;
 
-  Future<void> _anular(BuildContext context, WidgetRef ref) async {
+  Future<void> _anular(BuildContext context, WidgetRef ref, Gasto? gasto) async {
+    final conGasto = gasto != null && !gasto.anulado;
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (contexto) => AlertDialog(
         title: const Text('¿Anular esta entrada?'),
-        content: const Text(
-          'Las existencias se descuentan; los precios actualizados no cambian.',
+        content: Text(
+          'Las existencias se descuentan; los precios actualizados no cambian.'
+          '${conGasto ? ' También se anula el gasto de ${formatoMoneda(gasto.monto)}.' : ''}',
         ),
         actions: [
           TextButton(
@@ -48,7 +55,17 @@ class DetalleEntradaScreen extends ConsumerWidget {
             entradaId,
             por: ref.read(sesionProvider).usuarioActivo!,
           );
-      if (context.mounted) avisar(context, 'Entrada anulada');
+      if (context.mounted) {
+        avisar(context, conGasto ? 'Entrada y gasto anulados' : 'Entrada anulada');
+      }
+    } on PermisoDenegado {
+      if (context.mounted) {
+        avisar(
+          context,
+          'Solo el administrador o quien la recibió hoy puede anularla',
+          error: true,
+        );
+      }
     } on ArgumentError {
       // Otro toque o dispositivo ya la anuló: el dato está bien.
       if (context.mounted) avisar(context, 'La entrada ya estaba anulada', error: true);
@@ -133,6 +150,34 @@ class DetalleEntradaScreen extends ConsumerWidget {
               ],
             ),
           ),
+          if (detalle.lineasPedido != null) ...[
+            const SizedBox(height: 12),
+            _ComparacionPedido(
+              pedidas: detalle.lineasPedido!,
+              llegaron: detalle.lineas,
+            ),
+          ],
+          if (detalle.gasto != null) ...[
+            const SizedBox(height: 12),
+            Card(
+              key: const Key('gasto_entrada'),
+              child: ListTile(
+                leading: Icon(Icons.payments_outlined, color: c.sale),
+                title: Text('Gasto ${detalle.gasto!.descripcion ?? ''}'),
+                subtitle: detalle.gasto!.anulado
+                    ? Text('Gasto anulado', style: TextStyle(color: c.sale))
+                    : const Text('Pagado de la caja'),
+                trailing: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 120),
+                  child: Monto(
+                    detalle.gasto!.monto,
+                    tamano: 16,
+                    tachado: detalle.gasto!.anulado,
+                  ),
+                ),
+              ),
+            ),
+          ],
           if (entrada.nota != null) ...[
             const SizedBox(height: 12),
             Text(entrada.nota!, style: TextStyle(color: c.textoSecundario)),
@@ -143,9 +188,72 @@ class DetalleEntradaScreen extends ConsumerWidget {
               key: const Key('boton_anular_entrada'),
               texto: 'Anular entrada',
               variante: VarianteBoton.peligro,
-              onPressed: () => _anular(context, ref),
+              onPressed: () => _anular(context, ref, detalle.gasto),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Lo que se pidió frente a lo que llegó, producto por producto.
+class _ComparacionPedido extends StatelessWidget {
+  const _ComparacionPedido({required this.pedidas, required this.llegaron});
+
+  final List<LineaPedidoDetalle> pedidas;
+  final List<({LineaEntrada linea, String producto})> llegaron;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = ColoresApp.of(context);
+    final llego = {for (final l in llegaron) l.linea.productoId: l};
+    final pedidos = {for (final p in pedidas) p.linea.productoId};
+    final filas = [
+      for (final p in pedidas)
+        (
+          nombre: p.producto.nombre,
+          pedido: p.linea.cantidad as int?,
+          llego: llego[p.linea.productoId]?.linea.cantidad ?? 0,
+        ),
+      for (final l in llegaron)
+        if (!pedidos.contains(l.linea.productoId))
+          (nombre: l.producto, pedido: null, llego: l.linea.cantidad),
+    ];
+    return Card(
+      key: const Key('comparacion_pedido'),
+      child: Column(
+        children: [
+          for (final f in filas)
+            Builder(
+              builder: (_) {
+                final estado = estadoLineaPedido(
+                  pedido: f.pedido,
+                  llego: f.llego,
+                );
+                return ListTile(
+                  dense: true,
+                  title: Text(
+                    f.pedido == null
+                        ? '${f.nombre} · no se pidió · llegó ${f.llego}'
+                        : '${f.nombre} · pedido ${f.pedido} · llegó ${f.llego}',
+                  ),
+                  trailing: Pildora(
+                    texto: textoEstadoLinea(
+                      estado,
+                      pedido: f.pedido,
+                      llego: f.llego,
+                    ),
+                    color: switch (estado) {
+                      EstadoLineaPedido.completo => c.entra,
+                      EstadoLineaPedido.noLlego => c.sale,
+                      EstadoLineaPedido.extra => c.primario,
+                      _ => c.fiado,
+                    },
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );

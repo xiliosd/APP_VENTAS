@@ -20,6 +20,7 @@ class MovimientoHistorial {
     this.medioPago = MedioPago.efectivo,
     this.anulado = false,
     this.ultimaCorreccion,
+    this.entradaId,
   });
 
   final TipoMovimientoHistorial tipo;
@@ -50,6 +51,9 @@ class MovimientoHistorial {
 
   /// Anulación o corrección más reciente, si la hay.
   final Correccion? ultimaCorreccion;
+
+  /// Solo en gastos de mercancía recibida: la entrada que lo generó.
+  final int? entradaId;
 }
 
 class HistorialRepository {
@@ -105,6 +109,7 @@ class HistorialRepository {
           descripcion: g.descripcion,
           anulado: g.anulado,
           ultimaCorreccion: correccionesGastos[g.id],
+          entradaId: g.entradaId,
         ),
     ]..sort((a, b) => b.fecha.compareTo(a.fecha));
   }

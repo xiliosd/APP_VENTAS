@@ -2,6 +2,7 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
 import 'package:app_ventas/repositories/inventario_repository.dart';
+import 'package:app_ventas/repositories/pedido_repository.dart';
 import 'package:app_ventas/repositories/producto_repository.dart';
 import 'package:app_ventas/repositories/proveedor_repository.dart';
 import 'package:app_ventas/screens/configuracion/ajustes_screen.dart';
@@ -12,6 +13,7 @@ import 'package:app_ventas/screens/configuracion/usuarios_screen.dart';
 import 'package:app_ventas/screens/inventario/detalle_entrada_screen.dart';
 import 'package:app_ventas/screens/inventario/detalle_inventario_screen.dart';
 import 'package:app_ventas/screens/inventario/inventario_screen.dart';
+import 'package:app_ventas/screens/inventario/pedido_por_llegar_screen.dart';
 import 'package:app_ventas/screens/inventario/pedido_sugerido_screen.dart';
 import 'package:app_ventas/screens/inventario/recibir_mercancia_screen.dart';
 import 'package:app_ventas/screens/qr/configurar_qr_screen.dart';
@@ -34,7 +36,7 @@ void main() {
 
   /// Datos de ejemplo: tienda, proveedor con teléfono, tres productos
   /// controlados (uno agotado, uno bajo, uno bien) y una entrada.
-  Future<({int coca, int entrada, Producto producto})> datos(
+  Future<({int coca, int entrada, int pedido, Producto producto})> datos(
       ProviderContainer container) async {
     final ana = container.read(sesionProvider).usuarioActivo!;
     await ConfiguracionRepository(db)
@@ -77,15 +79,23 @@ void main() {
       lineas: [LineaRecibida(productoId: coca, cantidad: 24, precioCompra: 900)],
       por: ana,
     );
+    final pedido = await PedidoRepository(db).guardarPedido(
+      proveedorId: prov,
+      lineas: [
+        LineaPedidoNueva(productoId: coca, cantidad: 24, precioEsperado: 900),
+        LineaPedidoNueva(productoId: agua, cantidad: 12, precioEsperado: 700),
+      ],
+      por: ana,
+    );
     final producto = await (db.select(db.productos)
           ..where((p) => p.id.equals(coca)))
         .getSingle();
-    return (coca: coca, entrada: entrada, producto: producto);
+    return (coca: coca, entrada: entrada, pedido: pedido, producto: producto);
   }
 
   /// Monta [construir] en 360×800 dp, tema oscuro y letra 2,0×.
   Future<void> montar(WidgetTester tester,
-      Widget Function(({int coca, int entrada, Producto producto})) construir,
+      Widget Function(({int coca, int entrada, int pedido, Producto producto})) construir,
       {double escala = 2.0}) async {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1;
@@ -110,7 +120,7 @@ void main() {
   }
 
   final pantallas =
-      <String, Widget Function(({int coca, int entrada, Producto producto}))>{
+      <String, Widget Function(({int coca, int entrada, int pedido, Producto producto}))>{
     'inventario (por pedir)': (_) =>
         const Scaffold(body: InventarioScreen()),
     'detalle de inventario': (d) => DetalleInventarioScreen(productoId: d.coca),
@@ -119,6 +129,8 @@ void main() {
         ]),
     'pedido sugerido': (_) => const PedidoSugeridoScreen(proveedor: null),
     'detalle de entrada': (d) => DetalleEntradaScreen(entradaId: d.entrada),
+    'recibir con pedido': (d) => RecibirMercanciaScreen(pedidoId: d.pedido),
+    'pedido por llegar': (d) => PedidoPorLlegarScreen(pedidoId: d.pedido),
     'ajustes': (_) => const Scaffold(body: AjustesScreen()),
     'productos': (_) => const ProductosScreen(),
     'ficha de producto': (d) => ProductoScreen(producto: d.producto),

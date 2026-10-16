@@ -295,21 +295,30 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                             ListTile(
                               key: Key('por_pedir_${p.producto.id}'),
                               title: Text(p.producto.nombre),
-                              subtitle: Text(
-                                'quedan ${numeroConSigno(p.existencias)} · '
-                                'mín. ${p.producto.minimo}',
-                              ),
-                              trailing:
-                                  InventarioRepository.sugeridoDe(p) <= 0
-                                  ? Pildora(
-                                      key: Key('ya_pedido_${p.producto.id}'),
-                                      texto: 'Ya pedido · llegan ${p.porLlegar}',
-                                      color: c.entra,
-                                    )
-                                  : EtiquetaNivel(
-                                      nivel: nivelExistencias(
-                                          p.existencias, p.producto.minimo),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'quedan ${numeroConSigno(p.existencias)} · '
+                                    'mín. ${p.producto.minimo}',
+                                  ),
+                                  // Lo que viene en camino ya alcanza.
+                                  if (InventarioRepository.sugeridoDe(p) <= 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Pildora(
+                                        key: Key('ya_pedido_${p.producto.id}'),
+                                        texto:
+                                            'Ya pedido · llegan ${p.porLlegar}',
+                                        color: c.entra,
+                                      ),
                                     ),
+                                ],
+                              ),
+                              trailing: EtiquetaNivel(
+                                nivel: nivelExistencias(
+                                    p.existencias, p.producto.minimo),
+                              ),
                               onTap: () => _abrir(
                                 DetalleInventarioScreen(
                                     productoId: p.producto.id),
