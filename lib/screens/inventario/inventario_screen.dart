@@ -21,6 +21,7 @@ import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
 import 'detalle_entrada_screen.dart';
 import 'detalle_inventario_screen.dart';
+import 'pedido_por_llegar_screen.dart';
 import 'pedido_sugerido_screen.dart';
 import 'recibir_mercancia_screen.dart';
 
@@ -62,6 +63,26 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
     if (guardado == true && mounted) avisar(context, 'Pedido guardado');
   }
 
+  Future<void> _abrirPedido(int pedidoId) async {
+    final aviso = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => PedidoPorLlegarScreen(pedidoId: pedidoId),
+      ),
+    );
+    if (aviso != null && mounted) avisar(context, aviso);
+  }
+
+  Future<void> _recibirPedido(int pedidoId) async {
+    final total = await Navigator.of(context).push<int>(
+      MaterialPageRoute(
+        builder: (_) => RecibirMercanciaScreen(pedidoId: pedidoId),
+      ),
+    );
+    if (total != null && mounted) {
+      avisar(context, 'Mercancía recibida · ${formatoMoneda(total)}');
+    }
+  }
+
   void _abrir(Widget pantalla) =>
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => pantalla));
 
@@ -73,6 +94,8 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
     final grupos = ref.watch(porPedirProvider).valueOrNull ?? const [];
     final entradas =
         ref.watch(entradasRecientesProvider).valueOrNull ?? const [];
+    final porLlegar =
+        ref.watch(pedidosPorLlegarProvider).valueOrNull ?? const [];
     final nPorPedir = grupos.fold<int>(0, (s, g) => s + g.productos.length);
     final agotados = controlados
         .where((x) =>
@@ -120,6 +143,65 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
           onPressed: _recibir,
         ),
         const SizedBox(height: 12),
+        if (porLlegar.isNotEmpty) ...[
+          const TituloSeccion('POR LLEGAR'),
+          for (final r in porLlegar)
+            Card(
+              key: Key('pedido_por_llegar_${r.pedido.id}'),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => _abrirPedido(r.pedido.id),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.schedule_rounded,
+                              size: 20, color: c.textoSecundario),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              r.proveedor.nombre,
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'pedido el ${fechaCorta(r.pedido.fecha)} · '
+                        '${plural(r.productos, 'producto', 'productos')} · '
+                        '${formatoMoneda(r.totalEstimado)}',
+                        style: TextStyle(color: c.textoSecundario),
+                      ),
+                      if (!r.proveedor.activo)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Proveedor inactivo: actívalo para recibir',
+                            style: TextStyle(color: c.sale),
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      BotonPrincipal(
+                        key: Key('llego_pedido_${r.pedido.id}'),
+                        texto: 'Llegó este pedido',
+                        variante: VarianteBoton.entra,
+                        icono: Icons.inventory_rounded,
+                        onPressed: r.proveedor.activo
+                            ? () => _recibirPedido(r.pedido.id)
+                            : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          const SizedBox(height: 12),
+        ],
         if (controlados.isEmpty)
           EstadoVacio(
             icono: Icons.inventory_2_outlined,

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
-import '../../providers/productos_providers.dart';
 import '../../providers/proveedores_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
@@ -14,6 +13,7 @@ import '../../ui/colores_app.dart';
 import '../../ui/dialogo_cantidad.dart';
 import '../../ui/hoja_inferior.dart';
 import '../../util/formato_moneda.dart';
+import 'hoja_productos.dart';
 
 class _Linea {
   _Linea(this.producto, String precio)
@@ -53,9 +53,13 @@ class RecibirMercanciaScreen extends ConsumerStatefulWidget {
     super.key,
     this.proveedorInicial,
     this.lineasIniciales = const [],
+    this.pedidoId,
   });
 
   final Proveedor? proveedorInicial;
+
+  /// Pedido por llegar contra el que se recibe.
+  final int? pedidoId;
 
   /// Sus precios son sugerencias: elegir o cambiar de proveedor los reemplaza.
   final List<LineaInicial> lineasIniciales;
@@ -126,7 +130,7 @@ class _RecibirMercanciaScreenState
       context,
       titulo: 'Agregar producto',
       builder: (_) =>
-          _HojaProductos(excluir: {for (final l in _lineas) l.producto.id}),
+          HojaProductos(excluir: {for (final l in _lineas) l.producto.id}),
     );
     if (producto == null) return;
     final precio = await _precioSugerido(producto.id);
@@ -336,56 +340,6 @@ class _RecibirMercanciaScreenState
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Buscador de productos activos que aún no están en la entrada.
-class _HojaProductos extends ConsumerStatefulWidget {
-  const _HojaProductos({required this.excluir});
-
-  final Set<int> excluir;
-
-  @override
-  ConsumerState<_HojaProductos> createState() => _HojaProductosState();
-}
-
-class _HojaProductosState extends ConsumerState<_HojaProductos> {
-  String _busqueda = '';
-
-  @override
-  Widget build(BuildContext context) {
-    final buscado = _busqueda.trim().toLowerCase();
-    final productos =
-        (ref.watch(productosActivosProvider).valueOrNull ?? const <Producto>[])
-            .where(
-              (p) =>
-                  !widget.excluir.contains(p.id) &&
-                  p.nombre.toLowerCase().contains(buscado),
-            )
-            .toList()
-          ..sort((a, b) => a.nombre.compareTo(b.nombre));
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextField(
-          key: const Key('campo_buscar_producto'),
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Buscar producto',
-            prefixIcon: Icon(Icons.search_rounded),
-          ),
-          onChanged: (v) => setState(() => _busqueda = v),
-        ),
-        const SizedBox(height: 8),
-        for (final p in productos.take(20))
-          ListTile(
-            key: Key('opcion_producto_recibir_${p.id}'),
-            title: Text(p.nombre),
-            onTap: () => Navigator.of(context).pop(p),
-          ),
-      ],
     );
   }
 }
