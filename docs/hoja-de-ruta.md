@@ -28,6 +28,8 @@ Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/s
   gasto "Mercancía · proveedor" de la caja y sugerencia que descuenta lo que viene en camino.
 - Inicio de marca "el toldo se abre" — completo la primera vez y breve en cada arranque, se salta
   tocando, quieto con "reducir movimiento"; pantalla de carga de Android del mismo color.
+- Ingreso con huella — botón "Entrar con huella" en la pantalla del PIN para quien lo activa en
+  Ajustes (aviso de celular compartido y confirmación); el PIN sigue siempre; se olvida al restaurar.
 - Renovación R4 — administración: Ajustes con cabecera de tienda, inventario con resumen y niveles, barra de total fija al recibir y pedir, productos con buscador y margen, proveedores y usuarios con avatar y chips, respaldo y QR con el estilo nuevo.
 
 ## En curso
@@ -37,15 +39,7 @@ Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/s
 ## Después
 
 - Mejoras pedidas el 2026-10-16 (planeadas, sin implementar; cada una con spec, plan, pruebas y los
-  lineamientos UNIMINUTO; orden sugerido: 3 → 4; la 1 y la 2 ya están hechas).
-  3. **Huella digital al ingresar** (rama `feature/ingreso-con-huella`). Paquete `local_auth`
-     (versión fijada tras verificarla en pub.dev); `MainActivity` pasa a `FlutterFragmentActivity`
-     y se agrega `USE_BIOMETRIC`. Cada usuario la activa en Ajustes después de ingresar con su
-     PIN; en "¿Quién eres?" se ofrece la huella y el PIN queda siempre como respaldo (sin huella
-     registrada, sensor bloqueado o fallos). Nada biométrico se guarda en la app: solo la marca
-     "huella activada" por usuario. Riesgo: la huella es del celular, no del usuario; si varios
-     comparten el celular, cualquier huella registrada abre ese usuario, así que se avisa al
-     activarla.
+  lineamientos UNIMINUTO; queda la 4; la 1, la 2 y la 3 ya están hechas).
   4. **Vender y reconocer productos por voz** (rama `feature/venta-por-voz`), en dos etapas:
      a) búsqueda por voz, el diseño aprobado el 2026-10-13: botón de micrófono en el buscador fijo
         con `speech_to_text` 7.5.0 (es-CO, hasta 8 s o 3 s de silencio), texto en vivo que filtra
@@ -67,4 +61,4 @@ Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/s
 
 - Recorrido manual en un celular real de: Cargar QR (2D), corregir y anular (3A) y reportes
   (3B), detalle de tickets (3C) y catálogo, proveedores y nombre de la tienda (4A), inventario (4B), pedido sugerido (4C), pulido tanda 1 y pulido tanda 2 (incluido el ícono temático en
-  Android 13+), renovación R1 en claro y oscuro (incluida la vibración) renovación R2a, renovación R2b (recorrido completo en un celular nuevo), renovación R3a, renovación R3b, renovación R4 y código de barras con productos reales (cámara), pedidos guardados con recepción como gasto e inicio de marca (claro, oscuro, Android 12+ y anteriores).
+  Android 13+), renovación R1 en claro y oscuro (incluida la vibración) renovación R2a, renovación R2b (recorrido completo en un celular nuevo), renovación R3a, renovación R3b, renovación R4 y código de barras con productos reales (cámara), pedidos guardados con recepción como gasto inicio de marca (claro, oscuro, Android 12+ y anteriores) e ingreso con huella (activar, entrar, bloqueo, sin huellas).

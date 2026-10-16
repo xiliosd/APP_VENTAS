@@ -1,5 +1,6 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/screens/login/ingresar_pin_screen.dart';
 import 'package:app_ventas/widgets/indicadores_pin.dart';
@@ -7,6 +8,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/vibraciones.dart';
 
@@ -32,7 +34,10 @@ void main() {
     final usuario = (await db.select(db.usuarios).get()).single;
 
     final container = ProviderContainer(
-      overrides: [databaseProvider.overrideWithValue(db)],
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        preferenciasProvider.overrideWithValue(await _preferencias()),
+      ],
     );
     addTearDown(container.dispose);
 
@@ -85,7 +90,10 @@ void main() {
     final usuario = (await db.select(db.usuarios).get()).single;
 
     final container = ProviderContainer(
-      overrides: [databaseProvider.overrideWithValue(db)],
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        preferenciasProvider.overrideWithValue(await _preferencias()),
+      ],
     );
     addTearDown(container.dispose);
 
@@ -124,4 +132,10 @@ void main() {
     expect(find.byType(IngresarPinScreen), findsNothing);
     expect(find.byKey(const Key('pantalla_host')), findsOneWidget);
   });
+}
+
+/// Preferencias vacías: la pantalla del PIN las lee para saber si hay huella.
+Future<SharedPreferences> _preferencias() async {
+  SharedPreferences.setMockInitialValues({});
+  return SharedPreferences.getInstance();
 }

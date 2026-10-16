@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../respaldo/respaldo_provider.dart';
+import '../servicios/autenticacion_huella.dart';
 
 /// Preferencia: ids de los usuarios que activaron la huella en este celular.
 /// No va en la base de datos: la huella es del celular, no de la tienda.
@@ -40,4 +41,10 @@ class UsuariosConHuella extends Notifier<Set<int>> {
 
 final usuariosConHuellaProvider = NotifierProvider<UsuariosConHuella, Set<int>>(
   UsuariosConHuella.new,
+);
+
+/// El celular tiene biometría registrada (se consulta una vez por sesión de
+/// la app; se invalida al volver a mirar).
+final huellaDisponibleProvider = FutureProvider<bool>(
+  (ref) => ref.watch(autenticacionHuellaProvider).disponible(),
 );

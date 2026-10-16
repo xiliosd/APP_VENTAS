@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
+import '../../providers/huella_provider.dart';
 import '../../providers/sesion_provider.dart';
+import '../../servicios/autenticacion_huella.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/tipografia.dart';
@@ -26,6 +28,39 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
 
   /// Cada PIN incorrecto lo aumenta y sacude los indicadores.
   int _errores = 0;
+
+  /// Hay un diálogo de huella abierto: un segundo toque no abre otro.
+  bool _usandoHuella = false;
+
+  Future<void> _entrarConHuella() async {
+    if (_usandoHuella) return;
+    setState(() {
+      _usandoHuella = true;
+      _error = null;
+    });
+    final resultado = await ref
+        .read(autenticacionHuellaProvider)
+        .confirmar('Confirma que eres ${widget.usuario.nombre}');
+    if (!mounted) return;
+    var ok = false;
+    if (resultado == ResultadoHuella.aprobada) {
+      ok = await ref
+          .read(sesionProvider.notifier)
+          .iniciarSesionConHuella(widget.usuario.id);
+    }
+    if (!mounted) return;
+    setState(() {
+      _usandoHuella = false;
+      _error = switch (resultado) {
+        ResultadoHuella.bloqueada =>
+          'Demasiados intentos con la huella: usa tu PIN',
+        ResultadoHuella.sinHuellas =>
+          'Este celular ya no tiene huellas registradas: usa tu PIN',
+        _ => null,
+      };
+    });
+    if (ok && Navigator.of(context).canPop()) Navigator.of(context).pop();
+  }
 
   Future<void> _validar() async {
     final ok = await ref
@@ -61,6 +96,9 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
   @override
   Widget build(BuildContext context) {
     final usuario = widget.usuario;
+    final conHuella =
+        ref.watch(usuariosConHuellaProvider).contains(usuario.id) &&
+        (ref.watch(huellaDisponibleProvider).valueOrNull ?? false);
     return Scaffold(
       appBar: AppBar(),
       body: SafeArea(
@@ -116,6 +154,18 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
                       onDigito: _presionarDigito,
                       onBorrar: _borrar,
                     ),
+                    if (conHuella) ...[
+                      const SizedBox(height: 8),
+                      Tooltip(
+                        message: 'Entrar con huella',
+                        child: TextButton.icon(
+                          key: const Key('boton_huella'),
+                          onPressed: _usandoHuella ? null : _entrarConHuella,
+                          icon: const Icon(Icons.fingerprint_rounded, size: 28),
+                          label: const Text('Entrar con huella'),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                   ],
                 ),

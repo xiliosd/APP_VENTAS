@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/database.dart';
 import '../providers/database_provider.dart';
+import '../providers/huella_provider.dart';
 import '../providers/sesion_provider.dart';
 import 'config_respaldo.dart';
 import 'copia_base_datos.dart';
@@ -253,6 +254,8 @@ class RespaldoNotifier extends Notifier<EstadoRespaldo> {
     switch (resultado) {
       case ResultadoRestauracion.restaurado:
         await _marcarHabilitado(true);
+        // La base nueva puede traer otras personas con los mismos ids.
+        await ref.read(usuariosConHuellaProvider.notifier).borrarTodas();
         ref.read(sesionProvider.notifier).cerrarSesion();
         ref.invalidate(databaseProvider);
       case ResultadoRestauracion.sinRespaldo:

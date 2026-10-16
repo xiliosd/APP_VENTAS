@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/providers/huella_provider.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/respaldo/nube_respaldo.dart';
 import 'package:app_ventas/respaldo/respaldo_provider.dart';
@@ -202,6 +203,23 @@ void main() {
     expect(container.read(sesionProvider).haySesion, isFalse);
     // El respaldo que arrancó durante la restauración deja programado otro
     // (30 s); en la app el notifier siempre tiene oyente y lo ejecuta.
+    await tester.pump(const Duration(seconds: 31));
+    container.dispose();
+  });
+
+  testWidgets('restaurar con éxito olvida las huellas activadas', (
+    tester,
+  ) async {
+    final container = await containerRespaldo(
+      db,
+      NubeRespaldoFalsa(conSesion: true),
+    );
+    await container.read(usuariosConHuellaProvider.notifier).activar(ana);
+
+    await container.read(respaldoProvider.notifier).restaurar();
+
+    // La base restaurada puede traer otras personas con los mismos ids.
+    expect(container.read(usuariosConHuellaProvider), isEmpty);
     await tester.pump(const Duration(seconds: 31));
     container.dispose();
   });

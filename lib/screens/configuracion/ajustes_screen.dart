@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/database.dart';
 import '../../providers/configuracion_providers.dart';
+import '../../providers/huella_provider.dart';
 import '../../providers/recorrido_provider.dart';
 import '../../providers/sesion_provider.dart';
 import '../../respaldo/respaldo_provider.dart';
+import '../../servicios/autenticacion_huella.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/entrada_escalonada.dart';
@@ -175,6 +178,8 @@ class AjustesScreen extends ConsumerWidget {
         EntradaEscalonada(
           indice: 4,
           child: _Grupo(titulo: 'CUENTA', opciones: [
+            if (ref.watch(huellaDisponibleProvider).valueOrNull ?? false)
+              const _FilaHuella(),
             ListTile(
               key: const Key('ajustes_cerrar_sesion'),
               leading: IconoCuadrado(icono: Icons.logout_rounded, color: c.sale),
@@ -247,6 +252,61 @@ class _Opcion extends StatelessWidget {
         ],
       ),
       onTap: onTap,
+    );
+  }
+}
+
+/// Activa o desactiva la huella del usuario con sesión, en este celular.
+class _FilaHuella extends ConsumerWidget {
+  const _FilaHuella();
+
+  Future<void> _activar(BuildContext context, WidgetRef ref, Usuario yo) async {
+    final acepta = await showDialog<bool>(
+      context: context,
+      builder: (contexto) => AlertDialog(
+        title: const Text('¿Entrar con huella?'),
+        content: const Text(
+          'Cualquier huella registrada en este celular podrá abrir tu usuario. '
+          'Actívalo solo si el celular es tuyo.',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('cancelar_huella'),
+            onPressed: () => Navigator.pop(contexto, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            key: const Key('activar_huella'),
+            onPressed: () => Navigator.pop(contexto, true),
+            child: const Text('Activar'),
+          ),
+        ],
+      ),
+    );
+    if (acepta != true) return;
+    // Solo se activa si quien está aquí confirma con su huella.
+    final resultado = await ref
+        .read(autenticacionHuellaProvider)
+        .confirmar('Confirma que eres ${yo.nombre}');
+    if (resultado != ResultadoHuella.aprobada) return;
+    await ref.read(usuariosConHuellaProvider.notifier).activar(yo.id);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final yo = ref.watch(sesionProvider).usuarioActivo;
+    if (yo == null) return const SizedBox.shrink();
+    final activa = ref.watch(usuariosConHuellaProvider).contains(yo.id);
+    final c = ColoresApp.of(context);
+    return SwitchListTile(
+      key: const Key('interruptor_huella'),
+      secondary: IconoCuadrado(icono: Icons.fingerprint_rounded, color: c.primario),
+      title: const Text('Entrar con huella'),
+      subtitle: const Text('Sin escribir el PIN, en este celular'),
+      value: activa,
+      onChanged: (encender) => encender
+          ? _activar(context, ref, yo)
+          : ref.read(usuariosConHuellaProvider.notifier).desactivar(yo.id),
     );
   }
 }

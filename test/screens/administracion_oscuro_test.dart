@@ -19,6 +19,7 @@ import 'package:app_ventas/screens/inventario/recibir_mercancia_screen.dart';
 import 'package:app_ventas/screens/qr/configurar_qr_screen.dart';
 import 'package:app_ventas/screens/venta/hoja_producto_rapido.dart';
 import 'package:app_ventas/screens/venta/registrar_venta_screen.dart';
+import 'package:app_ventas/servicios/autenticacion_huella.dart';
 import 'package:app_ventas/servicios/open_food_facts.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/native.dart';
@@ -26,6 +27,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/huella_falsa.dart';
 import '../support/montaje.dart';
 
 void main() {
@@ -102,6 +104,8 @@ void main() {
     addTearDown(tester.view.reset);
     final container = await containerConSesion(db, overrides: [
       consultaProductoProvider.overrideWithValue(_SinDatos()),
+      // Con huella disponible: Ajustes muestra la fila "Entrar con huella".
+      autenticacionHuellaProvider.overrideWithValue(HuellaFalsa()),
     ]);
     addTearDown(container.dispose);
     final d = await datos(container);

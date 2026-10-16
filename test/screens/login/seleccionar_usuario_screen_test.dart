@@ -1,11 +1,13 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:app_ventas/screens/login/seleccionar_usuario_screen.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   late AppDatabase db;
@@ -25,7 +27,10 @@ void main() {
     }
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [databaseProvider.overrideWithValue(db)],
+        overrides: [
+        databaseProvider.overrideWithValue(db),
+        preferenciasProvider.overrideWithValue(await _preferencias()),
+      ],
         child: MaterialApp(
             theme: temaClaro(), home: const SeleccionarUsuarioScreen()),
       ),
@@ -79,4 +84,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Hola, Ana'), findsOneWidget);
   });
+}
+
+/// Preferencias vacías: la pantalla del PIN las lee para saber si hay huella.
+Future<SharedPreferences> _preferencias() async {
+  SharedPreferences.setMockInitialValues({});
+  return SharedPreferences.getInstance();
 }
