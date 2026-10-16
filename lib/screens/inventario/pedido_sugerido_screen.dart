@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/inventario_providers.dart';
+import '../../providers/proveedores_providers.dart';
+import '../../providers/repository_providers.dart';
+import '../../providers/sesion_provider.dart';
 import '../../repositories/inventario_repository.dart';
+import '../../repositories/pedido_repository.dart';
 import '../../ui/barra_accion_fija.dart';
 import '../../ui/boton_cantidad.dart';
 import '../../ui/boton_principal.dart';
@@ -12,10 +16,9 @@ import '../../ui/dialogo_cantidad.dart';
 import '../../ui/estado_vacio.dart';
 import '../../util/formato_moneda.dart';
 import 'inventario_screen.dart';
-import 'recibir_mercancia_screen.dart';
 
 /// Cuánto pedirle a [proveedor] (null = "Sin proveedor"). Las cantidades se
-/// editan en pantalla y no se guardan. Si se recibe, se cierra con el total.
+/// editan en pantalla; "Guardar pedido" lo deja por llegar y cierra con true.
 class PedidoSugeridoScreen extends ConsumerStatefulWidget {
   const PedidoSugeridoScreen({super.key, required this.proveedor});
 
@@ -30,28 +33,47 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
   /// Cantidades cambiadas por id de producto.
   final Map<int, int> _cantidades = {};
 
+  /// Proveedor elegido cuando el del grupo no sirve (sin proveedor o inactivo).
+  Proveedor? _elegido;
+  bool _guardando = false;
+  String? _error;
+
   int _cantidad(LineaSugerida l) => _cantidades[l.producto.id] ?? l.sugerido;
 
-  Future<void> _recibir(List<LineaSugerida> lineas) async {
-    final total = await Navigator.of(context).push<int>(
-      MaterialPageRoute(
-        builder: (_) => RecibirMercanciaScreen(
-          proveedorInicial: (widget.proveedor?.activo ?? false)
-              ? widget.proveedor
-              : null,
-          lineasIniciales: [
-            for (final l in lineas)
-              if (_cantidad(l) > 0)
-                LineaInicial(
-                  producto: l.producto,
-                  cantidad: _cantidad(l),
-                  precio: l.precio,
-                ),
-          ],
-        ),
-      ),
-    );
-    if (total != null && mounted) Navigator.of(context).pop(total);
+  bool get _proveedorFijo => widget.proveedor?.activo ?? false;
+
+  Proveedor? get _proveedor => _proveedorFijo ? widget.proveedor : _elegido;
+
+  Future<void> _guardar(List<LineaSugerida> lineas) async {
+    setState(() {
+      _guardando = true;
+      _error = null;
+    });
+    try {
+      await ref
+          .read(pedidoRepositoryProvider)
+          .guardarPedido(
+            proveedorId: _proveedor!.id,
+            lineas: [
+              for (final l in lineas)
+                if (_cantidad(l) > 0)
+                  LineaPedidoNueva(
+                    productoId: l.producto.id,
+                    cantidad: _cantidad(l),
+                    // Sin proveedor fijo, el precio sugerido no es de este.
+                    precioEsperado: _proveedorFijo ? l.precio : null,
+                  ),
+            ],
+            por: ref.read(sesionProvider).usuarioActivo!,
+          );
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'No se pudo guardar, intenta de nuevo');
+      }
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
   }
 
   @override
@@ -62,7 +84,12 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
       0,
       (s, l) => s + (l.precio == null ? 0 : _cantidad(l) * l.precio!),
     );
-    final hayAlgo = lineas.any((l) => _cantidad(l) > 0);
+    final puedeGuardar =
+        !_guardando && _proveedor != null && lineas.any((l) => _cantidad(l) > 0);
+    final proveedores = _proveedorFijo
+        ? const <Proveedor>[]
+        : ref.watch(proveedoresActivosProvider).valueOrNull ??
+              const <Proveedor>[];
     final gris = TextStyle(color: ColoresApp.of(context).textoSecundario);
 
     return Scaffold(
@@ -73,16 +100,29 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
       ),
       bottomNavigationBar: pedido.hasValue && lineas.isNotEmpty
           ? BarraAccionFija(
-              total: Text(
-                'Total estimado ${formatoMoneda(total)}',
-                key: const Key('total_pedido'),
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              total: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_error != null)
+                    Text(
+                      _error!,
+                      key: const Key('error_guardar_pedido'),
+                      style: TextStyle(color: ColoresApp.of(context).sale),
+                    ),
+                  Text(
+                    'Total estimado ${formatoMoneda(total)}',
+                    key: const Key('total_pedido'),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
               boton: BotonPrincipal(
-                key: const Key('boton_recibir_pedido'),
-                texto: 'Recibir este pedido',
-                onPressed: hayAlgo ? () => _recibir(lineas) : null,
+                key: const Key('boton_guardar_pedido'),
+                texto: 'Guardar pedido',
+                onPressed: puedeGuardar ? () => _guardar(lineas) : null,
               ),
             )
           : null,
@@ -101,6 +141,27 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                if (!_proveedorFijo) ...[
+                  const Text(
+                    '¿A qué proveedor se lo pides?',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final p in proveedores)
+                        ChoiceChip(
+                          key: Key('opcion_proveedor_pedido_${p.id}'),
+                          label: Text(p.nombre),
+                          selected: _elegido?.id == p.id,
+                          onSelected: (_) => setState(() => _elegido = p),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 for (final l in lineas)
                   Card(
                     child: Padding(
@@ -123,6 +184,12 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
                                   '${l.producto.pedirHasta == null ? '' : ' · hasta ${l.producto.pedirHasta}'}',
                                   style: gris,
                                 ),
+                                if (l.porLlegar > 0)
+                                  Text(
+                                    'ya pedido · llegan ${l.porLlegar}',
+                                    key: Key('llegan_pedido_${l.producto.id}'),
+                                    style: gris,
+                                  ),
                                 Text(
                                   l.precio == null
                                       ? 'Sin precio'

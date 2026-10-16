@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../providers/inventario_providers.dart';
 import '../../providers/sesion_provider.dart';
+import '../../repositories/inventario_repository.dart';
 import '../../ui/avisos.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/entrada_escalonada.dart';
 import '../../ui/monto.dart';
+import '../../ui/pildora.dart';
 import '../../ui/nivel_existencias.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
@@ -52,14 +54,12 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
   }
 
   Future<void> _verPedido(Proveedor? proveedor) async {
-    final total = await Navigator.of(context).push<int>(
+    final guardado = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => PedidoSugeridoScreen(proveedor: proveedor),
       ),
     );
-    if (total != null && mounted) {
-      avisar(context, 'Mercancía recibida · ${formatoMoneda(total)}');
-    }
+    if (guardado == true && mounted) avisar(context, 'Pedido guardado');
   }
 
   void _abrir(Widget pantalla) =>
@@ -217,10 +217,17 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                                 'quedan ${numeroConSigno(p.existencias)} · '
                                 'mín. ${p.producto.minimo}',
                               ),
-                              trailing: EtiquetaNivel(
-                                nivel: nivelExistencias(
-                                    p.existencias, p.producto.minimo),
-                              ),
+                              trailing:
+                                  InventarioRepository.sugeridoDe(p) <= 0
+                                  ? Pildora(
+                                      key: Key('ya_pedido_${p.producto.id}'),
+                                      texto: 'Ya pedido · llegan ${p.porLlegar}',
+                                      color: c.entra,
+                                    )
+                                  : EtiquetaNivel(
+                                      nivel: nivelExistencias(
+                                          p.existencias, p.producto.minimo),
+                                    ),
                               onTap: () => _abrir(
                                 DetalleInventarioScreen(
                                     productoId: p.producto.id),

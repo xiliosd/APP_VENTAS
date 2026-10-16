@@ -4,11 +4,11 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/inventario_providers.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/repositories/inventario_repository.dart';
+import 'package:app_ventas/repositories/pedido_repository.dart';
 import 'package:app_ventas/repositories/producto_repository.dart';
 import 'package:app_ventas/repositories/proveedor_repository.dart';
 import 'package:app_ventas/screens/inventario/inventario_screen.dart';
 import 'package:app_ventas/screens/inventario/pedido_sugerido_screen.dart';
-import 'package:app_ventas/screens/inventario/recibir_mercancia_screen.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:drift/native.dart';
 import 'package:app_ventas/ui/barra_accion_fija.dart';
@@ -97,30 +97,39 @@ void main() {
         tester.widget<Text>(find.byKey(Key('cantidad_pedido_$pan'))).data, '0');
   });
 
-  testWidgets('Recibir este pedido abre Recibir lleno y suma existencias',
+  Future<List<(int, int, int?)>> lineasGuardadas() async => [
+        for (final l in await db.select(db.lineasPedido).get())
+          (l.productoId, l.cantidad, l.precioEsperado),
+      ];
+
+  testWidgets('Guardar pedido guarda lo editado y vuelve con el aviso',
       (tester) async {
     final (postobon, coca, pan, _) = await preparar(tester);
     await tester.tap(find.byKey(Key('ver_pedido_$postobon')));
     await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('boton_recibir_pedido')));
+    await tester.tap(find.byKey(Key('cantidad_pedido_$pan')));
     await tester.pumpAndSettle();
-    expect(find.byType(RecibirMercanciaScreen), findsOneWidget);
-    expect(find.text(r'Total $23.400'), findsOneWidget);
-    await tester.ensureVisible(find.byKey(const Key('boton_guardar_recibir')));
-    await tester.tap(find.byKey(const Key('boton_guardar_recibir')));
+    await tester.enterText(find.byKey(const Key('campo_cantidad')), '0');
+    await tester.tap(find.byKey(const Key('aceptar_cantidad')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('boton_recibir_pedido')), findsNothing);
+    expect(find.text('Guardar pedido'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('boton_guardar_pedido')));
     await tester.pumpAndSettle();
 
     expect(find.byType(InventarioScreen), findsOneWidget);
-    expect(find.text(r'Mercancía recibida · $23.400'), findsOneWidget);
-    final inv = InventarioRepository(db);
-    expect(await inv.existencias(coca), 24);
-    expect(await inv.existencias(pan), 10);
+    expect(find.text('Pedido guardado'), findsOneWidget);
+    final pedido = await db.select(db.pedidos).getSingle();
+    expect(pedido.proveedorId, postobon);
+    expect(await lineasGuardadas(), [(coca, 22, 900)]);
+    // Guardar no recibe: las existencias no cambian.
+    expect(await InventarioRepository(db).existencias(coca), 2);
   });
 
-  testWidgets('sin proveedor: sin precio y Recibir sin proveedor elegido',
+  testWidgets('sin proveedor hay que elegir uno antes de guardar',
       (tester) async {
-    final (_, _, _, agua) = await preparar(tester);
+    final (postobon, _, _, agua) = await preparar(tester);
 
     await tester.scrollUntilVisible(find.byKey(const Key('ver_pedido_sin')), 200);
     await tester.tap(find.byKey(const Key('ver_pedido_sin')));
@@ -129,20 +138,24 @@ void main() {
     expect(find.text('Pedido sugerido · Sin proveedor'), findsOneWidget);
     expect(find.text('Sin precio'), findsOneWidget);
     expect(find.text(r'Total estimado $0'), findsOneWidget);
+    expect(habilitado(tester, 'boton_guardar_pedido'), isFalse);
 
+    await tester.tap(find.byKey(Key('opcion_proveedor_pedido_$postobon')));
+    await tester.pump();
+    expect(habilitado(tester, 'boton_guardar_pedido'), isTrue);
     await tester.tap(find.byKey(Key('restar_pedido_$agua')));
     await tester.pump();
-    expect(habilitado(tester, 'boton_recibir_pedido'), isFalse);
-
+    expect(habilitado(tester, 'boton_guardar_pedido'), isFalse);
     await tester.tap(find.byKey(Key('sumar_pedido_$agua')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('boton_recibir_pedido')));
+
+    await tester.tap(find.byKey(const Key('boton_guardar_pedido')));
     await tester.pumpAndSettle();
-    expect(find.byType(RecibirMercanciaScreen), findsOneWidget);
-    expect(habilitado(tester, 'boton_guardar_recibir'), isFalse);
+    expect((await db.select(db.pedidos).getSingle()).proveedorId, postobon);
+    expect(await lineasGuardadas(), [(agua, 1, null)]);
   });
 
-  testWidgets('un proveedor desactivado no llega elegido a Recibir',
+  testWidgets('con un proveedor desactivado hay que elegir otro',
       (tester) async {
     final (postobon, _, _, _) = await preparar(tester);
     await ProveedorRepository(db).desactivar(postobon);
@@ -150,11 +163,36 @@ void main() {
 
     await tester.tap(find.byKey(Key('ver_pedido_$postobon')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('boton_recibir_pedido')));
+
+    expect(habilitado(tester, 'boton_guardar_pedido'), isFalse);
+    expect(find.byKey(Key('opcion_proveedor_pedido_$postobon')), findsNothing);
+  });
+
+  testWidgets('descuenta lo que ya viene y lo muestra en Por pedir',
+      (tester) async {
+    final (postobon, coca, pan, _) = await preparar(tester);
+    final ana = (await db.select(db.usuarios).get()).first;
+    final pedidos = PedidoRepository(db);
+    await pedidos.guardarPedido(
+        proveedorId: postobon,
+        lineas: [LineaPedidoNueva(productoId: coca, cantidad: 10)],
+        por: ana);
+    await pedidos.guardarPedido(
+        proveedorId: postobon,
+        lineas: [LineaPedidoNueva(productoId: pan, cantidad: 9)],
+        por: ana);
     await tester.pumpAndSettle();
 
-    expect(find.byType(RecibirMercanciaScreen), findsOneWidget);
-    expect(habilitado(tester, 'boton_guardar_recibir'), isFalse);
+    expect(find.text('Ya pedido · llegan 9'), findsOneWidget);
+    expect(find.byKey(Key('ya_pedido_$pan')), findsOneWidget);
+    expect(find.byKey(Key('ya_pedido_$coca')), findsNothing);
+
+    await tester.tap(find.byKey(Key('ver_pedido_$postobon')));
+    await tester.pumpAndSettle();
+    expect(
+        tester.widget<Text>(find.byKey(Key('cantidad_pedido_$coca'))).data, '12');
+    expect(find.textContaining('llegan 10'), findsOneWidget);
+    expect(find.byKey(Key('cantidad_pedido_$pan')), findsNothing);
   });
 
   Future<Proveedor> proveedorSinPedido() async {
@@ -172,7 +210,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No hay nada por pedir a este proveedor'), findsOneWidget);
-    expect(find.byKey(const Key('boton_recibir_pedido')), findsNothing);
+    expect(find.byKey(const Key('boton_guardar_pedido')), findsNothing);
   });
 
   testWidgets('mientras carga muestra el indicador', (tester) async {
