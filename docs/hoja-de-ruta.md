@@ -1,6 +1,6 @@
 # Hoja de ruta — VeciTienda
 
-Actualizada: 2026-10-12. Cada fase pasa por especificación (`docs/superpowers/specs/`) y plan
+Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/specs/`) y plan
 (`docs/superpowers/plans/`) antes de programarse.
 
 ## Hecho
@@ -31,13 +31,39 @@ Actualizada: 2026-10-12. Cada fase pasa por especificación (`docs/superpowers/s
 
 ## Después
 
-- Búsqueda por voz en Nueva venta (diseño aprobado en conversación el 2026-10-13, sin
-  implementar; aplica los lineamientos UNIMINUTO): botón de micrófono en el buscador fijo con
-  `speech_to_text` 7.5.0 (es-CO, hasta 8 s o 3 s de silencio), texto en vivo que filtra la
-  lista, búsqueda tolerante (ignora guiones y exige todas las palabras en nombre, marca o
-  tamaño), avisos sin permiso / sin reconocimiento / sin texto, permiso `RECORD_AUDIO`, sin
-  guardar audio ni texto. Rama `feature/busqueda-por-voz`. Segunda etapa posible: "dos coca
-  colas y un pan" agrega al ticket con confirmación.
+- Mejoras pedidas el 2026-10-16 (planeadas, sin implementar; cada una con spec, plan, pruebas y los
+  lineamientos UNIMINUTO; orden sugerido: 1 → 2 → 3 → 4).
+  1. **Pedido recibido = gasto** (rama `feature/pedido-como-gasto`). Al guardar en Recibir
+     mercancía se crea, en la misma transacción, un gasto "Mercancía · <proveedor>" por el total,
+     enlazado a la entrada (columna nueva `entradaId` en `Gastos`, BD v9 con migración). Interruptor
+     "Lo pagué de la caja" (encendido por defecto) para pedidos a crédito o pagados por fuera.
+     Anular la entrada anula su gasto; el gasto enlazado no se corrige suelto (se corrige la
+     entrada). Reportes y resumen ya restan gastos, así que la ganancia queda en vista de caja.
+     Riesgo: doble conteo si el tendero ya registraba la mercancía a mano; avisar una vez.
+  2. **Inicio de marca más audaz** (rama `feature/inicio-de-marca`). Pantalla de entrada a
+     pantalla completa con el color de la marca, isotipo grande, nombre VeciTienda en tipografía
+     fuerte y el eslogan, con animación corta (≈1,5 s, entrada con escala y desvanecido) y luego
+     pasa a Bienvenida / crear tienda. Splash nativo del mismo color para evitar el destello
+     blanco. Respeta "reducir movimiento", se puede saltar tocando y tiene `Semantics`. Por
+     decidir: versión completa solo en el primer uso y una breve en cada arranque.
+  3. **Huella digital al ingresar** (rama `feature/ingreso-con-huella`). Paquete `local_auth`
+     (versión fijada tras verificarla en pub.dev); `MainActivity` pasa a `FlutterFragmentActivity`
+     y se agrega `USE_BIOMETRIC`. Cada usuario la activa en Ajustes después de ingresar con su
+     PIN; en "¿Quién eres?" se ofrece la huella y el PIN queda siempre como respaldo (sin huella
+     registrada, sensor bloqueado o fallos). Nada biométrico se guarda en la app: solo la marca
+     "huella activada" por usuario. Riesgo: la huella es del celular, no del usuario; si varios
+     comparten el celular, cualquier huella registrada abre ese usuario, así que se avisa al
+     activarla.
+  4. **Vender y reconocer productos por voz** (rama `feature/venta-por-voz`), en dos etapas:
+     a) búsqueda por voz, el diseño aprobado el 2026-10-13: botón de micrófono en el buscador fijo
+        con `speech_to_text` 7.5.0 (es-CO, hasta 8 s o 3 s de silencio), texto en vivo que filtra
+        la lista, búsqueda tolerante (ignora guiones y exige todas las palabras en nombre, marca o
+        tamaño), avisos sin permiso / sin reconocimiento / sin texto, permiso `RECORD_AUDIO`, sin
+        guardar audio ni texto;
+     b) dictar la venta ("dos coca colas y un pan"): se separa en partes por "y" y comas, se leen
+        cantidades en número o palabra (un, dos… doce, media docena), cada parte se busca con el
+        filtro tolerante y se muestra una hoja de confirmación con lo reconocido, lo dudoso (elegir
+        entre opciones) y lo no encontrado; nada entra al ticket sin confirmar.
 - Monetización sin cobrarle al tendero (ideas presentadas el 2026-10-13): pedido digital al
   distribuidor (recomendado para empezar), promociones de marca, crédito y pagos con
   bancos/billeteras, recargas y pagos de servicios, datos agregados a escala; requiere
