@@ -398,4 +398,45 @@ void main() {
         tester.getSize(find.byKey(const Key('barra_ranking_1'))).width;
     expect(aguardiente, greaterThan(agua * 10));
   });
+
+  testWidgets('muestra porcentajes y la lista de mejores clientes',
+      (tester) async {
+    await db.into(db.ventas).insert(VentasCompanion.insert(
+        monto: 7500,
+        fecha: DateTime(2026, 10, 6, 9),
+        usuarioId: ana,
+        clienteId: Value(pedro)));
+    await vender(2500, DateTime(2026, 10, 6, 10));
+    await montar(tester);
+
+    expect(find.text('¿A quién le vendo?'), findsOneWidget);
+    expect(en('tarjeta_a_quien', r'Clientes habituales · $7.500 · 75 %'),
+        findsOneWidget);
+    expect(en('tarjeta_a_quien', r'De paso o sin marcar · $2.500 · 25 %'),
+        findsOneWidget);
+    expect(find.text('Mejores clientes'), findsOneWidget);
+    expect(en('mejor_cliente_0', r'1. Don Pedro · 1 compras · $7.500'),
+        findsOneWidget);
+  });
+
+  testWidgets('sin clientes marcados muestra la ayuda', (tester) async {
+    await vender(2500, DateTime(2026, 10, 6, 10));
+    await montar(tester);
+
+    expect(
+        find.text('Marca al cliente al cobrar para ver aquí a tus '
+            'mejores clientes'),
+        findsOneWidget);
+    expect(find.byKey(const Key('mejor_cliente_0')), findsNothing);
+  });
+
+  testWidgets('con solo gastos la tarjeta dice que aún no hay ventas',
+      (tester) async {
+    await db.into(db.gastos).insert(GastosCompanion.insert(
+        monto: 100, fecha: DateTime(2026, 10, 6), usuarioId: ana));
+    await montar(tester);
+
+    expect(en('tarjeta_a_quien', 'Aún no hay ventas en este periodo'),
+        findsOneWidget);
+  });
 }

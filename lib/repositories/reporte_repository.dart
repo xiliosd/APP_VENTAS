@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../data/database.dart';
 import '../util/fecha_util.dart';
+import '../util/nombre_cliente.dart';
 import '../util/periodo.dart';
 import '../util/texto_util.dart';
 import 'fiado_repository.dart';
@@ -28,6 +29,23 @@ class ProductoVendido {
   final int? ganancia;
 }
 
+/// Un cliente del ranking de mejores clientes del periodo.
+class ClienteComprador {
+  const ClienteComprador({
+    required this.clienteId,
+    required this.nombre,
+    required this.compras,
+    required this.dinero,
+  });
+
+  final int clienteId;
+
+  /// Nombre completo actual del cliente.
+  final String nombre;
+  final int compras;
+  final int dinero;
+}
+
 /// Cifras de un rango de días, sin nada anulado.
 class Reporte {
   const Reporte({
@@ -49,6 +67,9 @@ class Reporte {
     required this.gananciaProductos,
     required this.vendidoSinCosto,
     required this.hayCostos,
+    required this.vendidoHabituales,
+    required this.vendidoDePaso,
+    required this.mejoresClientes,
   });
 
   /// Contado + fiado.
@@ -100,6 +121,15 @@ class Reporte {
 
   /// Hubo al menos una línea con costo.
   final bool hayCostos;
+
+  /// Ventas del rango (contado y fiado) con cliente marcado.
+  final int vendidoHabituales;
+
+  /// Ventas de contado sin cliente marcado.
+  final int vendidoDePaso;
+
+  /// Hasta 10 clientes, por dinero (empate: compras, luego nombre).
+  final List<ClienteComprador> mejoresClientes;
 
   int get ganancia => ventas - gastos;
 
@@ -277,6 +307,44 @@ class ReporteRepository {
       }
     }
 
+    var vendidoHabituales = 0;
+    var vendidoDePaso = 0;
+    final porCliente = <int, ({int compras, int dinero})>{};
+    for (final v in ventas) {
+      final clienteId = v.clienteId;
+      if (clienteId == null) {
+        if (!v.esFiado) vendidoDePaso += v.monto;
+        continue;
+      }
+      vendidoHabituales += v.monto;
+      final previo = porCliente[clienteId];
+      porCliente[clienteId] = (
+        compras: (previo?.compras ?? 0) + 1,
+        dinero: (previo?.dinero ?? 0) + v.monto,
+      );
+    }
+    final nombresClientes = porCliente.isEmpty
+        ? const <int, String>{}
+        : {
+            for (final c in await _db.select(_db.clientes).get())
+              c.id: c.nombreCompleto,
+          };
+    final mejoresClientes = [
+      for (final e in porCliente.entries)
+        ClienteComprador(
+          clienteId: e.key,
+          nombre: nombresClientes[e.key] ?? '',
+          compras: e.value.compras,
+          dinero: e.value.dinero,
+        ),
+    ]..sort((a, b) {
+        final porDinero = b.dinero.compareTo(a.dinero);
+        if (porDinero != 0) return porDinero;
+        final porCompras = b.compras.compareTo(a.compras);
+        if (porCompras != 0) return porCompras;
+        return claveCliente(a.nombre).compareTo(claveCliente(b.nombre));
+      });
+
     return Reporte(
       ventas: _suma(ventas.map((v) => v.monto)),
       cantidadVentas: ventas.length,
@@ -296,6 +364,9 @@ class ReporteRepository {
       gananciaProductos: gananciaProductos,
       vendidoSinCosto: vendidoSinCosto,
       hayCostos: hayCostos,
+      vendidoHabituales: vendidoHabituales,
+      vendidoDePaso: vendidoDePaso,
+      mejoresClientes: mejoresClientes.take(10).toList(),
     );
   }
 

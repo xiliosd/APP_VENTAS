@@ -281,6 +281,59 @@ class _Contenido extends StatelessWidget {
             ),
           ),
         ),
+        const _Titulo('¿A quién le vendo?'),
+        Card(
+          key: const Key('tarjeta_a_quien'),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: _contenidoAQuien(r, gris),
+          ),
+        ),
+        const _Titulo('Mejores clientes'),
+        if (r.mejoresClientes.isEmpty)
+          Text(
+            'Marca al cliente al cobrar para ver aquí a tus mejores clientes',
+            key: const Key('texto_sin_clientes'),
+            style: gris,
+          )
+        else
+          for (final (i, cliente) in r.mejoresClientes.indexed)
+            Padding(
+              key: Key('mejor_cliente_$i'),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '${i + 1}. ${cliente.nombre} · ${cliente.compras} compras '
+                    '· ${formatoMoneda(cliente.dinero)}',
+                  ),
+                  const SizedBox(height: 4),
+                  LayoutBuilder(
+                    builder: (context, limites) {
+                      // La lista va por dinero: el primero llena el ancho.
+                      final mayor = r.mejoresClientes.first.dinero;
+                      final ancho = mayor <= 0
+                          ? 4.0
+                          : (limites.maxWidth * cliente.dinero / mayor)
+                              .clamp(4.0, limites.maxWidth);
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          key: Key('barra_mejor_cliente_$i'),
+                          height: 6,
+                          width: ancho,
+                          decoration: BoxDecoration(
+                            color: i == 0 ? c.marcaVerde : c.primario,
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
         const _Titulo('Ventas por día'),
         BarrasPorDia(ventasPorDia: r.ventasPorDia, mejorDia: r.mejorDia),
         const _Titulo('Productos más vendidos'),
@@ -410,6 +463,26 @@ class _Contenido extends StatelessWidget {
           ],
           resaltada: r.horaPico == null ? null : 'h${r.horaPico}',
         ),
+      ],
+    );
+  }
+}
+
+extension on _Contenido {
+  Widget _contenidoAQuien(Reporte r, TextStyle gris) {
+    final total = r.vendidoHabituales + r.vendidoDePaso;
+    if (total == 0) {
+      return Text('Aún no hay ventas en este periodo', style: gris);
+    }
+    String fila(String nombre, int monto) =>
+        '$nombre · ${formatoMoneda(monto)} · '
+        '${(monto * 100 / total).round()} %';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(fila('Clientes habituales', r.vendidoHabituales)),
+        const SizedBox(height: 4),
+        Text(fila('De paso o sin marcar', r.vendidoDePaso)),
       ],
     );
   }
