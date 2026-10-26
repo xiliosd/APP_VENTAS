@@ -19,6 +19,7 @@ import '../../ui/tema_app.dart';
 import '../../ui/tipografia.dart';
 import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
+import '../../util/nombre_cliente.dart';
 import '../../util/saldos_fiado.dart';
 import '../correccion/hoja_movimiento.dart';
 import '../correccion/texto_correccion.dart';
@@ -35,7 +36,7 @@ class DetalleClienteScreen extends ConsumerWidget {
     final cliente = clienteConSaldo.cliente;
     final registrado = await mostrarHojaInferior<bool>(
       context,
-      titulo: 'Abono de ${cliente.nombre}',
+      titulo: 'Abono de ${cliente.nombreCompleto}',
       builder: (_) => _HojaAbono(clienteId: cliente.id, saldo: saldo),
     );
     if (registrado == true && context.mounted) {
@@ -66,7 +67,7 @@ class DetalleClienteScreen extends ConsumerWidget {
         : clienteConSaldo.fechaDeudaMasAntigua ?? DateTime.now();
 
     return Scaffold(
-      appBar: AppBar(title: Text(cliente.nombre)),
+      appBar: AppBar(title: Text(cliente.nombreCompleto)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -80,7 +81,7 @@ class DetalleClienteScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(cliente.nombre,
+                Text(cliente.nombreCompleto,
                     style: estiloTitulo(tamano: 14, color: suave)),
                 const SizedBox(height: 4),
                 // Con saldo a favor se muestra el valor; el texto lo aclara.
@@ -116,7 +117,7 @@ class DetalleClienteScreen extends ConsumerWidget {
               onTap: (m) => abrirHojaMovimiento(
                 context,
                 MovimientoEditable.desdeFiado(m,
-                    clienteId: cliente.id, nombreCliente: cliente.nombre),
+                    clienteId: cliente.id, nombreCliente: cliente.nombreCompleto),
               ),
             ),
             loading: () => const Center(child: CircularProgressIndicator()),

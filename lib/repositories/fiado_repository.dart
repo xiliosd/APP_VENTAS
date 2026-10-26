@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../data/database.dart';
 import '../util/fecha_util.dart';
+import '../util/nombre_cliente.dart';
 import 'correccion_repository.dart';
 
 class ClienteConSaldo {
@@ -127,7 +128,9 @@ class FiadoRepository {
       resultado.add(ClienteConSaldo(cliente: cliente, saldo: saldo));
     }
     resultado.sort((a, b) =>
-        a.cliente.nombre.toLowerCase().compareTo(b.cliente.nombre.toLowerCase()));
+        a.cliente.nombreCompleto
+            .toLowerCase()
+            .compareTo(b.cliente.nombreCompleto.toLowerCase()));
     return resultado;
   }
 

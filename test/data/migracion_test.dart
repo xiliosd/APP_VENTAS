@@ -14,6 +14,7 @@ import '../support/esquema_v5.dart';
 import '../support/esquema_v6.dart';
 import '../support/esquema_v7.dart';
 import '../support/esquema_v8.dart';
+import '../support/esquema_v9.dart';
 
 void main() {
   late Directory carpeta;
@@ -55,7 +56,7 @@ void main() {
         MedioPago.transferencia);
     expect((await db.select(db.configuracionTienda).getSingle()).imagenQr,
         [1, 2]);
-    expect(db.schemaVersion, 9);
+    expect(db.schemaVersion, 10);
   });
 
   test('una base v2 abre en v3 sin nada anulado y sin correcciones', () async {
@@ -366,5 +367,30 @@ void main() {
         (await db.select(db.lineasPedido).getSingle()).precioEsperado, isNull);
     final gastos = await db.select(db.gastos).get();
     expect(gastos.last.entradaId, entrada);
+  });
+
+  test('una base v9 abre en v10 con clientes sin apellido', () async {
+    final archivo = File('${carpeta.path}/v9.sqlite');
+    crearBaseV9(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    final cliente = await db.select(db.clientes).getSingle();
+    expect(cliente.nombre, 'Don Pedro');
+    expect(cliente.apellido, isNull);
+  });
+
+  test('una base v1 abre en v10 y guarda apellido', () async {
+    final archivo = File('${carpeta.path}/v1c.sqlite');
+    crearBaseV1(archivo.path);
+
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    await db.into(db.clientes).insert(ClientesCompanion.insert(
+        nombre: 'Juan', apellido: const Value('Pérez')));
+    final clientes = await db.select(db.clientes).get();
+    expect(clientes.last.apellido, 'Pérez');
   });
 }

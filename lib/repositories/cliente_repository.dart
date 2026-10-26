@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../data/database.dart';
+import '../util/nombre_cliente.dart';
 
 class ClienteRepository {
   ClienteRepository(this._db);
@@ -27,19 +28,19 @@ class ClienteRepository {
   /// mayúsculas ni espacios de los extremos); si no existe, lo crea.
   Future<int> obtenerOCrearCliente(String nombre) async {
     final limpio = nombre.trim();
-    final buscado = limpio.toLowerCase();
+    final buscado = claveCliente(limpio);
     for (final cliente in await listarClientes()) {
-      if (cliente.nombre.trim().toLowerCase() == buscado) return cliente.id;
+      if (claveCliente(cliente.nombreCompleto) == buscado) return cliente.id;
     }
     return crearCliente(nombre: limpio);
   }
 
-  /// Nombre de cada cliente de [ids], por id.
+  /// Nombre completo de cada cliente de [ids], por id.
   Future<Map<int, String>> nombresPorId(Iterable<int> ids) async {
     if (ids.isEmpty) return {};
     final filas = await (_db.select(_db.clientes)
           ..where((c) => c.id.isIn(ids)))
         .get();
-    return {for (final c in filas) c.id: c.nombre};
+    return {for (final c in filas) c.id: c.nombreCompleto};
   }
 }

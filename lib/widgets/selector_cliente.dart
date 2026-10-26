@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database.dart';
 import '../providers/clientes_providers.dart';
 import '../providers/ticket_provider.dart';
+import '../util/nombre_cliente.dart';
 
 /// Buscador de cliente para ventas fiadas: sugiere clientes existentes y
 /// permite uno nuevo con el nombre escrito. Con un cliente [elegido] muestra
@@ -56,13 +57,13 @@ class _SelectorClienteState extends ConsumerState<SelectorCliente> {
     final clientes =
         ref.watch(listaClientesProvider).valueOrNull ?? const <Cliente>[];
     final texto = _busqueda.trim();
-    final buscado = texto.toLowerCase();
+    final buscado = claveCliente(texto);
     final sugeridos = clientes
-        .where((c) => c.nombre.toLowerCase().contains(buscado))
+        .where((c) => claveCliente(c.nombreCompleto).contains(buscado))
         .take(6)
         .toList();
     final existeExacto = clientes.any(
-      (c) => c.nombre.trim().toLowerCase() == buscado,
+      (c) => claveCliente(c.nombreCompleto) == buscado,
     );
 
     return Column(
@@ -91,9 +92,9 @@ class _SelectorClienteState extends ConsumerState<SelectorCliente> {
             for (final c in sugeridos)
               ActionChip(
                 key: Key('cliente_sugerido_${c.id}'),
-                label: Text(c.nombre),
+                label: Text(c.nombreCompleto),
                 onPressed: () =>
-                    widget.onElegir(ClienteTicket(id: c.id, nombre: c.nombre)),
+                    widget.onElegir(ClienteTicket(id: c.id, nombre: c.nombreCompleto)),
               ),
             if (texto.isNotEmpty && !existeExacto)
               ActionChip(

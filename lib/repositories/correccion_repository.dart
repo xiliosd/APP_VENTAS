@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../data/database.dart';
 import '../util/formato_moneda.dart';
+import '../util/nombre_cliente.dart';
 import '../util/permisos.dart';
 import 'cliente_repository.dart';
 import 'fiado_repository.dart';
@@ -296,7 +297,7 @@ class CorreccionRepository {
           : await (_db.select(_db.clientes)
                 ..where((c) => c.id.equals(clienteId)))
               .getSingleOrNull();
-      base = '$monto · Fiado · ${cliente?.nombre ?? 'Sin cliente'}';
+      base = '$monto · Fiado · ${cliente?.nombreCompleto ?? 'Sin cliente'}';
     }
     if (lineas.isEmpty) return base;
     final productos =

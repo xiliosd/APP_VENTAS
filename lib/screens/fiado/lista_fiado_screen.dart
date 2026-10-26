@@ -13,6 +13,7 @@ import '../../ui/tema_app.dart';
 import '../../ui/tipografia.dart';
 import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
+import '../../util/nombre_cliente.dart';
 import '../../util/texto_util.dart';
 import 'detalle_cliente_screen.dart';
 
@@ -45,7 +46,7 @@ class _ListaFiadoScreenState extends ConsumerState<ListaFiadoScreen> {
     final filtro = clientes.length > _clientesSinBuscador ? _filtro : '';
     final lista = [
       for (final c in clientes)
-        if (filtro.isEmpty || sinTildes(c.cliente.nombre).contains(filtro)) c,
+        if (filtro.isEmpty || claveCliente(c.cliente.nombreCompleto).contains(filtro)) c,
     ];
     lista.sort(_porAntiguedad ? _masAntigua : _mayorDeuda);
     return lista;
@@ -55,9 +56,9 @@ class _ListaFiadoScreenState extends ConsumerState<ListaFiadoScreen> {
     final porSaldo = b.saldo.compareTo(a.saldo);
     return porSaldo != 0
         ? porSaldo
-        : a.cliente.nombre
+        : a.cliente.nombreCompleto
             .toLowerCase()
-            .compareTo(b.cliente.nombre.toLowerCase());
+            .compareTo(b.cliente.nombreCompleto.toLowerCase());
   }
 
   static int _masAntigua(ClienteConSaldo a, ClienteConSaldo b) {
@@ -139,9 +140,9 @@ class _ListaFiadoScreenState extends ConsumerState<ListaFiadoScreen> {
                           key: Key('cliente_deuda_${item.cliente.id}'),
                           leading: AvatarInicial(
                               id: item.cliente.id,
-                              nombre: item.cliente.nombre),
+                              nombre: item.cliente.nombreCompleto),
                           title: Text(
-                            item.cliente.nombre,
+                            item.cliente.nombreCompleto,
                             key: const Key('nombre_cliente'),
                             style:
                                 const TextStyle(fontWeight: FontWeight.w600),
@@ -187,8 +188,8 @@ class _ListaFiadoScreenState extends ConsumerState<ListaFiadoScreen> {
                         child: ListTile(
                           key: Key('cliente_al_dia_${item.cliente.id}'),
                           leading: AvatarInicial(
-                              id: item.cliente.id, nombre: item.cliente.nombre),
-                          title: Text(item.cliente.nombre),
+                              id: item.cliente.id, nombre: item.cliente.nombreCompleto),
+                          title: Text(item.cliente.nombreCompleto),
                           subtitle: Text(item.saldo == 0
                               ? 'Al día'
                               : 'Saldo a favor ${formatoMoneda(-item.saldo)}'),
@@ -220,8 +221,8 @@ class _TarjetaTeDeben extends StatelessWidget {
     final total = clientes.fold<int>(0, (suma, x) => suma + x.saldo);
     final mayor = clientes.reduce((a, b) {
       if (a.saldo != b.saldo) return a.saldo >= b.saldo ? a : b;
-      return a.cliente.nombre.toLowerCase().compareTo(
-                  b.cliente.nombre.toLowerCase()) <=
+      return a.cliente.nombreCompleto.toLowerCase().compareTo(
+                  b.cliente.nombreCompleto.toLowerCase()) <=
               0
           ? a
           : b;
@@ -245,7 +246,7 @@ class _TarjetaTeDeben extends StatelessWidget {
               style: TextStyle(color: suave, fontSize: 12)),
           const SizedBox(height: 2),
           Text(
-            'Mayor deuda: ${mayor.cliente.nombre} ${formatoMoneda(mayor.saldo)}',
+            'Mayor deuda: ${mayor.cliente.nombreCompleto} ${formatoMoneda(mayor.saldo)}',
             key: const Key('texto_mayor_deuda'),
             style: TextStyle(color: suave, fontSize: 12),
           ),

@@ -58,6 +58,9 @@ class Productos extends Table {
 class Proveedores extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get nombre => text()();
+
+  /// Opcional: los clientes anteriores a la versión 10 no lo tienen.
+  TextColumn get apellido => text().nullable()();
   TextColumn get telefono => text().nullable()();
   TextColumn get notas => text().nullable()();
   BoolColumn get activo => boolean().withDefault(const Constant(true))();
@@ -148,6 +151,9 @@ class LineasPedido extends Table {
 class Clientes extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get nombre => text()();
+
+  /// Opcional: los clientes anteriores a la versión 10 no lo tienen.
+  TextColumn get apellido => text().nullable()();
   TextColumn get telefono => text().nullable()();
   TextColumn get notas => text().nullable()();
 }
@@ -271,7 +277,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -324,6 +330,9 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(pedidos);
             await m.createTable(lineasPedido);
             await m.addColumn(gastos, gastos.entradaId);
+          }
+          if (desde < 10) {
+            await m.addColumn(clientes, clientes.apellido);
           }
         },
       );
