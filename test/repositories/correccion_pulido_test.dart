@@ -1,4 +1,5 @@
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/providers/ticket_provider.dart';
 import 'package:app_ventas/repositories/correccion_repository.dart';
 import 'package:app_ventas/repositories/fiado_repository.dart';
 import 'package:app_ventas/repositories/gasto_repository.dart';
@@ -120,11 +121,13 @@ void main() {
   });
 
   group('cliente nuevo al corregir', () {
+    const rosaNueva = ClienteTicket(nombre: 'Rosa', apellido: 'Gómez');
+
     test('se crea y se asigna dentro de la corrección', () async {
       final id = await VentaRepository(db).registrarVenta(
           monto: 5000, esFiado: false, usuarioId: ana.id, fecha: hoy);
       await repo.corregirVenta(id,
-          monto: 5000, esFiado: true, clienteNuevo: 'Rosa', por: ana);
+          monto: 5000, esFiado: true, clienteNuevo: rosaNueva, por: ana);
       final rosa = await (db.select(db.clientes)
             ..where((c) => c.nombre.equals('Rosa')))
           .getSingle();
@@ -139,24 +142,13 @@ void main() {
       await repo.anularVenta(id, por: ana);
       await expectLater(
         repo.corregirVenta(id,
-            monto: 5000, esFiado: true, clienteNuevo: 'Rosa', por: ana),
+            monto: 5000, esFiado: true, clienteNuevo: rosaNueva, por: ana),
         throwsA(isA<CorreccionInvalida>()),
       );
       expect(
           await (db.select(db.clientes)..where((c) => c.nombre.equals('Rosa')))
               .get(),
           isEmpty);
-    });
-
-    test('un nombre igual a un cliente existente lo reutiliza', () async {
-      final id = await VentaRepository(db).registrarVenta(
-          monto: 5000, esFiado: false, usuarioId: ana.id, fecha: hoy);
-      await repo.corregirVenta(id,
-          monto: 5000, esFiado: true, clienteNuevo: ' don pedro ', por: ana);
-      final venta = await (db.select(db.ventas)..where((v) => v.id.equals(id)))
-          .getSingle();
-      expect(venta.clienteId, pedro);
-      expect(await db.select(db.clientes).get(), hasLength(1));
     });
   });
 }

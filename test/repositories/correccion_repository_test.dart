@@ -1,4 +1,5 @@
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/providers/ticket_provider.dart';
 import 'package:app_ventas/repositories/correccion_repository.dart';
 import 'package:app_ventas/repositories/fiado_repository.dart';
 import 'package:app_ventas/repositories/gasto_repository.dart';
@@ -123,6 +124,72 @@ void main() {
       expect(await fiado.saldoCliente(rosa), -3000);
       expect(await fiado.listaClientesConDeuda(), isEmpty);
       expect(await fiado.deudaTotalAl(ahora), 0);
+    });
+
+    test('corregir fiado a contado conserva el cliente como habitual',
+        () async {
+      final id = await ventas.registrarVenta(
+          monto: 4000, esFiado: true, clienteId: rosa, usuarioId: ana.id, fecha: hoy);
+
+      await repo.corregirVenta(id,
+          monto: 4000, esFiado: false, clienteId: rosa, por: ana);
+
+      final v = await venta(id);
+      expect(v.esFiado, isFalse);
+      expect(v.clienteId, rosa);
+      expect(await fiado.saldoCliente(rosa), 0);
+    });
+
+    test('cambiar solo el cliente de una venta de contado queda registrado',
+        () async {
+      final id = await ventas.registrarVenta(
+          monto: 5000,
+          esFiado: false,
+          clienteId: pedro,
+          usuarioId: ana.id,
+          fecha: hoy);
+
+      await repo.corregirVenta(id,
+          monto: 5000, esFiado: false, clienteId: rosa, por: ana);
+
+      expect((await venta(id)).clienteId, rosa);
+      final todas = await correcciones();
+      expect(todas, hasLength(1));
+      expect(todas.single.antes, r'$5.000 · Contado · Efectivo · Don Pedro');
+    });
+
+    test('quitar el cliente de una venta de contado la deja de paso',
+        () async {
+      final id = await ventas.registrarVenta(
+          monto: 5000,
+          esFiado: false,
+          clienteId: pedro,
+          usuarioId: ana.id,
+          fecha: hoy);
+
+      await repo.corregirVenta(id, monto: 5000, esFiado: false, por: ana);
+
+      expect((await venta(id)).clienteId, isNull);
+      expect(await correcciones(), hasLength(1));
+    });
+
+    test('clienteNuevo se crea con nombre y apellido en la misma transacción',
+        () async {
+      final id = await ventas.registrarVenta(
+          monto: 5000, esFiado: false, usuarioId: ana.id, fecha: hoy);
+
+      await repo.corregirVenta(id,
+          monto: 5000,
+          esFiado: true,
+          clienteNuevo: const ClienteTicket(nombre: 'Lucía', apellido: 'Gómez'),
+          por: ana);
+
+      final v = await venta(id);
+      final cliente = await (db.select(db.clientes)
+            ..where((c) => c.id.equals(v.clienteId!)))
+          .getSingle();
+      expect(cliente.nombre, 'Lucía');
+      expect(cliente.apellido, 'Gómez');
     });
   });
 

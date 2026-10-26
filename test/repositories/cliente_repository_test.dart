@@ -236,35 +236,6 @@ void main() {
     },
   );
 
-  test(
-    'obtenerOCrearCliente reutiliza un cliente con el mismo nombre',
-    () async {
-      final id = await repo.crearCliente(nombre: 'Don', apellido: 'Pedro');
-
-      expect(await repo.obtenerOCrearCliente('  don pedro '), id);
-      expect(await repo.listarClientes(), hasLength(1));
-    },
-  );
-
-  test('obtenerOCrearCliente separa nombre y apellido al crear', () async {
-    final id = await repo.obtenerOCrearCliente('  Doña Rosa  ');
-
-    final cliente = await repo.obtenerCliente(id);
-    expect(cliente!.nombre, 'Doña');
-    expect(cliente.apellido, 'Rosa');
-  });
-
-  test(
-    'obtenerOCrearCliente con una sola palabra deja el apellido nulo',
-    () async {
-      final id = await repo.obtenerOCrearCliente(' Rosa ');
-
-      final cliente = await repo.obtenerCliente(id);
-      expect(cliente!.nombre, 'Rosa');
-      expect(cliente.apellido, isNull);
-    },
-  );
-
   test('nombresPorId devuelve el nombre completo', () async {
     final id = await repo.crearCliente(nombre: 'Pedro', apellido: 'Gómez');
 

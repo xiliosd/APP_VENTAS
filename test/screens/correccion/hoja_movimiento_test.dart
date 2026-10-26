@@ -4,6 +4,7 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/lineas_venta_providers.dart';
 import 'package:app_ventas/providers/repository_providers.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
+import 'package:app_ventas/providers/ticket_provider.dart';
 import 'package:app_ventas/repositories/correccion_repository.dart';
 import 'package:app_ventas/repositories/fiado_repository.dart';
 import 'package:app_ventas/repositories/gasto_repository.dart';
@@ -12,6 +13,7 @@ import 'package:app_ventas/screens/correccion/hoja_movimiento.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:app_ventas/ui/teclado_monto.dart';
 import 'package:app_ventas/util/fecha_util.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -111,6 +113,7 @@ void main() {
     await tester.tap(find.byKey(const Key('tecla_monto_borrar')));
     await tester.pump();
     expect(guardarHabilitado(tester), isTrue);
+    await tester.ensureVisible(find.byKey(const Key('boton_guardar_correccion')));
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
     await tester.pumpAndSettle();
 
@@ -130,6 +133,7 @@ void main() {
     await tester.tap(find.byKey(const Key('tecla_monto_borrar')));
     await tester.pump();
 
+    await tester.ensureVisible(find.byKey(const Key('boton_guardar_correccion')));
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')),
         warnIfMissed: false);
@@ -169,6 +173,54 @@ void main() {
     expect(v.esFiado, isTrue);
     expect(v.clienteId, rosa);
     expect(await db.select(db.clientes).get(), hasLength(1));
+  });
+
+  testWidgets('la hoja de corrección muestra ¿Quién compra? en contado',
+      (tester) async {
+    final (container, ana) = await sesion();
+    final id = await VentaRepository(db)
+        .registrarVenta(monto: 5000, esFiado: false, usuarioId: ana.id);
+    await abrir(tester, container, deVenta(id, ana));
+    await tester.tap(find.byKey(const Key('boton_corregir')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('¿Quién compra?'), findsOneWidget);
+    expect(find.byKey(const Key('editar_medio_pago')), findsOneWidget);
+  });
+
+  testWidgets('al pasar de fiado a contado el cliente se conserva',
+      (tester) async {
+    final (container, ana) = await sesion();
+    final rosa = await db.into(db.clientes).insert(
+        ClientesCompanion.insert(nombre: 'Rosa', apellido: const Value('Gómez')));
+    final id = await VentaRepository(db).registrarVenta(
+        monto: 5000, esFiado: true, clienteId: rosa, usuarioId: ana.id);
+    await abrir(
+        tester,
+        container,
+        MovimientoEditable(
+          tipo: TipoMovimiento.venta,
+          id: id,
+          monto: 5000,
+          fecha: DateTime.now(),
+          usuarioId: ana.id,
+          esFiado: true,
+          clienteId: rosa,
+          nombreCliente: 'Rosa Gómez',
+        ));
+    await tester.tap(find.byKey(const Key('boton_corregir')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Contado'));
+    await tester.pumpAndSettle();
+    expect(guardarHabilitado(tester), isTrue);
+    await tester.ensureVisible(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.pumpAndSettle();
+
+    final v = await venta(id);
+    expect(v.esFiado, isFalse);
+    expect(v.clienteId, rosa);
   });
 
   testWidgets('anular pide confirmación; cancelar no cambia nada',
@@ -514,6 +566,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('tecla_monto_borrar')));
     await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('boton_guardar_correccion')));
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
     await tester.pumpAndSettle();
 
@@ -556,7 +609,7 @@ class _RepoSinPermiso extends CorreccionRepository {
     required int monto,
     required bool esFiado,
     int? clienteId,
-    String? clienteNuevo,
+    ClienteTicket? clienteNuevo,
     MedioPago medioPago = MedioPago.efectivo,
     Map<int, int>? cantidades,
     required Usuario por,

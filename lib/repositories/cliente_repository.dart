@@ -91,26 +91,6 @@ class ClienteRepository {
         .getSingleOrNull();
   }
 
-  /// Id del cliente cuyo nombre coincide con [nombre] (sin importar
-  /// mayúsculas ni espacios de los extremos); si no existe, lo crea.
-  Future<int> obtenerOCrearCliente(String nombre) async {
-    final limpio = nombre.trim();
-    final buscado = claveCliente(limpio);
-    for (final cliente in await listarClientes()) {
-      if (claveCliente(cliente.nombreCompleto) == buscado) return cliente.id;
-    }
-    // Una sola palabra: no hay apellido que exigir (cobro rápido).
-    final partes = limpio.split(RegExp(r'\s+'));
-    return _db.into(_db.clientes).insert(
-          ClientesCompanion.insert(
-            nombre: partes.first,
-            apellido: Value(
-              partes.length > 1 ? partes.skip(1).join(' ') : null,
-            ),
-          ),
-        );
-  }
-
   /// Nombre completo de cada cliente de [ids], por id.
   Future<Map<int, String>> nombresPorId(Iterable<int> ids) async {
     if (ids.isEmpty) return {};

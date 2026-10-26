@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../data/database.dart';
+import '../providers/ticket_provider.dart';
 import '../util/formato_moneda.dart';
 import '../util/nombre_cliente.dart';
 import '../util/permisos.dart';
@@ -51,31 +52,35 @@ class CorreccionRepository {
   }
 
   /// Una venta fiada guarda `efectivo` (no cuenta por medio de pago); una de
-  /// contado queda sin cliente. Si la venta tiene líneas, [cantidades] (id de
+  /// contado guarda el cliente habitual si se indica, o queda de paso. Si la
+  /// venta tiene líneas, [cantidades] (id de
   /// línea → nueva cantidad; 0 = quitar) las ajusta y el monto se recalcula
   /// con ellas ([monto] se ignora); debe quedar al menos una. Si es fiada,
-  /// [clienteId] o [clienteNuevo] (se obtiene o crea en la misma transacción).
+  /// [clienteId] o [clienteNuevo] (sin id: se crea en la misma transacción).
   Future<void> corregirVenta(
     int id, {
     required int monto,
     required bool esFiado,
     int? clienteId,
-    String? clienteNuevo,
+    ClienteTicket? clienteNuevo,
     MedioPago medioPago = MedioPago.efectivo,
     Map<int, int>? cantidades,
     required Usuario por,
   }) async {
-    final nuevo = clienteNuevo?.trim() ?? '';
-    if (esFiado && clienteId == null && nuevo.isEmpty) {
+    if (esFiado && clienteId == null && clienteNuevo == null) {
       throw const CorreccionInvalida('Una venta fiada necesita cliente');
     }
     await _db.transaction(() async {
       final venta = await _venta(id);
       _comprobar(por, venta.usuarioId, venta.fecha, venta.anulado);
-      final cliente = !esFiado
-          ? null
-          : clienteId ??
-              await ClienteRepository(_db).obtenerOCrearCliente(nuevo);
+      final cliente = clienteId ??
+          (clienteNuevo == null
+              ? null
+              : await ClienteRepository(_db).crearCliente(
+                  nombre: clienteNuevo.nombre,
+                  apellido: clienteNuevo.apellido,
+                  telefono: clienteNuevo.telefono,
+                ));
       final lineas = await _lineas(id);
       var montoFinal = monto;
       final nuevas = <int, int>{};
@@ -106,9 +111,8 @@ class CorreccionRepository {
       final igual = !cambianLineas &&
           montoFinal == venta.monto &&
           esFiado == venta.esFiado &&
-          (esFiado
-              ? cliente == venta.clienteId
-              : medioPago == venta.medioPago);
+          cliente == venta.clienteId &&
+          (esFiado || medioPago == venta.medioPago);
       if (igual) return;
       final antes = await _antesVenta(venta, lineas);
       for (final linea in lineas) {
@@ -288,15 +292,16 @@ class CorreccionRepository {
   Future<String> _antesVenta(Venta venta, List<LineaVenta> lineas) async {
     final monto = formatoMoneda(venta.monto);
     final String base;
+    final clienteId = venta.clienteId;
+    final cliente = clienteId == null
+        ? null
+        : await (_db.select(_db.clientes)
+              ..where((c) => c.id.equals(clienteId)))
+            .getSingleOrNull();
     if (!venta.esFiado) {
-      base = '$monto · Contado · ${_nombreMedio(venta.medioPago)}';
+      final habitual = cliente == null ? '' : ' · ${cliente.nombreCompleto}';
+      base = '$monto · Contado · ${_nombreMedio(venta.medioPago)}$habitual';
     } else {
-      final clienteId = venta.clienteId;
-      final cliente = clienteId == null
-          ? null
-          : await (_db.select(_db.clientes)
-                ..where((c) => c.id.equals(clienteId)))
-              .getSingleOrNull();
       base = '$monto · Fiado · ${cliente?.nombreCompleto ?? 'Sin cliente'}';
     }
     if (lineas.isEmpty) return base;

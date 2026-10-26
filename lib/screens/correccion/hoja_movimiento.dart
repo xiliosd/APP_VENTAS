@@ -153,12 +153,11 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
   late int _monto = widget.movimiento.monto;
   late bool _esFiado = widget.movimiento.esFiado;
   late MedioPago _medio = widget.movimiento.medioPago;
-  late ClienteTicket? _cliente =
-      widget.movimiento.esFiado && widget.movimiento.clienteId != null
-          ? ClienteTicket(
-              id: widget.movimiento.clienteId,
-              nombre: widget.movimiento.nombreCliente ?? '')
-          : null;
+  late ClienteTicket? _cliente = widget.movimiento.clienteId != null
+      ? ClienteTicket(
+          id: widget.movimiento.clienteId,
+          nombre: widget.movimiento.nombreCliente ?? '')
+      : null;
   late final _descripcion =
       TextEditingController(text: widget.movimiento.descripcion ?? '');
 
@@ -204,9 +203,8 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
     if (_lineas.any((l) => _cantidad(l) != l.cantidad)) return true;
     return switch (_m.tipo) {
       TipoMovimiento.venta => _esFiado != _m.esFiado ||
-          (_esFiado
-              ? _clienteElegido?.id != _m.clienteId
-              : _medio != _m.medioPago),
+          _clienteElegido?.id != _m.clienteId ||
+          (!_esFiado && _medio != _m.medioPago),
       TipoMovimiento.abono => _medio != _m.medioPago,
       TipoMovimiento.gasto =>
         _descripcion.text.trim() != (_m.descripcion?.trim() ?? ''),
@@ -236,12 +234,12 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
       final repo = ref.read(correccionRepositoryProvider);
       switch (_m.tipo) {
         case TipoMovimiento.venta:
-          final cliente = _esFiado ? _clienteElegido! : null;
+          final cliente = _clienteElegido;
           await repo.corregirVenta(_m.id,
               monto: _total,
               esFiado: _esFiado,
               clienteId: cliente?.id,
-              clienteNuevo: cliente?.id == null ? cliente?.nombreCompleto : null,
+              clienteNuevo: cliente?.id == null ? cliente : null,
               medioPago: _medio,
               cantidades: _lineas.isEmpty
                   ? null
@@ -315,7 +313,8 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
   String get _detalle => switch (_m.tipo) {
         TipoMovimiento.venta => _m.esFiado
             ? 'Fiado · ${_m.nombreCliente ?? ''}'
-            : 'Contado · ${_nombreMedio(_m.medioPago)}',
+            : 'Contado · ${_nombreMedio(_m.medioPago)}'
+                '${_m.nombreCliente == null ? '' : ' · ${_m.nombreCliente}'}',
         TipoMovimiento.abono => 'Abono · ${_nombreMedio(_m.medioPago)}',
         TipoMovimiento.gasto => (_m.descripcion?.trim().isNotEmpty ?? false)
             ? _m.descripcion!.trim()
@@ -493,7 +492,15 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
               exigir: true,
             )
           else
-            _selectorMedio(),
+            ...[
+              _selectorMedio(),
+              const SizedBox(height: 12),
+              SelectorCliente(
+                elegido: _cliente,
+                onElegir: (cliente) => setState(() => _cliente = cliente),
+                etiqueta: '¿Quién compra?',
+              ),
+            ],
         ],
         if (_m.tipo == TipoMovimiento.abono) _selectorMedio(),
         if (_m.tipo == TipoMovimiento.gasto)
