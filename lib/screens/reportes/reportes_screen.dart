@@ -305,7 +305,8 @@ class _Contenido extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    '${i + 1}. ${cliente.nombre} · ${cliente.compras} compras '
+                    '${i + 1}. ${cliente.nombre} · '
+                    '${plural(cliente.compras, 'compra', 'compras')} '
                     '· ${formatoMoneda(cliente.dinero)}',
                   ),
                   const SizedBox(height: 4),

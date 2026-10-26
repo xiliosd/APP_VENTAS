@@ -415,7 +415,7 @@ void main() {
     expect(en('tarjeta_a_quien', r'De paso o sin marcar · $2.500 · 25 %'),
         findsOneWidget);
     expect(find.text('Mejores clientes'), findsOneWidget);
-    expect(en('mejor_cliente_0', r'1. Don Pedro · 1 compras · $7.500'),
+    expect(en('mejor_cliente_0', r'1. Don Pedro · 1 compra · $7.500'),
         findsOneWidget);
   });
 
@@ -437,6 +437,21 @@ void main() {
     await montar(tester);
 
     expect(en('tarjeta_a_quien', 'Aún no hay ventas en este periodo'),
+        findsOneWidget);
+  });
+
+  testWidgets('con varias compras el cliente dice compras en plural',
+      (tester) async {
+    for (final dia in [6, 7]) {
+      await db.into(db.ventas).insert(VentasCompanion.insert(
+          monto: 1000,
+          fecha: DateTime(2026, 10, dia, 9),
+          usuarioId: ana,
+          clienteId: Value(pedro)));
+    }
+    await montar(tester);
+
+    expect(en('mejor_cliente_0', r'1. Don Pedro · 2 compras · $2.000'),
         findsOneWidget);
   });
 }
