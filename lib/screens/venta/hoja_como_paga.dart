@@ -13,18 +13,23 @@ import '../../widgets/selector_cliente.dart';
 enum FormaPago { efectivo, transferencia, fiado }
 
 /// Pregunta cómo paga el cliente. Con Fiado, el cliente se elige dentro de la
-/// hoja (queda en el ticket). Null si se cierra sin elegir.
-Future<FormaPago?> mostrarHojaComoPaga(BuildContext context) {
+/// hoja (queda en el ticket). En contado se puede marcar el cliente habitual
+/// (salvo en la [practica] del recorrido). Null si se cierra sin elegir.
+Future<FormaPago?> mostrarHojaComoPaga(
+  BuildContext context, {
+  bool practica = false,
+}) {
   final ticket = ProviderScope.containerOf(context).read(ticketProvider);
   return mostrarHojaInferior<FormaPago>(
     context,
     titulo: 'Cobrar ${formatoMoneda(ticket.total)}',
-    builder: (_) => const _ComoPaga(),
+    builder: (_) => _ComoPaga(practica: practica),
   );
 }
 
 class _ComoPaga extends ConsumerStatefulWidget {
-  const _ComoPaga();
+  const _ComoPaga({required this.practica});
+  final bool practica;
   @override
   ConsumerState<_ComoPaga> createState() => _ComoPagaState();
 }
@@ -32,6 +37,7 @@ class _ComoPaga extends ConsumerStatefulWidget {
 class _ComoPagaState extends ConsumerState<_ComoPaga> {
   var _fiado = false;
   var _elegido = false; // evita doble toque
+  var _eligiendoCliente = false;
 
   void _elegir(FormaPago forma) {
     if (_elegido) return;
@@ -57,6 +63,16 @@ class _ComoPagaState extends ConsumerState<_ComoPaga> {
         // Con Fiado escogido quedan solo el cliente y Fiar, para que con el
         // teclado abierto quepan en celulares pequeños.
         if (!_fiado) ...[
+        if (!widget.practica) ...[
+          _FilaQuienCompra(
+            cliente: ticket.cliente,
+            desplegada: _eligiendoCliente,
+            onAlternar: () =>
+                setState(() => _eligiendoCliente = !_eligiendoCliente),
+            onElegir: notifier.elegirCliente,
+          ),
+          const SizedBox(height: 8),
+        ],
         ObjetivoRecorrido(
           id: 'pago_efectivo',
           child: _Opcion(
@@ -103,6 +119,64 @@ class _ComoPagaState extends ConsumerState<_ComoPaga> {
             onPressed: cliente == null ? null : () => _elegir(FormaPago.fiado),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Fila compacta "¿Quién compra? De paso" de la venta de contado: al tocarla
+/// se despliega el selector; con cliente elegido muestra su chip quitable.
+class _FilaQuienCompra extends StatelessWidget {
+  const _FilaQuienCompra({
+    required this.cliente,
+    required this.desplegada,
+    required this.onAlternar,
+    required this.onElegir,
+  });
+
+  final ClienteTicket? cliente;
+  final bool desplegada;
+  final VoidCallback onAlternar;
+  final ValueChanged<ClienteTicket?> onElegir;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = ColoresApp.of(context);
+    return Column(
+      key: const Key('quien_compra'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  text: '¿Quién compra? ',
+                  style: TextStyle(color: c.textoSecundario),
+                  children: [
+                    if (cliente == null)
+                      const TextSpan(
+                        text: 'De paso',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            if (cliente == null)
+              TextButton(
+                style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+                onPressed: onAlternar,
+                child: Text(desplegada ? 'Cerrar' : 'Elegir cliente'),
+              ),
+          ],
+        ),
+        if (cliente != null || desplegada)
+          SelectorCliente(
+            etiqueta: '¿Quién compra?',
+            elegido: cliente,
+            onElegir: onElegir,
+          ),
       ],
     );
   }

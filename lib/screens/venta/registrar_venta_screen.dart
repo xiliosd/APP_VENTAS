@@ -343,7 +343,10 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     final notifier = ref.read(ticketProvider.notifier);
     // En la práctica, la capa de globos pasa encima de la hoja.
     if (widget.practica && _globos?.indice == 1) _globos!.avanzar();
-    final forma = await mostrarHojaComoPaga(context);
+    final forma = await mostrarHojaComoPaga(
+      context,
+      practica: widget.practica,
+    );
     if (!mounted) return;
     if (forma == null) {
       notifier.cambiarFiado(false);
@@ -379,8 +382,8 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       }
       final sesion = ref.read(sesionProvider).usuarioActivo!;
       int? clienteId;
-      if (ticket.esFiado) {
-        final cliente = ticket.clienteParaCobrar!;
+      final cliente = ticket.clienteParaCobrar;
+      if (cliente != null) {
         clienteId =
             cliente.id ??
             await ref.read(clienteRepositoryProvider).crearCliente(
@@ -388,6 +391,17 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
               apellido: cliente.apellido,
               telefono: cliente.telefono,
             );
+        // Con el id en el ticket, un reintento no vuelve a crear al cliente.
+        if (cliente.id == null) {
+          ref.read(ticketProvider.notifier).elegirCliente(
+            ClienteTicket(
+              id: clienteId,
+              nombre: cliente.nombre,
+              apellido: cliente.apellido,
+              telefono: cliente.telefono,
+            ),
+          );
+        }
       }
       final ventaRepo = ref.read(ventaRepositoryProvider);
       final ventaId = await ventaRepo.registrarVenta(

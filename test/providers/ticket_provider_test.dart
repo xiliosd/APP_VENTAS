@@ -92,8 +92,17 @@ void main() {
     expect(ticket().puedeCobrar, isTrue);
 
     notifier().cambiarFiado(false);
-    expect(ticket().cliente, isNull);
+    expect(ticket().cliente!.nombre, 'Don Pedro');
     expect(ticket().puedeCobrar, isTrue);
+  });
+
+  test('cambiarFiado(false) conserva el cliente', () {
+    notifier().agregarMonto(2000);
+    notifier().elegirCliente(const ClienteTicket(id: 7, nombre: 'Ana'));
+    notifier().cambiarFiado(true);
+    notifier().cambiarFiado(false);
+    expect(ticket().esFiado, isFalse);
+    expect(ticket().cliente!.id, 7);
   });
 
   test('al dejar de usarse, el ticket se descarta', () async {

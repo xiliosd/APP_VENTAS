@@ -136,7 +136,7 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
   void cambiarFiado(bool esFiado) => state = Ticket(
     lineas: state.lineas,
     esFiado: esFiado,
-    cliente: esFiado ? state.cliente : null,
+    cliente: state.cliente,
     medioPago: state.medioPago,
   );
 
