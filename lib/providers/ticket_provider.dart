@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
+import '../models/cliente_ticket.dart';
 import '../util/formato_moneda.dart';
+
+export '../models/cliente_ticket.dart';
 
 class LineaTicket {
   const LineaTicket({
@@ -28,23 +31,6 @@ class LineaTicket {
     cantidad: nueva,
     productoId: productoId,
   );
-}
-
-/// Cliente de una venta fiada. [id] null = cliente nuevo por crear al cobrar.
-class ClienteTicket {
-  const ClienteTicket({
-    this.id,
-    required this.nombre,
-    this.apellido = '',
-    this.telefono,
-  });
-
-  final int? id;
-  final String nombre;
-  final String apellido;
-  final String? telefono;
-
-  String get nombreCompleto => '$nombre $apellido'.trim();
 }
 
 class Ticket {

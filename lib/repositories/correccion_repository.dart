@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../data/database.dart';
-import '../providers/ticket_provider.dart';
+import '../models/cliente_ticket.dart';
 import '../util/formato_moneda.dart';
 import '../util/nombre_cliente.dart';
 import '../util/permisos.dart';
