@@ -95,7 +95,7 @@ void main() {
     await sinNadaGuardado();
   });
 
-  testWidgets('fiado con cliente escrito: no crea cliente ni venta',
+  testWidgets('fiado con cliente nuevo: no crea cliente ni venta',
       (tester) async {
     await abrirPractica(tester, conGlobos: false);
     await tester.tap(find.text('Pan'));
@@ -104,7 +104,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pago_fiado')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('campo_cliente')), 'Don Pedro');
+    await tester.enterText(find.byKey(const Key('campo_cliente')), 'Pedro');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_cliente_nuevo')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('campo_nombre_cliente')), 'Pedro');
+    await tester.enterText(find.byKey(const Key('campo_apellido_cliente')), 'Gómez');
+    await tester.tap(find.byKey(const Key('boton_continuar_cliente')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('boton_fiar')));
     await tester.pumpAndSettle();

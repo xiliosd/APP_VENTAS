@@ -383,9 +383,11 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
         final cliente = ticket.clienteParaCobrar!;
         clienteId =
             cliente.id ??
-            await ref
-                .read(clienteRepositoryProvider)
-                .obtenerOCrearCliente(cliente.nombre);
+            await ref.read(clienteRepositoryProvider).crearCliente(
+              nombre: cliente.nombre,
+              apellido: cliente.apellido,
+              telefono: cliente.telefono,
+            );
       }
       final ventaRepo = ref.read(ventaRepositoryProvider);
       final ventaId = await ventaRepo.registrarVenta(

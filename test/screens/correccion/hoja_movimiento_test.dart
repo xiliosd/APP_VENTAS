@@ -139,8 +139,7 @@ void main() {
   });
 
   testWidgets(
-      'pasar a fiada exige cliente y usa el existente aunque cambien las '
-      'mayúsculas', (tester) async {
+      'pasar a fiada exige elegir cliente y usa el existente', (tester) async {
     final (container, ana) = await sesion();
     final rosa =
         await db.into(db.clientes).insert(ClientesCompanion.insert(nombre: 'Rosa'));
@@ -155,6 +154,9 @@ void main() {
     expect(guardarHabilitado(tester), isFalse);
 
     await tester.enterText(find.byKey(const Key('campo_cliente')), 'rosa');
+    await tester.pumpAndSettle();
+    expect(guardarHabilitado(tester), isFalse);
+    await tester.tap(find.byKey(Key('cliente_sugerido_$rosa')));
     await tester.pumpAndSettle();
     expect(guardarHabilitado(tester), isTrue);
     // Las sugerencias de clientes alargan la hoja: se desplaza hasta Guardar.

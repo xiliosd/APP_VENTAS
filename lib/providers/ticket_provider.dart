@@ -52,7 +52,6 @@ class Ticket {
     this.lineas = const [],
     this.esFiado = false,
     this.cliente,
-    this.nombreEscrito = '',
     this.medioPago = MedioPago.efectivo,
   });
 
@@ -60,19 +59,11 @@ class Ticket {
   final bool esFiado;
   final ClienteTicket? cliente;
 
-  /// Lo escrito en "¿A quién le fías?" sin tocar una sugerencia. Basta para
-  /// fiar: al cobrar se busca (o crea) el cliente con ese nombre.
-  final String nombreEscrito;
-
   /// Solo aplica a ventas de contado.
   final MedioPago medioPago;
 
-  /// Cliente con el que se fía: el elegido o, si no hay, el nombre escrito.
-  ClienteTicket? get clienteParaCobrar {
-    if (cliente != null) return cliente;
-    final nombre = nombreEscrito.trim();
-    return nombre.isEmpty ? null : ClienteTicket(nombre: nombre);
-  }
+  /// Cliente con el que se fía: el elegido o creado en el selector.
+  ClienteTicket? get clienteParaCobrar => cliente;
 
   int get total => lineas.fold(0, (suma, l) => suma + l.subtotal);
   int get cantidadArticulos => lineas.fold(0, (suma, l) => suma + l.cantidad);
@@ -133,14 +124,12 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
   void vaciar() => state = Ticket(
     esFiado: state.esFiado,
     cliente: state.cliente,
-    nombreEscrito: state.nombreEscrito,
   );
 
   void cambiarMedioPago(MedioPago medio) => state = Ticket(
     lineas: state.lineas,
     esFiado: state.esFiado,
     cliente: state.cliente,
-    nombreEscrito: state.nombreEscrito,
     medioPago: medio,
   );
 
@@ -148,7 +137,6 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
     lineas: state.lineas,
     esFiado: esFiado,
     cliente: esFiado ? state.cliente : null,
-    nombreEscrito: esFiado ? state.nombreEscrito : '',
     medioPago: state.medioPago,
   );
 
@@ -156,15 +144,6 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
     lineas: state.lineas,
     esFiado: state.esFiado,
     cliente: cliente,
-    nombreEscrito: state.nombreEscrito,
-    medioPago: state.medioPago,
-  );
-
-  void escribirCliente(String nombre) => state = Ticket(
-    lineas: state.lineas,
-    esFiado: state.esFiado,
-    cliente: state.cliente,
-    nombreEscrito: nombre,
     medioPago: state.medioPago,
   );
 
@@ -188,7 +167,6 @@ class TicketNotifier extends AutoDisposeNotifier<Ticket> {
     lineas: lineas,
     esFiado: state.esFiado,
     cliente: state.cliente,
-    nombreEscrito: state.nombreEscrito,
     medioPago: state.medioPago,
   );
 }

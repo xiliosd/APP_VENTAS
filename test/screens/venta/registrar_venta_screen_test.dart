@@ -113,6 +113,25 @@ void main() {
     expect(ventas.single.monto, 999);
   });
 
+  /// Escribe [texto], toca "Nuevo" y llena el formulario de cliente.
+  Future<void> crearClienteNuevo(
+    WidgetTester tester,
+    String texto,
+    String nombre,
+    String apellido,
+  ) async {
+    await tester.enterText(find.byKey(const Key('campo_cliente')), texto);
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('boton_cliente_nuevo')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('campo_nombre_cliente')), nombre);
+    await tester.enterText(
+        find.byKey(const Key('campo_apellido_cliente')), apellido);
+    await tester.tap(find.byKey(const Key('boton_continuar_cliente')));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('fiado sin cliente no deja cobrar; con cliente nuevo sí',
       (tester) async {
     await abrirVenta(tester);
@@ -122,11 +141,8 @@ void main() {
     await abrirFiado(tester);
     expect(botonFiar(tester).onPressed, isNull);
 
-    await tester.enterText(find.byKey(const Key('campo_cliente')), 'Don Pedro');
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('boton_cliente_nuevo')));
-    await tester.pump();
-    expect(find.text(r'Fiar $2.000 a Don Pedro'), findsOneWidget);
+    await crearClienteNuevo(tester, 'Pedro', 'Pedro', 'Gómez');
+    expect(find.text(r'Fiar $2.000 a Pedro Gómez'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('boton_fiar')));
     await tester.pumpAndSettle();
@@ -134,7 +150,7 @@ void main() {
     final ventas = await db.select(db.ventas).get();
     final clientes = await db.select(db.clientes).get();
     expect(ventas.single.esFiado, isTrue);
-    expect(clientes.single.nombreCompleto, 'Don Pedro');
+    expect(clientes.single.nombreCompleto, 'Pedro Gómez');
     expect(ventas.single.clienteId, clientes.single.id);
   });
 
@@ -150,7 +166,6 @@ void main() {
     await abrirFiado(tester);
     await tester.enterText(find.byKey(const Key('campo_cliente')), 'don pedro');
     await tester.pump();
-    expect(find.byKey(const Key('boton_cliente_nuevo')), findsNothing);
     await tester.tap(find.byKey(Key('cliente_sugerido_$pedro')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('boton_fiar')));
@@ -228,11 +243,8 @@ void main() {
     expect(await db.select(db.ventas).get(), isEmpty);
   });
 
-  testWidgets('escribir el nombre basta para fiar y no duplica clientes',
+  testWidgets('escribir el nombre sin elegir cliente no deja fiar',
       (tester) async {
-    final pedro = await db
-        .into(db.clientes)
-        .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
     await abrirVenta(tester);
 
     await tester.tap(find.byKey(const Key('monto_rapido_1000')));
@@ -240,13 +252,8 @@ void main() {
     await abrirFiado(tester);
     await tester.enterText(find.byKey(const Key('campo_cliente')), 'don pedro ');
     await tester.pump();
-    expect(find.text(r'Fiar $1.000 a don pedro'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('boton_fiar')));
-    await tester.pumpAndSettle();
-
-    expect(await db.select(db.clientes).get(), hasLength(1));
-    expect((await db.select(db.ventas).get()).single.clienteId, pedro);
+    expect(botonFiar(tester).onPressed, isNull);
   });
 
   testWidgets('los productos no se desbordan con letra grande en celular pequeño',

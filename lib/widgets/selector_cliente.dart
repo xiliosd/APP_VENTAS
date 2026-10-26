@@ -5,24 +5,25 @@ import '../data/database.dart';
 import '../providers/clientes_providers.dart';
 import '../providers/ticket_provider.dart';
 import '../util/nombre_cliente.dart';
+import 'formulario_cliente.dart';
 
-/// Buscador de cliente para ventas fiadas: sugiere clientes existentes y
-/// permite uno nuevo con el nombre escrito. Con un cliente [elegido] muestra
-/// solo su chip, que se puede quitar.
+/// Buscador de cliente: sugiere clientes existentes (por nombre, apellido o
+/// teléfono) y abre el formulario para uno nuevo. Con un cliente [elegido]
+/// muestra solo su chip, que se puede quitar.
 class SelectorCliente extends ConsumerStatefulWidget {
   const SelectorCliente({
     super.key,
     required this.elegido,
     required this.onElegir,
-    this.onEscribir,
+    this.etiqueta = '¿A quién le fías?',
     this.exigir = false,
   });
 
   final ClienteTicket? elegido;
   final ValueChanged<ClienteTicket?> onElegir;
-  final ValueChanged<String>? onEscribir;
+  final String etiqueta;
 
-  /// Con true y nada escrito, muestra "Escribe o elige el cliente".
+  /// Con true y sin cliente elegido, muestra "Escribe o elige el cliente".
   final bool exigir;
 
   @override
@@ -39,6 +40,17 @@ class _SelectorClienteState extends ConsumerState<SelectorCliente> {
     super.dispose();
   }
 
+  bool _coincide(Cliente cliente, String buscado, String? digitos) {
+    if (claveCliente(cliente.nombreCompleto).contains(buscado)) return true;
+    final telefono = telefonoNormalizado(cliente.telefono);
+    return digitos != null && telefono != null && telefono.contains(digitos);
+  }
+
+  Future<void> _crearNuevo(String texto) async {
+    final cliente = await pedirClienteNuevo(context, textoInicial: texto);
+    if (cliente != null) widget.onElegir(cliente);
+  }
+
   @override
   Widget build(BuildContext context) {
     final elegido = widget.elegido;
@@ -48,7 +60,7 @@ class _SelectorClienteState extends ConsumerState<SelectorCliente> {
         child: InputChip(
           key: const Key('cliente_elegido'),
           avatar: const Icon(Icons.person_rounded, size: 18),
-          label: Text(elegido.nombre),
+          label: Text(elegido.nombreCompleto),
           onDeleted: () => widget.onElegir(null),
         ),
       );
@@ -58,8 +70,9 @@ class _SelectorClienteState extends ConsumerState<SelectorCliente> {
         ref.watch(listaClientesProvider).valueOrNull ?? const <Cliente>[];
     final texto = _busqueda.trim();
     final buscado = claveCliente(texto);
+    final digitos = telefonoNormalizado(texto);
     final sugeridos = clientes
-        .where((c) => claveCliente(c.nombreCompleto).contains(buscado))
+        .where((c) => _coincide(c, buscado, digitos))
         .take(6)
         .toList();
     final existeExacto = clientes.any(
@@ -73,16 +86,13 @@ class _SelectorClienteState extends ConsumerState<SelectorCliente> {
           key: const Key('campo_cliente'),
           controller: _controller,
           decoration: InputDecoration(
-            labelText: '¿A quién le fías?',
+            labelText: widget.etiqueta,
             prefixIcon: const Icon(Icons.search_rounded),
             errorText: widget.exigir && texto.isEmpty
                 ? 'Escribe o elige el cliente'
                 : null,
           ),
-          onChanged: (valor) {
-            setState(() => _busqueda = valor);
-            widget.onEscribir?.call(valor);
-          },
+          onChanged: (valor) => setState(() => _busqueda = valor),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -93,15 +103,21 @@ class _SelectorClienteState extends ConsumerState<SelectorCliente> {
               ActionChip(
                 key: Key('cliente_sugerido_${c.id}'),
                 label: Text(c.nombreCompleto),
-                onPressed: () =>
-                    widget.onElegir(ClienteTicket(id: c.id, nombre: c.nombreCompleto)),
+                onPressed: () => widget.onElegir(
+                  ClienteTicket(
+                    id: c.id,
+                    nombre: c.nombre,
+                    apellido: c.apellido ?? '',
+                    telefono: c.telefono,
+                  ),
+                ),
               ),
-            if (texto.isNotEmpty && !existeExacto)
+            if (texto.isNotEmpty)
               ActionChip(
                 key: const Key('boton_cliente_nuevo'),
                 avatar: const Icon(Icons.person_add_alt_rounded, size: 18),
-                label: Text('Nuevo: $texto'),
-                onPressed: () => widget.onElegir(ClienteTicket(nombre: texto)),
+                label: Text(existeExacto ? 'Nuevo cliente' : 'Nuevo: $texto'),
+                onPressed: () => _crearNuevo(texto),
               ),
           ],
         ),

@@ -159,7 +159,6 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
               id: widget.movimiento.clienteId,
               nombre: widget.movimiento.nombreCliente ?? '')
           : null;
-  String _escrito = '';
   late final _descripcion =
       TextEditingController(text: widget.movimiento.descripcion ?? '');
 
@@ -198,11 +197,7 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
     super.dispose();
   }
 
-  ClienteTicket? get _clienteElegido {
-    if (_cliente != null) return _cliente;
-    final nombre = _escrito.trim();
-    return nombre.isEmpty ? null : ClienteTicket(nombre: nombre);
-  }
+  ClienteTicket? get _clienteElegido => _cliente;
 
   bool get _hayCambios {
     if (_total != _m.monto) return true;
@@ -246,7 +241,7 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
               monto: _total,
               esFiado: _esFiado,
               clienteId: cliente?.id,
-              clienteNuevo: cliente?.id == null ? cliente?.nombre : null,
+              clienteNuevo: cliente?.id == null ? cliente?.nombreCompleto : null,
               medioPago: _medio,
               cantidades: _lineas.isEmpty
                   ? null
@@ -495,7 +490,6 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
             SelectorCliente(
               elegido: _cliente,
               onElegir: (cliente) => setState(() => _cliente = cliente),
-              onEscribir: (texto) => setState(() => _escrito = texto),
               exigir: true,
             )
           else

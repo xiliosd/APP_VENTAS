@@ -91,7 +91,6 @@ class _ComoPagaState extends ConsumerState<_ComoPaga> {
           SelectorCliente(
             elegido: ticket.cliente,
             onElegir: notifier.elegirCliente,
-            onEscribir: notifier.escribirCliente,
             exigir: true,
           ),
           const SizedBox(height: 12),
@@ -99,7 +98,7 @@ class _ComoPagaState extends ConsumerState<_ComoPaga> {
             key: const Key('boton_fiar'),
             texto: cliente == null
                 ? 'Fiar ${formatoMoneda(ticket.total)}'
-                : 'Fiar ${formatoMoneda(ticket.total)} a ${cliente.nombre}',
+                : 'Fiar ${formatoMoneda(ticket.total)} a ${cliente.nombreCompleto}',
             variante: VarianteBoton.entra,
             onPressed: cliente == null ? null : () => _elegir(FormaPago.fiado),
           ),
