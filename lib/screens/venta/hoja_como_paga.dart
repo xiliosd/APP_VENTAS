@@ -63,33 +63,33 @@ class _ComoPagaState extends ConsumerState<_ComoPaga> {
         // Con Fiado escogido quedan solo el cliente y Fiar, para que con el
         // teclado abierto quepan en celulares pequeños.
         if (!_fiado) ...[
-        if (!widget.practica) ...[
-          _FilaQuienCompra(
-            cliente: ticket.cliente,
-            desplegada: _eligiendoCliente,
-            onAlternar: () =>
-                setState(() => _eligiendoCliente = !_eligiendoCliente),
-            onElegir: notifier.elegirCliente,
+          if (!widget.practica) ...[
+            _FilaQuienCompra(
+              cliente: ticket.cliente,
+              desplegada: _eligiendoCliente,
+              onAlternar: () =>
+                  setState(() => _eligiendoCliente = !_eligiendoCliente),
+              onElegir: notifier.elegirCliente,
+            ),
+            const SizedBox(height: 8),
+          ],
+          ObjetivoRecorrido(
+            id: 'pago_efectivo',
+            child: _Opcion(
+              key: const Key('pago_efectivo'),
+              icono: Icons.payments_rounded,
+              texto: 'Efectivo',
+              color: c.entra,
+              onTap: () => _elegir(FormaPago.efectivo),
+            ),
           ),
-          const SizedBox(height: 8),
-        ],
-        ObjetivoRecorrido(
-          id: 'pago_efectivo',
-          child: _Opcion(
-            key: const Key('pago_efectivo'),
-            icono: Icons.payments_rounded,
-            texto: 'Efectivo',
-            color: c.entra,
-            onTap: () => _elegir(FormaPago.efectivo),
+          _Opcion(
+            key: const Key('pago_transferencia'),
+            icono: Icons.qr_code_2_rounded,
+            texto: 'Transferencia (mostrar QR)',
+            color: c.primario,
+            onTap: () => _elegir(FormaPago.transferencia),
           ),
-        ),
-        _Opcion(
-          key: const Key('pago_transferencia'),
-          icono: Icons.qr_code_2_rounded,
-          texto: 'Transferencia (mostrar QR)',
-          color: c.primario,
-          onTap: () => _elegir(FormaPago.transferencia),
-        ),
         ],
         _Opcion(
           key: const Key('pago_fiado'),
