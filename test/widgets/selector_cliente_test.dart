@@ -30,7 +30,7 @@ void main() {
         ),
       );
 
-  Future<void> montar(WidgetTester tester) async {
+  Future<void> montar(WidgetTester tester, {bool exigir = false}) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
@@ -44,6 +44,7 @@ void main() {
             builder: (contexto, setState) => SelectorCliente(
               elegido: elegido,
               onElegir: (cliente) => setState(() => elegido = cliente),
+              exigir: exigir,
             ),
           ),
         ),
@@ -129,5 +130,33 @@ void main() {
     await buscar(tester, 'pedro gomez');
 
     expect(find.text('Nuevo cliente'), findsOneWidget);
+  });
+
+  testWidgets('al exigir cliente pide escribir o elegir con el campo vacío', (
+    tester,
+  ) async {
+    await montar(tester, exigir: true);
+
+    expect(find.text('Escribe o elige el cliente'), findsOneWidget);
+  });
+
+  testWidgets('al exigir cliente con texto escrito pide tocar uno o «Nuevo»', (
+    tester,
+  ) async {
+    await montar(tester, exigir: true);
+
+    await buscar(tester, 'Ana');
+
+    expect(find.text('Escribe o elige el cliente'), findsNothing);
+    expect(find.text('Toca un cliente o «Nuevo»'), findsOneWidget);
+  });
+
+  testWidgets('sin exigir cliente no muestra aviso', (tester) async {
+    await montar(tester);
+
+    await buscar(tester, 'Ana');
+
+    expect(find.text('Toca un cliente o «Nuevo»'), findsNothing);
+    expect(find.text('Escribe o elige el cliente'), findsNothing);
   });
 }

@@ -23,7 +23,9 @@ class SelectorCliente extends ConsumerStatefulWidget {
   final ValueChanged<ClienteTicket?> onElegir;
   final String etiqueta;
 
-  /// Con true y sin cliente elegido, muestra "Escribe o elige el cliente".
+  /// Con true y sin cliente elegido, siempre muestra qué falta: "Escribe o
+  /// elige el cliente" con el campo vacío y "Toca un cliente o «Nuevo»" con
+  /// texto, porque escribir no basta para elegirlo.
   final bool exigir;
 
   @override
@@ -88,9 +90,11 @@ class _SelectorClienteState extends ConsumerState<SelectorCliente> {
           decoration: InputDecoration(
             labelText: widget.etiqueta,
             prefixIcon: const Icon(Icons.search_rounded),
-            errorText: widget.exigir && texto.isEmpty
+            errorText: !widget.exigir
+                ? null
+                : texto.isEmpty
                 ? 'Escribe o elige el cliente'
-                : null,
+                : 'Toca un cliente o «Nuevo»',
           ),
           onChanged: (valor) => setState(() => _busqueda = valor),
         ),
