@@ -16,6 +16,7 @@ import '../../ui/tema_app.dart';
 import '../../ui/titulo_seccion.dart';
 import '../qr/configurar_qr_screen.dart';
 import '../respaldo/respaldo_screen.dart';
+import '../clientes/clientes_screen.dart';
 import 'hoja_nombre_tienda.dart';
 import 'productos_screen.dart';
 import 'proveedores_screen.dart';
@@ -106,6 +107,14 @@ class AjustesScreen extends ConsumerWidget {
               titulo: 'Proveedores',
               subtitulo: 'A quién le compras',
               onTap: () => abrir(const ProveedoresScreen()),
+            ),
+            _Opcion(
+              key: const Key('menu_clientes'),
+              icono: Icons.people_outline_rounded,
+              color: c.entra,
+              titulo: 'Clientes',
+              subtitulo: 'Datos y compras de tus clientes',
+              onTap: () => abrir(const ClientesScreen()),
             ),
             _Opcion(
               key: const Key('menu_usuarios'),

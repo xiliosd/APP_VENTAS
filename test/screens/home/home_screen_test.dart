@@ -72,6 +72,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('menu_productos')), findsOneWidget);
     expect(find.byKey(const Key('menu_usuarios')), findsOneWidget);
+    await tester.scrollUntilVisible(find.byKey(const Key('menu_respaldo')), 100);
     expect(find.byKey(const Key('menu_respaldo')), findsOneWidget);
 
     // La lista de Ajustes es larga: se desplaza hasta "Cerrar sesión".

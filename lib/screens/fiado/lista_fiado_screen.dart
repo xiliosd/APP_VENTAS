@@ -15,6 +15,7 @@ import '../../util/fecha_util.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/nombre_cliente.dart';
 import '../../util/texto_util.dart';
+import '../clientes/clientes_screen.dart';
 import 'detalle_cliente_screen.dart';
 
 class ListaFiadoScreen extends ConsumerStatefulWidget {
@@ -89,6 +90,18 @@ class _ListaFiadoScreenState extends ConsumerState<ListaFiadoScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Card(
+                child: ListTile(
+                  key: const Key('ir_a_clientes'),
+                  leading: const Icon(Icons.people_outline_rounded),
+                  title: const Text('Todos los clientes'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ClientesScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               if (clientes.isEmpty)
                 const EstadoVacio(
                   icono: Icons.volunteer_activism_rounded,

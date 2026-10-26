@@ -54,10 +54,10 @@ void main() {
     expect(find.text('TIENDA'), findsOneWidget);
     expect(find.text('COBROS Y DATOS'), findsOneWidget);
     expect(find.text('AYUDA'), findsOneWidget);
-    expect(find.text('CUENTA'), findsOneWidget);
     for (final clave in [
       'menu_productos',
       'menu_proveedores',
+      'menu_clientes',
       'menu_usuarios',
       'menu_cobro_qr',
       'menu_respaldo',
@@ -66,6 +66,8 @@ void main() {
       expect(find.byKey(Key(clave)), findsOneWidget);
     }
     expect(find.byKey(const Key('estado_respaldo_menu')), findsNothing);
+    await tester.scrollUntilVisible(find.text('CUENTA'), 100);
+    expect(find.text('CUENTA'), findsOneWidget);
   });
 
   testWidgets('con el respaldo activo la fila dice "Activo"', (tester) async {

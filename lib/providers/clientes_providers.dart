@@ -17,3 +17,18 @@ final listaClientesProvider = FutureProvider<List<Cliente>>((ref) {
   ref.watch(_cambiosClientesProvider);
   return ref.watch(clienteRepositoryProvider).listarClientes();
 });
+
+/// Compras (contado y fiado, sin anuladas) de un cliente, las más recientes
+/// primero.
+final comprasClienteProvider =
+    FutureProvider.family<List<Venta>, int>((ref, clienteId) {
+  ref.watch(_cambiosClientesProvider);
+  return ref.watch(clienteRepositoryProvider).comprasCliente(clienteId);
+});
+
+/// Un cliente por id; se refresca al editarlo.
+final clientePorIdProvider =
+    FutureProvider.family<Cliente?, int>((ref, clienteId) {
+  ref.watch(_cambiosClientesProvider);
+  return ref.watch(clienteRepositoryProvider).obtenerCliente(clienteId);
+});
