@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'providers/apariencia_provider.dart';
+import 'providers/tamano_letra_provider.dart';
 import 'respaldo/config_respaldo.dart';
 import 'respaldo/respaldo_provider.dart';
 import 'screens/raiz_app.dart';
@@ -36,6 +37,16 @@ class AppVentas extends ConsumerWidget {
       theme: temaClaro(),
       darkTheme: temaOscuro(),
       themeMode: ref.watch(aparienciaProvider),
+      builder: (context, child) {
+        final tamano = ref.watch(tamanoLetraProvider);
+        final datos = MediaQuery.of(context);
+        return MediaQuery(
+          data: datos.copyWith(
+            textScaler: escalaCombinada(datos.textScaler, tamano),
+          ),
+          child: child!,
+        );
+      },
       home: const RaizApp(),
     );
   }

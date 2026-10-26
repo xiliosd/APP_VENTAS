@@ -1,5 +1,6 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/apariencia_provider.dart';
+import 'package:app_ventas/providers/tamano_letra_provider.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
 import 'package:app_ventas/screens/home/home_screen.dart';
 import 'package:app_ventas/ui/tema_app.dart';
@@ -68,5 +69,21 @@ void main() {
     await tester.tap(find.byKey(const Key('menu_cuenta')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('boton_apariencia')), findsOneWidget);
+  });
+
+  testWidgets('la hoja Apariencia cambia el tamaño de letra al tocar',
+      (tester) async {
+    final container = await montar(tester);
+
+    await tester.tap(find.byKey(const Key('menu_cuenta')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_apariencia')));
+    await tester.pumpAndSettle();
+    expect(find.text('Tamaño de letra'), findsOneWidget);
+    expect(find.byKey(const Key('selector_tamano_letra')), findsOneWidget);
+    await tester.tap(find.text('Grande'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(tamanoLetraProvider), TamanoLetra.grande);
   });
 }
