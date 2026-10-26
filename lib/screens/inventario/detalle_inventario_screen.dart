@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/inventario_providers.dart';
+import '../../providers/sesion_provider.dart';
 import '../../repositories/inventario_repository.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
@@ -11,6 +12,7 @@ import '../../ui/nivel_existencias.dart';
 import '../../ui/titulo_seccion.dart';
 import '../../ui/estado_vacio.dart';
 import '../../util/fecha_util.dart';
+import '../configuracion/producto_screen.dart';
 import 'hoja_ajuste_conteo.dart';
 import 'inventario_screen.dart';
 
@@ -61,7 +63,22 @@ class DetalleInventarioScreen extends ConsumerWidget {
     final nivel = nivelExistencias(item.existencias, item.producto.minimo);
     final pedirHasta = item.producto.pedirHasta;
     return Scaffold(
-      appBar: AppBar(title: Text(item.producto.nombre)),
+      appBar: AppBar(
+        title: Text(item.producto.nombre),
+        actions: [
+          if (ref.watch(sesionProvider).esAdmin)
+            IconButton(
+              key: const Key('boton_editar_producto'),
+              tooltip: 'Editar',
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ProductoScreen(producto: item.producto),
+                ),
+              ),
+            ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

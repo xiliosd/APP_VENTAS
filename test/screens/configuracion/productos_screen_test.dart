@@ -10,6 +10,7 @@ import 'package:app_ventas/screens/configuracion/producto_screen.dart';
 import 'package:app_ventas/screens/configuracion/productos_screen.dart';
 import 'package:app_ventas/servicios/lector_codigo.dart';
 import 'package:app_ventas/servicios/open_food_facts.dart';
+import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -839,6 +840,47 @@ void main() {
     await tester.enterText(find.byKey(const Key('campo_codigo_producto')), '123');
     await guardar(tester);
     expect(find.text('Revisa el código de barras: ya es de Pan'), findsOneWidget);
+  });
+
+  testWidgets('cada producto muestra el lápiz Editar y abre el editor',
+      (tester) async {
+    final id = await crearArepa();
+    await montar(tester);
+    expect(find.byKey(Key('boton_editar_$id')), findsOneWidget);
+    await tester.tap(find.byKey(Key('boton_editar_$id')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProductoScreen), findsOneWidget);
+  });
+
+  testWidgets('la fila con lápiz y desactivar no desborda a 2,0× en 360 dp',
+      (tester) async {
+    final id = await db.into(db.productos).insert(ProductosCompanion.insert(
+        nombre: 'Arroz Diana extra largo de primera calidad libra',
+        precio: 3800));
+    tester.view.physicalSize = const Size(360 * 3, 780 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final container = await containerConSesion(db);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        theme: temaClaro(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: const TextScaler.linear(2.0)),
+          child: child!,
+        ),
+        home: const ProductosScreen(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    for (final clave in ['boton_editar_$id', 'boton_desactivar_$id']) {
+      final tamano = tester.getSize(find.byKey(Key(clave)));
+      expect(tamano.width, greaterThanOrEqualTo(48));
+      expect(tamano.height, greaterThanOrEqualTo(48));
+    }
   });
 }
 

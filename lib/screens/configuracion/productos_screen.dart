@@ -188,13 +188,25 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                               ),
                             ),
                             onTap: () => _abrir(producto: p),
-                            trailing: IconButton(
-                              key: Key('boton_desactivar_${p.id}'),
-                              tooltip: 'Desactivar',
-                              icon: const Icon(Icons.visibility_off_outlined),
-                              onPressed: () => ref
-                                  .read(productoRepositoryProvider)
-                                  .desactivarProducto(p.id),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  key: Key('boton_editar_${p.id}'),
+                                  tooltip: 'Editar',
+                                  icon: const Icon(Icons.edit_outlined),
+                                  onPressed: () => _abrir(producto: p),
+                                ),
+                                IconButton(
+                                  key: Key('boton_desactivar_${p.id}'),
+                                  tooltip: 'Desactivar',
+                                  icon: const Icon(
+                                      Icons.visibility_off_outlined),
+                                  onPressed: () => ref
+                                      .read(productoRepositoryProvider)
+                                      .desactivarProducto(p.id),
+                                ),
+                              ],
                             ),
                           ),
                         ),
