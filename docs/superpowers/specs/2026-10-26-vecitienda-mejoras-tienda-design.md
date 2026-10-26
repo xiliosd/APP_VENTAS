@@ -79,9 +79,8 @@ existe alguien igual, **informar para que el vendedor defina**.
     con acceso al extracto (punto 6) si tiene fiado.
   - Entrada: desde el Inicio (junto a Fiado) y desde Ajustes. Sin eliminar ni fusionar
     clientes en esta tanda.
-  - Permisos (decisión mía, el usuario no lo definió): admin y vendedor pueden crear y editar
-    clientes, porque los clientes se crean en el mostrador y hay que corregir errores de
-    escritura en el turno. Se puede cambiar a solo admin sin afectar el resto del diseño.
+  - Permisos (decisión del usuario): admin y vendedor pueden crear y editar los datos de los
+    clientes.
 - Clientes existentes sin apellido: nada se bloquea; al editarlos en "Clientes" el apellido
   es obligatorio para guardar. La lista los marca con "Falta apellido".
 - Datos personales (Ley 1581): nombre y teléfono no aparecen en logs.
