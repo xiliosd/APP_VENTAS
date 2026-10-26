@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('avisar con acción muestra la etiqueta y la ejecuta',
-      (tester) async {
+  testWidgets('avisar con acción muestra la etiqueta y la ejecuta', (
+    tester,
+  ) async {
     var ejecutada = 0;
     await tester.pumpWidget(
       MaterialApp(

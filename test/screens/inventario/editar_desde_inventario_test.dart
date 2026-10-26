@@ -27,24 +27,28 @@ void main() {
         .insert(ProductosCompanion.insert(nombre: 'Coca', precio: 3000));
     await InventarioRepository(db)
         .activarControl(coca, cantidad: 2, minimo: 6, por: usuario);
-    await tester.pumpWidget(appDePrueba(container,
-        inicio: DetalleInventarioScreen(productoId: coca)));
+    await tester.pumpWidget(
+      appDePrueba(container, inicio: DetalleInventarioScreen(productoId: coca)),
+    );
     await tester.pumpAndSettle();
   }
 
-  testWidgets('admin ve Editar en el detalle de inventario y abre el producto',
-      (tester) async {
-    await montar(tester, rol: 'admin');
-    final boton = find.byKey(const Key('boton_editar_producto'));
-    expect(boton, findsOneWidget);
-    expect(find.byTooltip('Editar'), findsOneWidget);
-    await tester.tap(boton);
-    await tester.pumpAndSettle();
-    expect(find.byType(ProductoScreen), findsOneWidget);
-  });
+  testWidgets(
+    'admin ve Editar en el detalle de inventario y abre el producto',
+    (tester) async {
+      await montar(tester, rol: 'admin');
+      final boton = find.byKey(const Key('boton_editar_producto'));
+      expect(boton, findsOneWidget);
+      expect(find.byTooltip('Editar'), findsOneWidget);
+      await tester.tap(boton);
+      await tester.pumpAndSettle();
+      expect(find.byType(ProductoScreen), findsOneWidget);
+    },
+  );
 
-  testWidgets('vendedor no ve Editar en el detalle de inventario',
-      (tester) async {
+  testWidgets('vendedor no ve Editar en el detalle de inventario', (
+    tester,
+  ) async {
     await montar(tester, rol: 'vendedor');
     expect(find.byKey(const Key('boton_editar_producto')), findsNothing);
   });

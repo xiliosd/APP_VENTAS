@@ -42,7 +42,8 @@ Actualizada: 2026-10-26. Cada fase pasa por especificación (`docs/superpowers/s
 - Mejoras de tienda (spec: `docs/superpowers/specs/2026-10-26-vecitienda-mejoras-tienda-design.md`):
   - Tanda 1 — hecha: clientes con apellido, pantalla Clientes, cliente habitual en ventas de
     contado y por transferencia, y reportes de clientes (habituales, de paso y mejores clientes).
-  - Tanda 2 — pendiente: letra grande y edición de productos.
+  - Tanda 2 — hecha: letra grande (normal, grande y muy grande, guardada por celular) y
+    edición de productos desde Nueva venta, escáner, inventario y Productos.
   - Tanda 3 — pendiente: aviso por pedir y extracto de fiado.
   - Tanda 4 — pendiente: escáner y recorrido.
 
@@ -66,3 +67,4 @@ Actualizada: 2026-10-26. Cada fase pasa por especificación (`docs/superpowers/s
   Android 13+), renovación R1 en claro y oscuro (incluida la vibración) renovación R2a, renovación R2b (recorrido completo en un celular nuevo), renovación R3a, renovación R3b, renovación R4 y código de barras con productos reales (cámara), pedidos guardados con recepción como gasto, inicio de marca (claro, oscuro, Android 12+ y anteriores), ingreso con huella (activar, entrar, bloqueo, sin huellas) venta por voz (con y sin el español
   sin conexión descargado) y orden de productos y mejoras de tienda, tanda 1 (clientes con apellido, pantalla Clientes,
   cliente habitual y reportes de clientes).
+- tanda 2 en celular real (tamaño de letra en las tres opciones, editar producto desde venta, escáner, inventario y productos).

@@ -59,8 +59,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('admin: mantener presionado un producto abre Editar producto',
-      (tester) async {
+  testWidgets('admin: mantener presionado un producto abre Editar producto', (
+    tester,
+  ) async {
     await abrir(tester);
     await mantener(tester);
     expect(find.byKey(const Key('menu_editar_producto')), findsOneWidget);
@@ -70,22 +71,26 @@ void main() {
     expect(find.byType(ProductoScreen), findsOneWidget);
   });
 
-  testWidgets('vendedor: mantener presionado no muestra el menú',
-      (tester) async {
+  testWidgets('vendedor: mantener presionado no muestra el menú', (
+    tester,
+  ) async {
     await abrir(tester, rol: 'vendedor');
     await mantener(tester);
     expect(find.byKey(const Key('menu_editar_producto')), findsNothing);
   });
 
-  testWidgets('práctica del recorrido: mantener presionado no muestra el menú',
-      (tester) async {
-    await abrir(tester, practica: true);
-    await mantener(tester);
-    expect(find.byKey(const Key('menu_editar_producto')), findsNothing);
-  });
+  testWidgets(
+    'práctica del recorrido: mantener presionado no muestra el menú',
+    (tester) async {
+      await abrir(tester, practica: true);
+      await mantener(tester);
+      expect(find.byKey(const Key('menu_editar_producto')), findsNothing);
+    },
+  );
 
-  testWidgets('editar el precio no cambia la línea ya agregada al ticket',
-      (tester) async {
+  testWidgets('editar el precio no cambia la línea ya agregada al ticket', (
+    tester,
+  ) async {
     await abrir(tester);
     await tester.tap(find.byKey(Key('producto_$productoId')));
     await tester.pump();
@@ -106,8 +111,9 @@ void main() {
     expect(container.read(ticketProvider).total, 4500);
   });
 
-  testWidgets('admin: al escanear un producto existente el aviso trae Editar',
-      (tester) async {
+  testWidgets('admin: al escanear un producto existente el aviso trae Editar', (
+    tester,
+  ) async {
     await abrir(tester, codigos: ['7702']);
     await tester.tap(find.byKey(const Key('boton_escanear_venta')));
     await tester.pumpAndSettle();
