@@ -15,6 +15,7 @@ class Mosaico extends StatelessWidget {
     required this.onTap,
     this.onRestar,
     this.destacado = false,
+    this.onLongPress,
   });
 
   final String titulo;
@@ -25,6 +26,9 @@ class Mosaico extends StatelessWidget {
   /// Con cantidad, muestra un botón − (o una caneca en 1) que resta uno.
   final VoidCallback? onRestar;
   final bool destacado;
+
+  /// Mantener presionado (p. ej. el menú de editar producto del admin).
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +49,7 @@ class Mosaico extends StatelessWidget {
           Vibracion.toque();
           onTap();
         },
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(radioTarjeta),
         child: Stack(
           children: [

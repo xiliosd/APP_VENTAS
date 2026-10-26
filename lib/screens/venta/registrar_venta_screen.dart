@@ -18,6 +18,7 @@ import '../../ui/teclado_monto.dart';
 import '../../servicios/dictado.dart';
 import '../../servicios/lector_codigo.dart';
 import '../../util/busqueda_producto.dart';
+import '../configuracion/producto_screen.dart';
 import '../../util/catalogo_producto.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/interpretar_dictado.dart';
@@ -98,7 +99,13 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     if (!mounted) return;
     if (producto != null && producto.activo) {
       notifier.agregarProducto(producto);
-      avisar(context, '${producto.nombre} agregado');
+      final esAdmin = ref.read(sesionProvider).esAdmin;
+      avisar(
+        context,
+        '${producto.nombre} agregado',
+        etiquetaAccion: esAdmin ? 'Editar' : null,
+        onAccion: esAdmin ? () => _editarProducto(producto) : null,
+      );
     } else if (producto != null) {
       avisar(
         context,
@@ -110,6 +117,30 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       final nuevo = await mostrarHojaProductoRapido(context, codigo: limpio);
       if (nuevo != null && mounted) notifier.agregarProducto(nuevo);
     }
+  }
+
+  /// Abre el editor del producto. Las líneas del ticket guardan su propio
+  /// precio, así que lo ya agregado no cambia.
+  Future<void> _editarProducto(Producto producto) async {
+    final guardado = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ProductoScreen(producto: producto)),
+    );
+    if (guardado == true && mounted) avisar(context, 'Producto guardado');
+  }
+
+  /// Hoja con "Editar producto", solo para el admin fuera de la práctica.
+  Future<void> _menuProducto(Producto producto) async {
+    final editar = await mostrarHojaInferior<bool>(
+      context,
+      titulo: producto.nombre,
+      builder: (contexto) => ListTile(
+        key: const Key('menu_editar_producto'),
+        leading: const Icon(Icons.edit_outlined),
+        title: const Text('Editar producto'),
+        onTap: () => Navigator.of(contexto).pop(true),
+      ),
+    );
+    if (editar == true && mounted) await _editarProducto(producto);
   }
 
   /// Enter en el buscador con un código exacto (p. ej. un lector físico).
@@ -501,6 +532,11 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
                           cantidad: ticket.cantidadDe('p${p.id}'),
                           onTap: () => notifier.agregarProducto(p),
                           onRestar: () => notifier.restar('p${p.id}'),
+                          onLongPress:
+                              ref.watch(sesionProvider).esAdmin &&
+                                  !widget.practica
+                              ? () => _menuProducto(p)
+                              : null,
                         ),
                       ),
                     Mosaico(
