@@ -475,15 +475,28 @@ extension on _Contenido {
     if (total == 0) {
       return Text('Aún no hay ventas en este periodo', style: gris);
     }
-    String fila(String nombre, int monto) =>
-        '$nombre · ${formatoMoneda(monto)} · '
-        '${(monto * 100 / total).round()} %';
+    // De paso es el resto para que las dos filas sumen siempre 100 %.
+    final porcentajeHabituales = (r.vendidoHabituales * 100 / total).round();
+    String fila(String nombre, int monto, int porcentaje) =>
+        '$nombre · ${formatoMoneda(monto)} · $porcentaje %';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(fila('Clientes habituales', r.vendidoHabituales)),
+        Text(
+          fila(
+            'Clientes habituales',
+            r.vendidoHabituales,
+            porcentajeHabituales,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(fila('De paso o sin marcar', r.vendidoDePaso)),
+        Text(
+          fila(
+            'De paso o sin marcar',
+            r.vendidoDePaso,
+            100 - porcentajeHabituales,
+          ),
+        ),
       ],
     );
   }

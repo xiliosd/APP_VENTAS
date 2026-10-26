@@ -419,6 +419,22 @@ void main() {
         findsOneWidget);
   });
 
+  testWidgets('los porcentajes de a quién le vendo suman 100', (tester) async {
+    // 50,5 % y 49,5 % redondeados por separado darían 51 % + 50 %.
+    await db.into(db.ventas).insert(VentasCompanion.insert(
+        monto: 1010,
+        fecha: DateTime(2026, 10, 6, 9),
+        usuarioId: ana,
+        clienteId: Value(pedro)));
+    await vender(990, DateTime(2026, 10, 6, 10));
+    await montar(tester);
+
+    expect(en('tarjeta_a_quien', r'Clientes habituales · $1.010 · 51 %'),
+        findsOneWidget);
+    expect(en('tarjeta_a_quien', r'De paso o sin marcar · $990 · 49 %'),
+        findsOneWidget);
+  });
+
   testWidgets('sin clientes marcados muestra la ayuda', (tester) async {
     await vender(2500, DateTime(2026, 10, 6, 10));
     await montar(tester);
