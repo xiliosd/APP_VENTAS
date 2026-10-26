@@ -1,6 +1,6 @@
 # Hoja de ruta — VeciTienda
 
-Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/specs/`) y plan
+Actualizada: 2026-10-26. Cada fase pasa por especificación (`docs/superpowers/specs/`) y plan
 (`docs/superpowers/plans/`) antes de programarse.
 
 ## Hecho
@@ -39,6 +39,12 @@ Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/s
 ## En curso
 
 - Renovación terminada (R1–R4); falta el recorrido manual en un celular real.
+- Mejoras de tienda (spec: `docs/superpowers/specs/2026-10-26-vecitienda-mejoras-tienda-design.md`):
+  - Tanda 1 — hecha: clientes con apellido, pantalla Clientes, cliente habitual en ventas de
+    contado y por transferencia, y reportes de clientes (habituales, de paso y mejores clientes).
+  - Tanda 2 — pendiente: letra grande y edición de productos.
+  - Tanda 3 — pendiente: aviso por pedir y extracto de fiado.
+  - Tanda 4 — pendiente: escáner y recorrido.
 
 ## Después
 
@@ -48,6 +54,10 @@ Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/s
   distribuidor (recomendado para empezar), promociones de marca, crédito y pagos con
   bancos/billeteras, recargas y pagos de servicios, datos agregados a escala; requiere
   sincronización con consentimiento y cumplir la Ley 1581 de 2012.
+- Tienda centralizada (proyecto aparte): varios celulares en la misma tienda con un código único
+  de tienda, alerta al admin cuando entra un celular nuevo, información actualizada al ingresar
+  y avisos de "por pedir" en todos los celulares; requiere sincronización y cumplir la Ley 1581
+  de 2012.
 - Preparar para uso real: llave de firma propia, compilar con las claves de Supabase y, si se
   publica, requisitos de Play Store.
 
@@ -56,4 +66,5 @@ Actualizada: 2026-10-16. Cada fase pasa por especificación (`docs/superpowers/s
 - Recorrido manual en un celular real de: Cargar QR (2D), corregir y anular (3A) y reportes
   (3B), detalle de tickets (3C) y catálogo, proveedores y nombre de la tienda (4A), inventario (4B), pedido sugerido (4C), pulido tanda 1 y pulido tanda 2 (incluido el ícono temático en
   Android 13+), renovación R1 en claro y oscuro (incluida la vibración) renovación R2a, renovación R2b (recorrido completo en un celular nuevo), renovación R3a, renovación R3b, renovación R4 y código de barras con productos reales (cámara), pedidos guardados con recepción como gasto, inicio de marca (claro, oscuro, Android 12+ y anteriores), ingreso con huella (activar, entrar, bloqueo, sin huellas) venta por voz (con y sin el español
-  sin conexión descargado) y orden de productos.
+  sin conexión descargado) y orden de productos y mejoras de tienda, tanda 1 (clientes con apellido, pantalla Clientes,
+  cliente habitual y reportes de clientes).
