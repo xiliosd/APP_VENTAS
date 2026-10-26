@@ -146,21 +146,22 @@ class _FilaQuienCompra extends StatelessWidget {
       key: const Key('quien_compra'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
+        // Wrap: con letra grande el botón baja a otra línea en vez de desbordar.
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  text: '¿Quién compra? ',
-                  style: TextStyle(color: c.textoSecundario),
-                  children: [
-                    if (cliente == null)
-                      const TextSpan(
-                        text: 'De paso',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                  ],
-                ),
+            Text.rich(
+              TextSpan(
+                text: '¿Quién compra? ',
+                style: TextStyle(color: c.textoSecundario),
+                children: [
+                  if (cliente == null)
+                    const TextSpan(
+                      text: 'De paso',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                ],
               ),
             ),
             if (cliente == null)

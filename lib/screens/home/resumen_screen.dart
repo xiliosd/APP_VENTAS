@@ -83,13 +83,14 @@ class _ResumenScreenState extends ConsumerState<ResumenScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
+                // Wrap: con letra grande el botón baja a otra línea en vez de desbordar.
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    const Expanded(
-                      child: Text('Por vendedor',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w700)),
-                    ),
+                    const Text('Por vendedor',
+                        style:
+                            TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                     if (esAdmin)
                       TextButton(
                         key: const Key('boton_ver_reportes'),

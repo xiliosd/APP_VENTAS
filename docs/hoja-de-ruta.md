@@ -48,8 +48,6 @@ Actualizada: 2026-10-26. Cada fase pasa por especificación (`docs/superpowers/s
 
 ## Después
 
-- Inicio con letra 2,0× en celulares de 360 dp: una fila del contenido se desborda (ya pasaba antes;
-  encontrado el 2026-10-16 al probar "Vender por voz"; la prueba del Inicio usa 1,6×).
 - Monetización sin cobrarle al tendero (ideas presentadas el 2026-10-13): pedido digital al
   distribuidor (recomendado para empezar), promociones de marca, crédito y pagos con
   bancos/billeteras, recargas y pagos de servicios, datos agregados a escala; requiere
