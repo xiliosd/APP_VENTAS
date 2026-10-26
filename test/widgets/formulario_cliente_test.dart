@@ -170,6 +170,36 @@ void main() {
     expect(guardado?.apellido, 'Rojas');
   });
 
+  testWidgets('editar un cliente antiguo sin apellido reparte su nombre', (
+    tester,
+  ) async {
+    final id = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'Pedro Pablo Ruiz'));
+    final cliente = await (db.select(
+      db.clientes,
+    )..where((c) => c.id.equals(id))).getSingle();
+    bool? guardo;
+    await montar(tester, (contexto) async {
+      guardo = await editarCliente(contexto, cliente);
+    });
+    final nombre = tester.widget<TextField>(
+      find.byKey(const Key('campo_nombre_cliente')),
+    );
+    final apellido = tester.widget<TextField>(
+      find.byKey(const Key('campo_apellido_cliente')),
+    );
+    expect(nombre.controller!.text, 'Pedro');
+    expect(apellido.controller!.text, 'Pablo Ruiz');
+    await continuar(tester);
+    expect(guardo, isTrue);
+    final guardado = await container
+        .read(clienteRepositoryProvider)
+        .obtenerCliente(id);
+    expect(guardado?.nombre, 'Pedro');
+    expect(guardado?.apellido, 'Pablo Ruiz');
+  });
+
   testWidgets('editar con un parecido ofrece volver sin guardar', (
     tester,
   ) async {

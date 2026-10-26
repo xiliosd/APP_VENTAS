@@ -79,9 +79,12 @@ class _FormularioClienteState extends ConsumerState<_FormularioCliente> {
     final cliente = widget.cliente;
     var nombre = cliente?.nombre ?? '';
     var apellido = cliente?.apellido ?? '';
-    if (cliente == null) {
+    // Un cliente anterior a la versión 10 guardó todo en el nombre: se
+    // reparte igual que el texto de búsqueda para pedir solo lo que falte.
+    if (cliente == null || apellido.trim().isEmpty) {
       // La primera palabra es el nombre y lo demás el apellido.
-      final partes = widget.textoInicial.trim().split(RegExp(r'\s+'));
+      final texto = cliente?.nombre ?? widget.textoInicial;
+      final partes = texto.trim().split(RegExp(r'\s+'));
       nombre = partes.first;
       apellido = partes.skip(1).join(' ');
     }
