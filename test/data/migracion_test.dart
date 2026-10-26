@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/repositories/inventario_repository.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -393,4 +394,55 @@ void main() {
     final clientes = await db.select(db.clientes).get();
     expect(clientes.last.apellido, 'Pérez');
   });
+
+  test('una base v9 migrada tiene las mismas columnas que una base nueva',
+      () async {
+    final archivo = File('${carpeta.path}/v9c.sqlite');
+    crearBaseV9(archivo.path);
+    final migrada = AppDatabase(NativeDatabase(archivo));
+    addTearDown(migrada.close);
+    final nueva = AppDatabase(NativeDatabase.memory());
+    addTearDown(nueva.close);
+
+    expect(await columnasPorTabla(migrada), await columnasPorTabla(nueva));
+  });
+
+  test('una base v9 migrada lista las entradas recientes con su proveedor',
+      () async {
+    final archivo = File('${carpeta.path}/v9e.sqlite');
+    crearBaseV9(archivo.path);
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+    final usuario = (await db.select(db.usuarios).get()).first.id;
+    final proveedor = await db
+        .into(db.proveedores)
+        .insert(ProveedoresCompanion.insert(nombre: 'Postobón'));
+    await db.into(db.entradasMercancia).insert(
+        EntradasMercanciaCompanion.insert(
+            proveedorId: proveedor,
+            usuarioId: usuario,
+            fecha: DateTime(2026, 10, 26),
+            total: 21600));
+
+    final entradas = await InventarioRepository(db).entradasRecientes();
+
+    expect(entradas.single.proveedor, 'Postobón');
+  });
+}
+
+/// Nombres de columnas de cada tabla de [db], para comparar esquemas.
+Future<Map<String, Set<String>>> columnasPorTabla(AppDatabase db) async {
+  final tablas = await db
+      .customSelect("SELECT name FROM sqlite_master WHERE type = 'table' "
+          "AND name NOT LIKE 'sqlite_%' ORDER BY name")
+      .get();
+  return {
+    for (final tabla in tablas)
+      tabla.read<String>('name'): {
+        for (final columna in await db
+            .customSelect("PRAGMA table_info('${tabla.read<String>('name')}')")
+            .get())
+          columna.read<String>('name'),
+      },
+  };
 }

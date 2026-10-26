@@ -58,9 +58,6 @@ class Productos extends Table {
 class Proveedores extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get nombre => text()();
-
-  /// Opcional: los clientes anteriores a la versión 10 no lo tienen.
-  TextColumn get apellido => text().nullable()();
   TextColumn get telefono => text().nullable()();
   TextColumn get notas => text().nullable()();
   BoolColumn get activo => boolean().withDefault(const Constant(true))();
