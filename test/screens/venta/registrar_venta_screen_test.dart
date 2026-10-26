@@ -5,6 +5,7 @@ import 'package:app_ventas/repositories/producto_repository.dart';
 import 'package:app_ventas/servicios/lector_codigo.dart';
 import 'package:app_ventas/servicios/open_food_facts.dart';
 import 'package:app_ventas/screens/venta/registrar_venta_screen.dart';
+import 'package:app_ventas/util/nombre_cliente.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -133,7 +134,7 @@ void main() {
     final ventas = await db.select(db.ventas).get();
     final clientes = await db.select(db.clientes).get();
     expect(ventas.single.esFiado, isTrue);
-    expect(clientes.single.nombre, 'Don Pedro');
+    expect(clientes.single.nombreCompleto, 'Don Pedro');
     expect(ventas.single.clienteId, clientes.single.id);
   });
 
