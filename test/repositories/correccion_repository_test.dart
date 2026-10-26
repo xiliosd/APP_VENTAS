@@ -173,6 +173,26 @@ void main() {
       expect(await correcciones(), hasLength(1));
     });
 
+    test('en contado clienteNuevo se crea y queda como cliente habitual',
+        () async {
+      final id = await ventas.registrarVenta(
+          monto: 5000, esFiado: false, usuarioId: ana.id, fecha: hoy);
+
+      await repo.corregirVenta(id,
+          monto: 5000,
+          esFiado: false,
+          clienteNuevo: const ClienteTicket(nombre: 'Lucía', apellido: 'Gómez'),
+          por: ana);
+
+      final v = await venta(id);
+      expect(v.esFiado, isFalse);
+      final cliente = await (db.select(db.clientes)
+            ..where((c) => c.id.equals(v.clienteId!)))
+          .getSingle();
+      expect(cliente.nombre, 'Lucía');
+      expect(cliente.apellido, 'Gómez');
+    });
+
     test('clienteNuevo se crea con nombre y apellido en la misma transacción',
         () async {
       final id = await ventas.registrarVenta(

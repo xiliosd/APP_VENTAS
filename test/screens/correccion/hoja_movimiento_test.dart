@@ -188,6 +188,39 @@ void main() {
     expect(find.byKey(const Key('editar_medio_pago')), findsOneWidget);
   });
 
+  testWidgets('en contado de paso un cliente nuevo habilita Guardar y se guarda',
+      (tester) async {
+    final (container, ana) = await sesion();
+    final id = await VentaRepository(db)
+        .registrarVenta(monto: 5000, esFiado: false, usuarioId: ana.id);
+    await abrir(tester, container, deVenta(id, ana));
+    await tester.tap(find.byKey(const Key('boton_corregir')));
+    await tester.pumpAndSettle();
+    expect(guardarHabilitado(tester), isFalse);
+
+    await tester.enterText(find.byKey(const Key('campo_cliente')), 'Lucía');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('boton_cliente_nuevo')));
+    await tester.tap(find.byKey(const Key('boton_cliente_nuevo')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const Key('campo_apellido_cliente')), 'Gómez');
+    await tester.tap(find.byKey(const Key('boton_continuar_cliente')));
+    await tester.pumpAndSettle();
+
+    expect(guardarHabilitado(tester), isTrue);
+    await tester.ensureVisible(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.pumpAndSettle();
+
+    final v = await venta(id);
+    expect(v.esFiado, isFalse);
+    final cliente = await db.select(db.clientes).getSingle();
+    expect(v.clienteId, cliente.id);
+    expect(cliente.nombre, 'Lucía');
+    expect(cliente.apellido, 'Gómez');
+  });
+
   testWidgets('al pasar de fiado a contado el cliente se conserva',
       (tester) async {
     final (container, ana) = await sesion();

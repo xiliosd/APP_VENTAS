@@ -204,6 +204,8 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
     return switch (_m.tipo) {
       TipoMovimiento.venta => _esFiado != _m.esFiado ||
           _clienteElegido?.id != _m.clienteId ||
+          // Un cliente nuevo aún no tiene id: elegirlo también es un cambio.
+          (_clienteElegido != null && _clienteElegido!.id == null) ||
           (!_esFiado && _medio != _m.medioPago),
       TipoMovimiento.abono => _medio != _m.medioPago,
       TipoMovimiento.gasto =>
