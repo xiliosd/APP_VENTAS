@@ -31,4 +31,23 @@ void main() {
     await tester.tap(find.text('Editar'));
     expect(ejecutada, 1);
   });
+
+  testWidgets('onAccion sin etiquetaAccion falla con un assert claro', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => avisar(context, 'x', onAccion: () {}),
+              child: const Text('mostrar'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('mostrar'));
+    expect(tester.takeException(), isA<AssertionError>());
+  });
 }

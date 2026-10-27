@@ -11,6 +11,8 @@ void avisar(BuildContext context, String texto,
     bool error = false,
     String? etiquetaAccion,
     VoidCallback? onAccion}) {
+  assert(onAccion == null || etiquetaAccion != null,
+      'onAccion necesita etiquetaAccion');
   final messenger = ScaffoldMessenger.of(context);
   error ? Vibracion.error() : Vibracion.exito();
   messenger.hideCurrentSnackBar();
