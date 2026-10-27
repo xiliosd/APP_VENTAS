@@ -24,6 +24,7 @@ enum TamanoLetra {
 /// para que las pantallas no se rompan. Con Normal no altera nada.
 TextScaler escalaCombinada(TextScaler sistema, TamanoLetra tamano) {
   if (tamano == TamanoLetra.normal) return sistema;
+  // Se muestrea en 14 y se vuelve lineal: el peor caso probado es 2,0× lineal.
   final escalaSistema = sistema.scale(14) / 14;
   return TextScaler.linear(
     math.min(escalaSistema * tamano.factor, _escalaMaxima),
@@ -52,3 +53,16 @@ class TamanoLetraNotifier extends Notifier<TamanoLetra> {
 final tamanoLetraProvider = NotifierProvider<TamanoLetraNotifier, TamanoLetra>(
   TamanoLetraNotifier.new,
 );
+
+/// Aplica [tamano] al texto de toda la app (rutas y hojas incluidas).
+Widget aplicarTamanoLetra(
+  BuildContext context,
+  Widget? child,
+  TamanoLetra tamano,
+) {
+  final datos = MediaQuery.of(context);
+  return MediaQuery(
+    data: datos.copyWith(textScaler: escalaCombinada(datos.textScaler, tamano)),
+    child: child!,
+  );
+}

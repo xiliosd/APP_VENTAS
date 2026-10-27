@@ -32,21 +32,13 @@ class AppVentas extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tamano = ref.watch(tamanoLetraProvider);
     return MaterialApp(
       title: 'VeciTienda',
       theme: temaClaro(),
       darkTheme: temaOscuro(),
       themeMode: ref.watch(aparienciaProvider),
-      builder: (context, child) {
-        final tamano = ref.watch(tamanoLetraProvider);
-        final datos = MediaQuery.of(context);
-        return MediaQuery(
-          data: datos.copyWith(
-            textScaler: escalaCombinada(datos.textScaler, tamano),
-          ),
-          child: child!,
-        );
-      },
+      builder: (context, child) => aplicarTamanoLetra(context, child, tamano),
       home: const RaizApp(),
     );
   }
