@@ -99,13 +99,7 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     if (!mounted) return;
     if (producto != null && producto.activo) {
       notifier.agregarProducto(producto);
-      final esAdmin = ref.read(sesionProvider).esAdmin;
-      avisar(
-        context,
-        '${producto.nombre} agregado',
-        etiquetaAccion: esAdmin ? 'Editar' : null,
-        onAccion: esAdmin ? () => _editarProducto(producto) : null,
-      );
+      _avisarAgregado(producto);
     } else if (producto != null) {
       avisar(
         context,
@@ -117,6 +111,17 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       final nuevo = await mostrarHojaProductoRapido(context, codigo: limpio);
       if (nuevo != null && mounted) notifier.agregarProducto(nuevo);
     }
+  }
+
+  /// Aviso de producto agregado; el admin puede tocar "Editar" desde él.
+  void _avisarAgregado(Producto producto) {
+    final esAdmin = ref.read(sesionProvider).esAdmin;
+    avisar(
+      context,
+      '${producto.nombre} agregado',
+      etiquetaAccion: esAdmin ? 'Editar' : null,
+      onAccion: esAdmin ? () => _editarProducto(producto) : null,
+    );
   }
 
   /// Abre el editor del producto. Las líneas del ticket guardan su propio
@@ -152,6 +157,7 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     ref.read(ticketProvider.notifier).agregarProducto(p);
     _busqueda.clear();
     setState(() => _filtro = '');
+    _avisarAgregado(p);
   }
 
   /// El dictado en curso, para detenerlo si se cierra la pantalla.

@@ -131,4 +131,36 @@ void main() {
     expect(find.text('Gaseosa agregado'), findsOneWidget);
     expect(find.text('Editar'), findsNothing);
   });
+
+  Future<void> enviarCodigoEnBuscador(WidgetTester tester) async {
+    for (var i = 0; i < 7; i++) {
+      await ProductoRepository(db).guardarProducto(
+        nombre: 'Relleno $i',
+        precio: 1000,
+      );
+    }
+    await tester.pumpAndSettle();
+    final campo = find.byType(TextField).first;
+    await tester.enterText(campo, '7702');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('admin: Enter en el buscador con un código trae Editar', (
+    tester,
+  ) async {
+    await abrir(tester);
+    await enviarCodigoEnBuscador(tester);
+    expect(find.text('Gaseosa agregado'), findsOneWidget);
+    await tester.tap(find.text('Editar'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProductoScreen), findsOneWidget);
+  });
+
+  testWidgets('vendedor: Enter en el buscador no trae Editar', (tester) async {
+    await abrir(tester, rol: 'vendedor');
+    await enviarCodigoEnBuscador(tester);
+    expect(find.text('Gaseosa agregado'), findsOneWidget);
+    expect(find.text('Editar'), findsNothing);
+  });
 }
