@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/inventario_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../repositories/inventario_repository.dart';
+import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/entrada_escalonada.dart';
@@ -71,11 +72,16 @@ class DetalleInventarioScreen extends ConsumerWidget {
               key: const Key('boton_editar_producto'),
               tooltip: 'Editar',
               icon: const Icon(Icons.edit_outlined),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ProductoScreen(producto: item.producto),
-                ),
-              ),
+              onPressed: () async {
+                final guardado = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => ProductoScreen(producto: item.producto),
+                  ),
+                );
+                if (guardado == true && context.mounted) {
+                  avisar(context, 'Producto guardado');
+                }
+              },
             ),
         ],
       ),

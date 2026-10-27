@@ -52,4 +52,17 @@ void main() {
     await montar(tester, rol: 'vendedor');
     expect(find.byKey(const Key('boton_editar_producto')), findsNothing);
   });
+
+  testWidgets('al guardar desde el detalle de inventario avisa Producto guardado', (
+    tester,
+  ) async {
+    await montar(tester, rol: 'admin');
+    await tester.tap(find.byKey(const Key('boton_editar_producto')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('boton_guardar_producto')));
+    await tester.tap(find.byKey(const Key('boton_guardar_producto')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProductoScreen), findsNothing);
+    expect(find.text('Producto guardado'), findsOneWidget);
+  });
 }
