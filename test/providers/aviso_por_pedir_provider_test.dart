@@ -68,4 +68,15 @@ void main() {
     );
     expect(container.read(avisoPorPedirProvider), isEmpty);
   });
+
+  test('mostrar deja agotados primero y luego por nombre', () {
+    final notifier = container.read(avisoPorPedirProvider.notifier);
+    notifier.mostrar([aviso(1, 'Pan', 3)]);
+    notifier.mostrar([aviso(2, 'Coca', 3), aviso(3, 'Zumo', 0)]);
+    final nombres = container
+        .read(avisoPorPedirProvider)
+        .map((a) => a.nombre)
+        .toList();
+    expect(nombres, ['Zumo', 'Coca', 'Pan']);
+  });
 }

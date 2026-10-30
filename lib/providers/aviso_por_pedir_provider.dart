@@ -20,7 +20,12 @@ class AvisoPorPedirNotifier extends Notifier<List<AvisoExistencias>> {
     for (final a in nuevos) {
       porProducto[a.productoId] = a;
     }
-    state = porProducto.values.toList();
+    // Mismo orden que al calcularlos: agotados primero, luego por nombre.
+    state = porProducto.values.toList()
+      ..sort((a, b) {
+        if (a.agotado != b.agotado) return a.agotado ? -1 : 1;
+        return a.nombre.compareTo(b.nombre);
+      });
   }
 
   void cerrar() => state = const [];

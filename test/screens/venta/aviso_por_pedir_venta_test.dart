@@ -22,6 +22,15 @@ class _InventarioQueFalla extends InventarioRepository {
       throw StateError('falla simulada');
 }
 
+class _InventarioQueNoRecalcula extends InventarioRepository {
+  _InventarioQueNoRecalcula(super.db);
+
+  @override
+  Future<List<AvisoExistencias>> avisosVigentes(
+    List<AvisoExistencias> avisos,
+  ) => throw StateError('falla simulada');
+}
+
 void main() {
   late AppDatabase db;
   late ProviderContainer container;
@@ -39,13 +48,21 @@ void main() {
     await db.close();
   });
 
-  Future<void> abrirVenta(WidgetTester tester, {bool falla = false}) async {
+  Future<void> abrirVenta(
+    WidgetTester tester, {
+    bool falla = false,
+    bool fallaAlRecalcular = false,
+  }) async {
     container = await containerConSesion(
       db,
       overrides: [
         if (falla)
           inventarioRepositoryProvider.overrideWith(
             (ref) => _InventarioQueFalla(ref.watch(databaseProvider)),
+          ),
+        if (fallaAlRecalcular)
+          inventarioRepositoryProvider.overrideWith(
+            (ref) => _InventarioQueNoRecalcula(ref.watch(databaseProvider)),
           ),
       ],
     );
@@ -119,4 +136,17 @@ void main() {
       expect(container.read(avisoPorPedirProvider), isEmpty);
     },
   );
+
+  testWidgets('si recalcular falla al deshacer, la venta se borra y el aviso '
+      'se cierra', (tester) async {
+    await abrirVenta(tester, fallaAlRecalcular: true);
+    await cobrarUnProducto(tester);
+    expect(container.read(avisoPorPedirProvider), hasLength(1));
+
+    await tester.tap(find.text('Deshacer'));
+    await tester.pumpAndSettle();
+
+    expect(await db.select(db.ventas).get(), isEmpty);
+    expect(container.read(avisoPorPedirProvider), isEmpty);
+  });
 }

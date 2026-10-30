@@ -482,7 +482,12 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
         'Venta registrada · ${formatoMoneda(ticket.total)}',
         onDeshacer: () async {
           await ventaRepo.eliminarVenta(ventaId);
-          await avisoNotifier.recalcular();
+          // Sin poder recalcular, un aviso viejo sería peor que ninguno.
+          try {
+            await avisoNotifier.recalcular();
+          } catch (_) {
+            avisoNotifier.cerrar();
+          }
         },
       );
       Navigator.of(context).pop();
