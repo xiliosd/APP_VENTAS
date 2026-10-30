@@ -2,21 +2,25 @@
 
 *La tranquilidad de tu tienda, en tu bolsillo.*
 
-App móvil offline (Android) para tenderos y vendedores informales en Colombia:
-registro rápido de ventas, fiado (crédito a clientes) con cobro parcial, gastos,
-y resumen diario general y por vendedor. Login por PIN de 4 dígitos, sin
-cuentas ni servidor — todos los datos viven en un archivo SQLite local en el
-dispositivo.
+## Nombre y descripción
 
-Fase 1 (este repo) es el núcleo funcional descrito en
-`docs/superpowers/specs/2026-09-02-app-ventas-fase1-design.md`. El plan de
-implementación ejecutado está en
-`docs/superpowers/plans/2026-09-02-app-ventas-fase1.md`.
+VeciTienda es una app Android que funciona sin conexión, para tenderos y vendedores
+informales en Colombia. Sirve para:
 
-## Arquitectura
+- registrar ventas rápido, con búsqueda, escáner de código de barras o voz;
+- llevar el fiado (crédito a clientes) con abonos y extracto;
+- anotar gastos;
+- manejar inventario, proveedores y pedidos sugeridos;
+- ver reportes por día, semana y mes;
+- cobrar por QR (Nequi, Daviplata o banco).
+
+Cada persona entra con un PIN de 4 dígitos o con su huella. Los datos viven en un archivo
+SQLite en el celular. El respaldo en la nube con Supabase es opcional.
+
+### Arquitectura
 
 ```
-UI (screens, Material)
+UI (screens, Material 3)
    ↓
 Riverpod providers (estado)
    ↓
@@ -25,102 +29,128 @@ Repositorios (uno por entidad)
 Drift / SQLite (persistencia local, única fuente de verdad)
 ```
 
-- **`lib/data/`** — esquema Drift (`AppDatabase`) y tablas.
-- **`lib/repositories/`** — una clase por entidad (Usuario, Producto, Cliente,
-  Venta, Fiado, Gasto, Resumen), cada una envolviendo consultas Drift.
-- **`lib/providers/`** — providers de Riverpod que conectan la base de datos,
-  los repositorios y el estado de sesión con la UI.
-- **`lib/screens/`** — pantallas Material, organizadas por flujo
-  (`login/`, `venta/`, `fiado/`, `gasto/`, `historial/`, `home/`,
-  `configuracion/`).
-- **`lib/util/`** — formateo de moneda (COP entero, sin decimales), hash de
-  PIN (SHA-256) y utilidades de fecha.
+- `lib/data/` — esquema Drift (`AppDatabase`), tablas y migraciones.
+- `lib/repositories/` — una clase por entidad que envuelve las consultas Drift
+  (patrón Repository).
+- `lib/providers/` — providers de Riverpod que conectan la base, los repositorios y la
+  sesión con la UI.
+- `lib/screens/` — pantallas organizadas por flujo (login, venta, fiado, gasto, historial,
+  reportes, inventario, configuración, escáner…).
+- `lib/ui/` — componentes visuales reutilizables (tema, colores, mosaicos, avisos,
+  recorrido de primer uso, vibración).
+- `lib/respaldo/` — respaldo y restauración con Supabase.
+- `lib/util/` — moneda (COP entero), hash de PIN y fechas.
 
-No hay llamadas de red en ninguna parte de esta fase: la app funciona 100%
-sin conexión.
+### Excepciones a los lineamientos
 
-## Configuración inicial
+- **Nombres de Dart:** los archivos van en `snake_case` y las constantes en
+  `lowerCamelCase`, como piden la convención oficial de Dart y `flutter analyze`. Los
+  lineamientos UNIMINUTO piden kebab-case y SCREAMING_SNAKE_CASE.
+- **Proyecto personal:** no lleva contenedor Docker. El trabajo se hace directamente en
+  `master`, sin ramas `develop`, `QA` ni `feature/...`.
+
+## Enlaces de documentación
+
+- Hoja de ruta y estado: [`docs/hoja-de-ruta.md`](docs/hoja-de-ruta.md).
+- Especificaciones de cada fase: [`docs/superpowers/specs/`](docs/superpowers/specs/).
+- Planes de implementación: [`docs/superpowers/plans/`](docs/superpowers/plans/).
+- Marca: [`docs/marca/vecitienda-marca.md`](docs/marca/vecitienda-marca.md).
+
+## Referencias de API
+
+No aplica: la app no expone ninguna API. Usa estos servicios externos, ambos opcionales:
+
+- **Supabase** (respaldo): inicio de sesión por teléfono con código OTP y un bucket privado
+  `respaldos` con políticas RLS. La configuración está en la Task 9 de
+  `docs/superpowers/plans/2026-10-05-app-ventas-fase2bc-respaldo.md`.
+- **Open Food Facts** (consulta pública, sin clave): al escanear un código desconocido,
+  autocompleta el nombre, la marca y el tamaño del producto.
+
+## Autores
+
+- Oscar Dueñas — dueño del producto y desarrollador.
+- Desarrollo asistido por Claude (Anthropic). Los commits lo registran con `Co-Authored-By`.
+
+## Distintivos
+
+No aplica: el repositorio todavía no tiene integración continua ni insignias publicadas.
+
+## Ambiente de pruebas
 
 ```bash
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
-```
-
-El segundo comando genera `lib/data/database.g.dart` (código Drift), que
-está en `.gitignore` porque es derivado del esquema — hay que regenerarlo en
-cada clon nuevo antes de compilar o correr los tests.
-
-## Correr los tests
-
-```bash
+flutter analyze
 flutter test
 ```
 
-Los tests de repositorios/providers/widgets usan una base de datos Drift en
-memoria (`NativeDatabase.memory()`), no una base real ni mocks.
+El segundo comando genera el código de Drift (`*.g.dart`). Esos archivos están en
+`.gitignore`, así que hay que regenerarlos en cada clon nuevo. Las pruebas de
+repositorios, providers y widgets usan una base Drift en memoria
+(`NativeDatabase.memory()`), no una base real ni mocks. Para revisar a mano, la app trae
+una "venta de práctica" en el recorrido de primer uso que no guarda nada.
 
-## Compilar
-
-```bash
-flutter build apk --debug
-```
-
-Genera `build/app/outputs/flutter-apk/app-debug.apk` (no está en git — es un
-artefacto de build). Para instalarlo en un emulador o dispositivo conectado:
+## Deployment
 
 ```bash
-adb install -r build/app/outputs/flutter-apk/app-debug.apk
+flutter build apk --release
+adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 
-## Respaldo en la nube (opcional)
+El APK queda en `build/app/outputs/flutter-apk/`. No se guarda en git porque es un
+artefacto de compilación. Todavía no se publica en Play Store y no tiene llave de firma
+propia; ese trabajo está pendiente en la hoja de ruta.
 
-Sin configuración la app funciona 100% local. Para habilitar el respaldo:
+## Environment variables
 
-1. Configurar un proyecto Supabase como describe la Task 9 de
-   `docs/superpowers/plans/2026-10-05-app-ventas-fase2bc-respaldo.md`
-   (login por teléfono, bucket privado `respaldos` y sus políticas RLS).
-2. Compilar pasando las claves (nunca se guardan en el repo):
+Se pasan al compilar con `--dart-define` y nunca se guardan en el repositorio. Sin ellas,
+la app funciona 100 % local y el respaldo queda deshabilitado.
+
+| Variable | Uso |
+|---|---|
+| `SUPABASE_URL` | URL del proyecto Supabase para el respaldo. |
+| `SUPABASE_ANON_KEY` | Llave pública (publishable o anon) del proyecto Supabase. |
 
 ```bash
-flutter run --dart-define=SUPABASE_URL=https://xxxx.supabase.co --dart-define=SUPABASE_ANON_KEY=<publishable o anon key>
+flutter run --dart-define=SUPABASE_URL=https://xxxx.supabase.co --dart-define=SUPABASE_ANON_KEY=<llave>
 ```
 
-Con el respaldo activo (Ajustes → Respaldo) la base se sube sola 30 s
-después de cada cambio y al abrir la app. En un celular nuevo, la pantalla
-de Bienvenida permite restaurarla verificando el mismo número.
+Con el respaldo activo (Ajustes → Respaldo), la base se sube sola 30 s después de cada
+cambio y al abrir la app. En un celular nuevo, la pantalla de Bienvenida permite
+restaurarla verificando el mismo número.
 
-**Riesgo restante:** sin respaldo activo, perder el celular es perder los
-datos. Los PIN se guardan como SHA-256 sin sal: quien obtenga el archivo de
-respaldo podría deducirlos; el acceso al respaldo está limitado al número
-de la tienda (RLS).
+**Riesgo restante:** sin respaldo activo, perder el celular es perder los datos. Los PIN se
+guardan como SHA-256 sin sal, así que quien obtenga el archivo de respaldo podría
+deducirlos. El acceso al respaldo está limitado al número de la tienda por RLS.
 
-## Fase 2
+## Screenshots
 
-La Fase 2 se divide en subproyectos, cada uno con su spec y plan en `docs/superpowers/`:
+Todavía no hay capturas en el repositorio. El logo y la marca están en
+[`docs/marca/`](docs/marca/).
 
-- **2A — Pantallas pendientes de la Fase 1** (hecho): resetear PIN y varios
-  administradores, editar/reactivar productos, historial y saldo vivo del
-  cliente con fiado, resumen por día, historial por día y usuario con gastos.
-- **2E — Experiencia de usuario y diseño visual** (hecho): sistema visual
-  "claro y confiable" (`lib/ui/`), venta tipo ticket con "Cobrar" y Deshacer,
-  Inicio con tarjetas de ventas/gastos/ganancia/por cobrar, avisos de
-  confirmación y estados vacíos en todas las pantallas.
-- **2B/2C — Respaldo en la nube (Supabase) e identidad de la tienda por OTP**
-  (hecho; requiere configurar Supabase, ver arriba).
-- **Marca VeciTienda** (hecho): nombre, isotipo e íconos Android
-  (`tool/generar_iconos.py` los regenera desde `docs/marca/`), paleta azul
-  cobalto + verde esmeralda con contraste AA, títulos en Nunito.
-- **2D — Cobro por QR** (hecho): el admin carga en Ajustes → "Cobro por QR" la
-  imagen del QR de su Nequi, Daviplata o banco; las ventas de contado y los
-  abonos pueden cobrarse por transferencia (se guardan al tocar "Recibido") y el
-  Inicio separa lo recibido en efectivo y por transferencias.
+## Tech stack
 
-Fuera de alcance por ahora: editar o anular ventas, abonos o gastos ya
-registrados; eliminar usuarios o cambiar su rol; rangos de fechas
-(semana/mes) y reportes exportables.
+- Flutter y Dart 3, Material 3, solo Android.
+- Estado: Riverpod 2.
+- Datos: Drift sobre SQLite (`sqlite3_flutter_libs`).
+- Respaldo: `supabase_flutter`.
+- Cámara y códigos: `mobile_scanner`.
+- Huella: `local_auth`.
+- Imágenes del QR: `image_picker`.
+- Dictado: reconocimiento de voz nativo de Android (`DictadoLocal.kt`).
+- Preferencias por celular: `shared_preferences`.
+- Calidad: `flutter_lints`, `dart format`, `flutter analyze` y `flutter test`.
 
 ## Usage/examples
 
-- **Escáner en el recorrido de primer uso:** en "Tus primeros productos", "Crear escaneando"
-  lee un código y crea el producto con la hoja rápida; en la venta de práctica, "Vender
-  escaneando" abre el escáner (con "Seguir sin cámara") y la guía sigue desde Cobrar.
+- **Vender:** Inicio → "Nueva venta". Se buscan productos, se escanea el código o se dicta
+  ("2 cocas y un pan"). Luego "Cobrar", y en "¿Cómo paga?" se elige efectivo,
+  transferencia (QR) o fiado.
+- **Fiado:** pestaña Fiado → cliente → "Registrar abono". "Ver extracto" muestra cada
+  compra y cada abono con el saldo.
+- **Inventario:** pestaña Inventario. Tiene "Recibir mercancía", "Ajustar conteo" y "Por
+  pedir", que arma el pedido sugerido por proveedor.
+- **Escáner en el recorrido de primer uso:** en "Tus primeros productos", "Crear
+  escaneando" lee un código y crea el producto con la hoja rápida. En la venta de
+  práctica, "Vender escaneando" abre el escáner (con "Seguir sin cámara") y la guía sigue
+  desde Cobrar.
