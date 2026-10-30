@@ -46,7 +46,9 @@ Actualizada: 2026-10-26. Cada fase pasa por especificación (`docs/superpowers/s
     edición de productos desde Nueva venta, escáner, inventario y Productos.
   - Tanda 3 — hecha: aviso al vender cuando un producto queda en su mínimo o se agota, franja e
     indicador "N por pedir" en el Inicio, y extracto de fiado en pantalla con consolidado por abono.
-  - Tanda 4 — pendiente: escáner y recorrido.
+  - Tanda 4 — hecha: escáner fácil (botón "Escanear código" con texto, consejos de primera
+    vez, ayuda en el escáner) y escáner en el recorrido ("Crear escaneando" y "Vender
+    escaneando").
 
 ## Después
 

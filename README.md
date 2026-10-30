@@ -118,3 +118,9 @@ La Fase 2 se divide en subproyectos, cada uno con su spec y plan en `docs/superp
 Fuera de alcance por ahora: editar o anular ventas, abonos o gastos ya
 registrados; eliminar usuarios o cambiar su rol; rangos de fechas
 (semana/mes) y reportes exportables.
+
+## Usage/examples
+
+- **Escáner en el recorrido de primer uso:** en "Tus primeros productos", "Crear escaneando"
+  lee un código y crea el producto con la hoja rápida; en la venta de práctica, "Vender
+  escaneando" abre el escáner (con "Seguir sin cámara") y la guía sigue desde Cobrar.

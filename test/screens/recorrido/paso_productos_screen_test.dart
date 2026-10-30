@@ -1,25 +1,35 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/recorrido_provider.dart';
 import 'package:app_ventas/screens/recorrido/paso_productos_screen.dart';
+import 'package:app_ventas/servicios/lector_codigo.dart';
+import 'package:app_ventas/servicios/open_food_facts.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../support/lector_falso.dart';
 import '../../support/montaje.dart';
+
+/// Sin internet en las pruebas: la hoja rápida no autocompleta nada.
+class _SinDatos implements ConsultaProducto {
+  @override
+  Future<DatosProducto?> buscar(String codigo) async => null;
+}
 
 void main() {
   late AppDatabase db;
   late ProviderContainer container;
+  late SharedPreferences prefs;
 
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
     SharedPreferences.setMockInitialValues({'recorrido_paso': 'productos'});
-    final prefs = await SharedPreferences.getInstance();
-    container = await containerConSesion(db,
-        preferencias: prefs);
+    prefs = await SharedPreferences.getInstance();
+    container = await containerConSesion(db, preferencias: prefs);
   });
 
   tearDown(() async {
@@ -32,7 +42,8 @@ void main() {
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
-        appDePrueba(container, inicio: const PasoProductosScreen()));
+      appDePrueba(container, inicio: const PasoProductosScreen()),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -46,8 +57,10 @@ void main() {
     await tester.tap(find.byKey(const Key('boton_guardar_productos')));
     await tester.pumpAndSettle();
     final productos = await db.select(db.productos).get();
-    expect(productos.map((p) => (p.nombre, p.precio)),
-        unorderedEquals([('Gaseosa', 2500), ('Pan', 6000)]));
+    expect(
+      productos.map((p) => (p.nombre, p.precio)),
+      unorderedEquals([('Gaseosa', 2500), ('Pan', 6000)]),
+    );
     expect(container.read(recorridoProvider), PasoRecorrido.venta);
   });
 
@@ -109,18 +122,142 @@ void main() {
     expect(find.byKey(const Key('boton_agregar_fila')), findsNothing);
   });
 
-  testWidgets('dos toques seguidos en Guardar no duplican productos',
-      (tester) async {
+  testWidgets('dos toques seguidos en Guardar no duplican productos', (
+    tester,
+  ) async {
     await montar(tester);
     await tester.enterText(find.byKey(const Key('fila_nombre_0')), 'Pan');
     await tester.enterText(find.byKey(const Key('fila_precio_0')), '6000');
     await tester.pump();
     // Dos toques antes de que termine la primera consulta.
     final boton = tester.widget<BotonPrincipal>(
-        find.byKey(const Key('boton_guardar_productos')));
+      find.byKey(const Key('boton_guardar_productos')),
+    );
     boton.onPressed!();
     boton.onPressed!();
     await tester.pumpAndSettle();
     expect(await db.select(db.productos).get(), hasLength(1));
+  });
+
+  group('Crear escaneando', () {
+    late LectorFalso lector;
+
+    Future<void> montarConLector(
+      WidgetTester tester,
+      List<String?> codigos, {
+      bool conPan = false,
+    }) async {
+      container.dispose();
+      lector = LectorFalso(codigos);
+      container = await containerConSesion(
+        db,
+        preferencias: prefs,
+        overrides: [
+          lectorCodigoProvider.overrideWithValue(lector),
+          consultaProductoProvider.overrideWithValue(_SinDatos()),
+        ],
+      );
+      if (conPan) {
+        await db
+            .into(db.productos)
+            .insert(
+              ProductosCompanion.insert(
+                nombre: 'Pan',
+                precio: 6000,
+                codigoBarras: const Value('123'),
+              ),
+            );
+      }
+      await montar(tester);
+    }
+
+    Future<void> crearArroz(WidgetTester tester) async {
+      await tester.tap(find.byKey(const Key('boton_crear_escaneando')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('campo_nombre_rapido')),
+        'Arroz',
+      );
+      await tester.enterText(
+        find.byKey(const Key('campo_precio_rapido')),
+        '3000',
+      );
+      await tester.tap(find.byKey(const Key('boton_guardar_producto_rapido')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Crear escaneando crea el producto y lo lista', (tester) async {
+      await montarConLector(tester, ['123']);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('boton_crear_escaneando')),
+          matching: find.text('Crear escaneando'),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('boton_crear_escaneando')));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('boton_guardar_producto_rapido')),
+          matching: find.text('Guardar'),
+        ),
+        findsOneWidget,
+      );
+      await tester.enterText(
+        find.byKey(const Key('campo_nombre_rapido')),
+        'Arroz',
+      );
+      await tester.enterText(
+        find.byKey(const Key('campo_precio_rapido')),
+        '3000',
+      );
+      await tester.tap(find.byKey(const Key('boton_guardar_producto_rapido')));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('escaneado_0')),
+          matching: find.textContaining('Arroz'),
+        ),
+        findsOneWidget,
+      );
+      final productos = await db.select(db.productos).get();
+      expect(productos.single.nombre, 'Arroz');
+      expect(productos.single.codigoBarras, '123');
+      expect(lector.usos, [UsoEscaner.primerosProductos]);
+    });
+
+    testWidgets('código ya existente avisa y no abre la hoja', (tester) async {
+      await montarConLector(tester, ['123'], conPan: true);
+      await tester.tap(find.byKey(const Key('boton_crear_escaneando')));
+      await tester.pumpAndSettle();
+      expect(find.text('Ese código ya es de Pan'), findsOneWidget);
+      expect(find.byKey(const Key('hoja_producto_rapido')), findsNothing);
+    });
+
+    testWidgets('cancelar el escáner no cambia nada', (tester) async {
+      await montarConLector(tester, [null]);
+      await tester.tap(find.byKey(const Key('boton_crear_escaneando')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('hoja_producto_rapido')), findsNothing);
+      expect(find.byKey(const Key('escaneado_0')), findsNothing);
+      expect(await db.select(db.productos).get(), isEmpty);
+    });
+
+    testWidgets('después de escanear, Guardar y continuar no duplica', (
+      tester,
+    ) async {
+      await montarConLector(tester, ['123']);
+      await crearArroz(tester);
+      await tester.enterText(find.byKey(const Key('fila_nombre_0')), 'Arroz');
+      await tester.enterText(find.byKey(const Key('fila_precio_0')), '3000');
+      await tester.tap(find.byKey(const Key('boton_guardar_productos')));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<Text>(find.byKey(const Key('error_fila_0'))).data,
+        'Ya está en la lista',
+      );
+      expect(await db.select(db.productos).get(), hasLength(1));
+    });
   });
 }

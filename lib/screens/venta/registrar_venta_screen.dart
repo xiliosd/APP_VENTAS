@@ -46,6 +46,7 @@ class RegistrarVentaScreen extends ConsumerStatefulWidget {
     this.practica = false,
     this.conGlobos = true,
     this.dictarAlAbrir = false,
+    this.escanearAlAbrir = false,
   });
 
   /// Venta de práctica del recorrido: guía con globos y no guarda nada.
@@ -57,6 +58,9 @@ class RegistrarVentaScreen extends ConsumerStatefulWidget {
 
   /// Desde "Vender por voz" del Inicio: empieza a escuchar al abrir.
   final bool dictarAlAbrir;
+
+  /// Desde "Vender escaneando" del recorrido: abre el escáner al abrir.
+  final bool escanearAlAbrir;
 
   @override
   ConsumerState<RegistrarVentaScreen> createState() =>
@@ -294,8 +298,14 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
         if (mounted) _dictar();
       });
     }
-    // En la práctica ya hay guía, y al dictar el consejo estorbaría.
-    if (!widget.practica && !widget.dictarAlAbrir) {
+    if (widget.escanearAlAbrir && !(widget.practica && widget.conGlobos)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _escanear();
+      });
+    }
+    // En la práctica ya hay guía, y al dictar o escanear el consejo
+    // estorbaría.
+    if (!widget.practica && !widget.dictarAlAbrir && !widget.escanearAlAbrir) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final vistos = ref.read(consejosVistosProvider);
@@ -307,13 +317,18 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       });
     }
     if (widget.practica && widget.conGlobos) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // Los globos viven en la capa raíz: encima del escáner lo taparían,
+        // así que esperan a que se cierre.
+        if (widget.escanearAlAbrir) await _escanear();
         if (!mounted) return;
         _globos = mostrarGlobos(
           context,
           globosVenta,
           onSaltar: _saltarRecorrido,
         );
+        // Si ya escaneó un producto, el siguiente paso es cobrar.
+        if (!ref.read(ticketProvider).estaVacio) _globos!.irA(1);
       });
     }
   }

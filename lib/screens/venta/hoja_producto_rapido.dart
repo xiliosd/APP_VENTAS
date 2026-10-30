@@ -13,20 +13,24 @@ import '../../util/formato_moneda.dart';
 import '../configuracion/campos_detalle_producto.dart';
 
 /// Crea un producto para [codigo] (autocompletado desde Open Food Facts) y
-/// lo devuelve; null si se cerró sin guardar.
+/// lo devuelve; null si se cerró sin guardar. [textoGuardar] cambia cuando
+/// el producto no va a un ticket (p. ej. en el recorrido).
 Future<Producto?> mostrarHojaProductoRapido(
   BuildContext context, {
   required String codigo,
+  String textoGuardar = 'Guardar y agregar',
 }) => mostrarHojaInferior<Producto>(
   context,
   titulo: 'Nuevo producto',
-  builder: (_) => _HojaProductoRapido(codigo: codigo),
+  builder: (_) =>
+      _HojaProductoRapido(codigo: codigo, textoGuardar: textoGuardar),
 );
 
 class _HojaProductoRapido extends ConsumerStatefulWidget {
-  const _HojaProductoRapido({required this.codigo});
+  const _HojaProductoRapido({required this.codigo, required this.textoGuardar});
 
   final String codigo;
+  final String textoGuardar;
 
   @override
   ConsumerState<_HojaProductoRapido> createState() =>
@@ -182,7 +186,7 @@ class _HojaProductoRapidoState extends ConsumerState<_HojaProductoRapido> {
         const SizedBox(height: 16),
         BotonPrincipal(
           key: const Key('boton_guardar_producto_rapido'),
-          texto: 'Guardar y agregar',
+          texto: widget.textoGuardar,
           onPressed: _guardando ? null : _guardar,
         ),
       ],

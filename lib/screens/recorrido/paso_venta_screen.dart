@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/recorrido_provider.dart';
+import '../../ui/boton_escanear.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/tipografia.dart';
@@ -26,8 +27,11 @@ class PasoVentaScreen extends ConsumerWidget {
               const Spacer(),
               Icon(Icons.point_of_sale_rounded, size: 72, color: c.primario),
               const SizedBox(height: 16),
-              Text('Hagamos una venta de práctica',
-                  textAlign: TextAlign.center, style: estiloTitulo()),
+              Text(
+                'Hagamos una venta de práctica',
+                textAlign: TextAlign.center,
+                style: estiloTitulo(),
+              ),
               const SizedBox(height: 8),
               Text(
                 'Así aprendes a cobrar. No quedará en tus cuentas.',
@@ -41,8 +45,23 @@ class PasoVentaScreen extends ConsumerWidget {
                 variante: VarianteBoton.entra,
                 onPressed: () => Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                      builder: (_) =>
-                          const RegistrarVentaScreen(practica: true)),
+                    builder: (_) => const RegistrarVentaScreen(practica: true),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Quien ya tiene un producto a mano aprende a vender con el
+              // código de barras desde la primera venta.
+              BotonEscanear(
+                key: const Key('boton_vender_escaneando'),
+                texto: 'Vender escaneando',
+                onPressed: () => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => const RegistrarVentaScreen(
+                      practica: true,
+                      escanearAlAbrir: true,
+                    ),
+                  ),
                 ),
               ),
               TextButton(

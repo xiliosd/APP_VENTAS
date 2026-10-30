@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/database.dart';
 import '../../providers/recorrido_provider.dart';
 import '../../providers/repository_providers.dart';
+import '../../servicios/lector_codigo.dart';
+import '../../ui/avisos.dart';
+import '../../ui/boton_escanear.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/tipografia.dart';
+import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
+import '../venta/hoja_producto_rapido.dart';
 import 'indicador_pasos.dart';
 import 'paso_venta_screen.dart';
 
@@ -29,6 +35,10 @@ class _PasoProductosScreenState extends ConsumerState<PasoProductosScreen> {
   final _errores = <int, String>{};
   bool _guardando = false;
 
+  /// Productos ya creados con el escáner: se guardan al momento, así que
+  /// solo se muestran para que el tendero vea que quedaron.
+  final _escaneados = <Producto>[];
+
   @override
   void initState() {
     super.initState();
@@ -49,7 +59,29 @@ class _PasoProductosScreenState extends ConsumerState<PasoProductosScreen> {
   void _agregarFila() {
     if (_filas.length >= _maximoFilas) return;
     setState(
-        () => _filas.add((TextEditingController(), TextEditingController())));
+      () => _filas.add((TextEditingController(), TextEditingController())),
+    );
+  }
+
+  Future<void> _crearEscaneando() async {
+    final codigo = await ref
+        .read(lectorCodigoProvider)
+        .leer(context, uso: UsoEscaner.primerosProductos);
+    if (codigo == null || !mounted) return;
+    final existente = await ref
+        .read(productoRepositoryProvider)
+        .productoPorCodigo(codigo);
+    if (!mounted) return;
+    if (existente != null) {
+      avisar(context, 'Ese código ya es de ${existente.nombre}', error: true);
+      return;
+    }
+    final nuevo = await mostrarHojaProductoRapido(
+      context,
+      codigo: codigo,
+      textoGuardar: 'Guardar',
+    );
+    if (nuevo != null && mounted) setState(() => _escaneados.add(nuevo));
   }
 
   Future<void> _guardar() async {
@@ -86,9 +118,11 @@ class _PasoProductosScreenState extends ConsumerState<PasoProductosScreen> {
         nuevos.add((nombre, precio));
       }
     }
-    setState(() => _errores
-      ..clear()
-      ..addAll(errores));
+    setState(
+      () => _errores
+        ..clear()
+        ..addAll(errores),
+    );
     if (errores.isNotEmpty) return;
     for (final (nombre, precio) in nuevos) {
       await repo.crearProducto(nombre: nombre, precio: precio);
@@ -100,7 +134,8 @@ class _PasoProductosScreenState extends ConsumerState<PasoProductosScreen> {
     await ref.read(recorridoProvider.notifier).irA(PasoRecorrido.venta);
     if (!mounted) return;
     await Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const PasoVentaScreen()));
+      MaterialPageRoute(builder: (_) => const PasoVentaScreen()),
+    );
   }
 
   @override
@@ -117,10 +152,26 @@ class _PasoProductosScreenState extends ConsumerState<PasoProductosScreen> {
             const SizedBox(height: 4),
             Text(
               'Escribe lo que más vendes. El costo, el proveedor y las '
-              'existencias los completas después en Productos.',
+              'existencias los completas después en Productos. Escríbelo o '
+              'escanea su código.',
               style: TextStyle(color: c.textoSecundario),
             ),
             const SizedBox(height: 16),
+            BotonEscanear(
+              key: const Key('boton_crear_escaneando'),
+              texto: 'Crear escaneando',
+              onPressed: _guardando ? null : _crearEscaneando,
+            ),
+            const SizedBox(height: 8),
+            for (var i = 0; i < _escaneados.length; i++)
+              ListTile(
+                key: Key('escaneado_$i'),
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.check_circle_rounded, color: c.entra),
+                title: Text(_escaneados[i].nombre),
+                trailing: Text(formatoMoneda(_escaneados[i].precio)),
+              ),
+            const SizedBox(height: 8),
             for (var i = 0; i < _filas.length; i++)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -136,8 +187,9 @@ class _PasoProductosScreenState extends ConsumerState<PasoProductosScreen> {
                             key: Key('fila_nombre_$i'),
                             controller: _filas[i].$1,
                             textCapitalization: TextCapitalization.sentences,
-                            decoration:
-                                const InputDecoration(labelText: 'Producto'),
+                            decoration: const InputDecoration(
+                              labelText: 'Producto',
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -151,7 +203,9 @@ class _PasoProductosScreenState extends ConsumerState<PasoProductosScreen> {
                               FilteringTextInputFormatter.digitsOnly,
                             ],
                             decoration: const InputDecoration(
-                                labelText: 'Precio', prefixText: r'$ '),
+                              labelText: 'Precio',
+                              prefixText: r'$ ',
+                            ),
                           ),
                         ),
                       ],
