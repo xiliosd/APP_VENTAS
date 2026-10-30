@@ -1,6 +1,6 @@
 # Hoja de ruta — VeciTienda
 
-Actualizada: 2026-10-26. Cada fase pasa por especificación (`docs/superpowers/specs/`) y plan
+Actualizada: 2026-10-30. Cada fase pasa por especificación (`docs/superpowers/specs/`) y plan
 (`docs/superpowers/plans/`) antes de programarse.
 
 ## Hecho
@@ -65,12 +65,33 @@ Actualizada: 2026-10-26. Cada fase pasa por especificación (`docs/superpowers/s
 - Preparar para uso real: llave de firma propia, compilar con las claves de Supabase y, si se
   publica, requisitos de Play Store.
 
+## Verificado en celular real
+
+- 2026-10-30, por el usuario: ingreso con huella, cobro por QR (2D), corregir y anular (3A),
+  reportes (3B), detalle de tickets (3C), catálogo (4A), inventario (4B), pedido sugerido (4C),
+  modo oscuro (R1), recorrido de primer uso (R2b), inicio de marca, venta por voz y orden de
+  productos.
+- 2026-10-13, por el usuario: cámara del código de barras.
+
+## Falla en celular real
+
+- Vibración (R1): no se siente en el celular. La app usa `HapticFeedback` de Flutter, que
+  depende de la opción "vibración al tocar" del sistema; falta diagnosticar.
+
 ## Pendiente de verificar
 
-- Recorrido manual en un celular real de: Cargar QR (2D), corregir y anular (3A) y reportes
-  (3B), detalle de tickets (3C) y catálogo, proveedores y nombre de la tienda (4A), inventario (4B), pedido sugerido (4C), pulido tanda 1 y pulido tanda 2 (incluido el ícono temático en
-  Android 13+), renovación R1 en claro y oscuro (incluida la vibración) renovación R2a, renovación R2b (recorrido completo en un celular nuevo), renovación R3a, renovación R3b, renovación R4 y código de barras con productos reales (cámara), pedidos guardados con recepción como gasto, inicio de marca (claro, oscuro, Android 12+ y anteriores), ingreso con huella (activar, entrar, bloqueo, sin huellas) venta por voz (con y sin el español
-  sin conexión descargado) y orden de productos y mejoras de tienda, tanda 1 (clientes con apellido, pantalla Clientes,
-  cliente habitual y reportes de clientes).
-- tanda 2 en celular real (tamaño de letra en las tres opciones, editar producto desde venta, escáner, inventario y productos).
-- tanda 3 en celular real (aviso por pedir al vender, Deshacer, indicador del Inicio y extracto de fiado).
+- Proveedores y nombre de la tienda (4A).
+- Pulido tandas 1 y 2 (incluido el ícono temático en Android 13+).
+- Renovación R2a (Inicio tipo tablero, "¿Cómo paga?", "¿Quién eres?" y PIN), R3a (fiado y
+  gastos), R3b (reportes, historial con filtros, corrección y cobro QR renovados) y R4
+  (administración).
+- Código de barras con productos reales: crear con Open Food Facts y vender escaneando.
+- Pedidos guardados con recepción como gasto.
+- Mejoras de tienda, tanda 1 (clientes con apellido, pantalla Clientes, cliente habitual y
+  reportes de clientes).
+- Mejoras de tienda, tanda 2 (tamaño de letra en las tres opciones, editar producto desde venta,
+  escáner, inventario y productos).
+- Mejoras de tienda, tanda 3 (aviso por pedir al vender, Deshacer, indicador del Inicio y
+  extracto de fiado).
+- Mejoras de tienda, tanda 4 (botón "Escanear código", consejos de primera vez, ayuda en el
+  escáner y "Crear/Vender escaneando" en el recorrido).
