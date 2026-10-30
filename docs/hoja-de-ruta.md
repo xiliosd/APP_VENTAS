@@ -35,10 +35,6 @@ Actualizada: 2026-10-30. Cada fase pasa por especificación (`docs/superpowers/s
 - Ordenar productos — botón "Ordenar" en Nueva venta (A–Z, como los creé, más vendidos de 30 días) y
   en Ajustes → Productos (A–Z, como los creé); cada listado recuerda su orden; arranca en A–Z.
 - Renovación R4 — administración: Ajustes con cabecera de tienda, inventario con resumen y niveles, barra de total fija al recibir y pedir, productos con buscador y margen, proveedores y usuarios con avatar y chips, respaldo y QR con el estilo nuevo.
-
-## En curso
-
-- Renovación terminada (R1–R4); falta el recorrido manual en un celular real.
 - Mejoras de tienda (spec: `docs/superpowers/specs/2026-10-26-vecitienda-mejoras-tienda-design.md`):
   - Tanda 1 — hecha: clientes con apellido, pantalla Clientes, cliente habitual en ventas de
     contado y por transferencia, y reportes de clientes (habituales, de paso y mejores clientes).
@@ -49,6 +45,22 @@ Actualizada: 2026-10-30. Cada fase pasa por especificación (`docs/superpowers/s
   - Tanda 4 — hecha: escáner fácil (botón "Escanear código" con texto, consejos de primera
     vez, ayuda en el escáner) y escáner en el recorrido ("Crear escaneando" y "Vender
     escaneando").
+
+## Orden de lo que falta
+
+Cada paso depende del anterior o conviene hacerlo antes que el siguiente.
+
+1. Vibración — revisar "vibración al tocar" en los ajustes del celular; si sigue sin vibrar,
+   diagnosticar y arreglar en la app.
+2. Prueba en celular de lo que falta — compilar un APK con la tanda 4 y probar R3a, R3b, R4 y
+   las tandas 1 a 4 de mejoras de tienda (ver "Pendiente de verificar").
+3. Arreglos y orden de la casa — corregir lo que falle en el paso 2, los detalles menores
+   diferidos de cada tanda y el README con las once secciones de los lineamientos.
+4. Consultar precio por código de barras — función pequeña y local, sin dependencias externas.
+5. Preparar para uso real — llave de firma propia, claves de Supabase (respaldo en la nube) y,
+   si se publica, requisitos de Play Store.
+6. Tienda centralizada — necesita Supabase listo del paso 5.
+7. Monetización — necesita la sincronización de la tienda centralizada (paso 6).
 
 ## Después
 
