@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
+import '../../providers/consejos_provider.dart';
 import '../../providers/inventario_providers.dart';
 import '../../providers/productos_providers.dart';
 import '../../providers/proveedores_providers.dart';
@@ -12,14 +13,18 @@ import '../../repositories/producto_repository.dart';
 import '../../servicios/lector_codigo.dart';
 import '../../servicios/open_food_facts.dart';
 import '../../ui/avisos.dart';
+import '../../ui/boton_escanear.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
 import '../../ui/monto.dart';
+import '../../ui/recorrido/globos.dart';
+import '../../ui/recorrido/objetivo_recorrido.dart';
 import '../../ui/titulo_seccion.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
+import '../escaner/consejos_escaner.dart';
 import '../inventario/hoja_ajuste_conteo.dart';
 import 'campos_detalle_producto.dart';
 
@@ -41,8 +46,7 @@ class _Fila {
   bool preferido;
 
   /// Identifica la fila en las claves y al excluir repetidos.
-  String get clave =>
-      proveedorId?.toString() ?? 'nuevo_${claveNombre(nombre)}';
+  String get clave => proveedorId?.toString() ?? 'nuevo_${claveNombre(nombre)}';
 }
 
 /// Crea ([producto] null) o edita un producto con sus proveedores. Se cierra
@@ -79,11 +83,13 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   String? _errorPrecio;
   String? _error;
   bool _guardando = false;
-  late final _codigo =
-      TextEditingController(text: widget.producto?.codigoBarras ?? '');
+  late final _codigo = TextEditingController(
+    text: widget.producto?.codigoBarras ?? '',
+  );
   late final _marca = TextEditingController(text: widget.producto?.marca ?? '');
-  late final _tamano =
-      TextEditingController(text: widget.producto?.tamano ?? '');
+  late final _tamano = TextEditingController(
+    text: widget.producto?.tamano ?? '',
+  );
   late String? _envase = widget.producto?.envase;
   late String? _tipo = widget.producto?.tipo;
   String? _errorCodigo;
@@ -93,11 +99,25 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   /// agregar antes reemplazaría la lista con una incompleta.
   late bool _cargando = widget.producto != null;
 
+  /// Consejo de primera vez sobre "Escanear código" (solo al crear).
+  ControladorGlobos? _consejo;
+
   @override
   void initState() {
     super.initState();
     final id = widget.producto?.id;
     if (id != null) _cargar(id);
+    if (widget.producto == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final vistos = ref.read(consejosVistosProvider);
+        if (vistos.contains(Consejo.escanearProducto)) return;
+        ref
+            .read(consejosVistosProvider.notifier)
+            .marcarVisto(Consejo.escanearProducto);
+        _consejo = mostrarConsejo(context, consejoEscanearProducto);
+      });
+    }
     // La vista previa muestra "Marca · Tamaño" mientras se escribe.
     _marca.addListener(_refrescar);
     _tamano.addListener(_refrescar);
@@ -108,7 +128,11 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   }
 
   Future<void> _escanear() async {
-    final codigo = await ref.read(lectorCodigoProvider).leer(context);
+    // Tocar el botón con el consejo abierto lo da por entendido.
+    _consejo?.cerrar();
+    final codigo = await ref
+        .read(lectorCodigoProvider)
+        .leer(context, uso: UsoEscaner.producto);
     if (codigo == null || !mounted) return;
     setState(() {
       _codigo.text = codigo;
@@ -167,6 +191,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
 
   @override
   void dispose() {
+    _consejo?.cerrar();
     _nombre.dispose();
     _precio.dispose();
     _hayAhora.dispose();
@@ -257,7 +282,9 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
     }
     setState(() => _guardando = true);
     try {
-      await ref.read(catalogoRepositoryProvider).guardarProductoCompleto(
+      await ref
+          .read(catalogoRepositoryProvider)
+          .guardarProductoCompleto(
             id: widget.producto?.id,
             nombre: nombre,
             precio: precio!,
@@ -360,7 +387,10 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
       return Text(
         'Este producto se vende con pérdida',
         key: Key('texto_resumen_costo'),
-        style: TextStyle(color: ColoresApp.of(context).sale, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          color: ColoresApp.of(context).sale,
+          fontWeight: FontWeight.w600,
+        ),
       );
     }
     final porcentaje = (ganancia * 100 / precio).round();
@@ -372,23 +402,23 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
   }
 
   Widget _tarjeta(String titulo, List<Widget> hijos) => Padding(
-        padding: const EdgeInsets.only(top: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TituloSeccion(titulo),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: hijos,
-                ),
-              ),
+    padding: const EdgeInsets.only(top: 16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TituloSeccion(titulo),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: hijos,
             ),
-          ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -402,260 +432,269 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
         // Abajo queda espacio para que un aviso no tape Guardar.
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Card(
-            key: const Key('vista_previa_producto'),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  AvatarInicial(
-                    id: widget.producto?.id ?? 0,
-                    nombre: _nombre.text,
-                    radio: 26,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _nombre.text.trim().isEmpty
-                              ? 'Sin nombre'
-                              : _nombre.text.trim(),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w700),
-                        ),
-                        if ([_marca.text.trim(), _tamano.text.trim()]
-                            .where((t) => t.isNotEmpty)
-                            .join(' · ')
-                            case final detalle when detalle.isNotEmpty)
-                          Text(
-                            detalle,
-                            key: const Key('detalle_vista_previa'),
-                            style: TextStyle(
-                                fontSize: 13,
-                                color: ColoresApp.of(context).textoSecundario),
-                          ),
-                        const SizedBox(height: 4),
-                        Monto(parsearMonto(_precio.text) ?? 0,
-                            tamano: 20, tono: TonoMonto.entra),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          _tarjeta('DATOS', [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: TextField(
-                    key: const Key('campo_codigo_producto'),
-                    controller: _codigo,
-                    keyboardType: TextInputType.number,
-                    onSubmitted: (t) {
-                      if (t.trim().isNotEmpty) _autocompletar(t.trim());
-                    },
-                    decoration: InputDecoration(
-                      labelText: 'Código de barras',
-                      errorText: _errorCodigo,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  key: const Key('boton_escanear_producto'),
-                  tooltip: 'Escanear',
-                  icon: const Icon(Icons.qr_code_scanner_rounded),
-                  onPressed: _escanear,
-                ),
-              ],
-            ),
-            if (_buscando)
-              Padding(
-                key: const Key('texto_buscando_producto'),
-                padding: const EdgeInsets.only(top: 8),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              key: const Key('vista_previa_producto'),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                    AvatarInicial(
+                      id: widget.producto?.id ?? 0,
+                      nombre: _nombre.text,
+                      radio: 26,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Buscando…',
-                      style: TextStyle(
-                          color: ColoresApp.of(context).textoSecundario),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _nombre.text.trim().isEmpty
+                                ? 'Sin nombre'
+                                : _nombre.text.trim(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if ([
+                                _marca.text.trim(),
+                                _tamano.text.trim(),
+                              ].where((t) => t.isNotEmpty).join(' · ')
+                              case final detalle when detalle.isNotEmpty)
+                            Text(
+                              detalle,
+                              key: const Key('detalle_vista_previa'),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: ColoresApp.of(context).textoSecundario,
+                              ),
+                            ),
+                          const SizedBox(height: 4),
+                          Monto(
+                            parsearMonto(_precio.text) ?? 0,
+                            tamano: 20,
+                            tono: TonoMonto.entra,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('campo_nombre_producto'),
-              controller: _nombre,
-              textCapitalization: TextCapitalization.sentences,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                labelText: 'Nombre del producto',
-                errorText: _errorNombre,
+            ),
+            _tarjeta('DATOS', [
+              TextField(
+                key: const Key('campo_codigo_producto'),
+                controller: _codigo,
+                keyboardType: TextInputType.number,
+                onSubmitted: (t) {
+                  if (t.trim().isNotEmpty) _autocompletar(t.trim());
+                },
+                decoration: InputDecoration(
+                  labelText: 'Código de barras',
+                  errorText: _errorCodigo,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('campo_precio_producto'),
-              controller: _precio,
-              keyboardType: TextInputType.number,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                labelText: 'Precio de venta',
-                errorText: _errorPrecio,
+              const SizedBox(height: 8),
+              ObjetivoRecorrido(
+                id: 'boton_escanear_producto',
+                child: BotonEscanear(
+                  key: const Key('boton_escanear_producto'),
+                  onPressed: _escanear,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            CamposDetalleProducto(
-              marca: _marca,
-              tamano: _tamano,
-              envase: _envase,
-              tipo: _tipo,
-              onEnvase: (v) => setState(() => _envase = v),
-              onTipo: (v) => setState(() => _tipo = v),
-              marcas: ref.watch(marcasUsadasProvider).valueOrNull ?? const [],
-            ),
-          ]),
-          _tarjeta('PROVEEDORES Y COSTO', [
-            for (final f in _filas)
-              Row(
-                key: Key('fila_proveedor_${f.clave}'),
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      key: Key('editar_proveedor_${f.clave}'),
-                      onTap: () => _editarPrecio(f),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                f.nombre,
-                                style: TextStyle(
-                                  color: f.activo
-                                      ? null
-                                      : ColoresApp.of(context).textoSecundario,
+              if (_buscando)
+                Padding(
+                  key: const Key('texto_buscando_producto'),
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Buscando…',
+                        style: TextStyle(
+                          color: ColoresApp.of(context).textoSecundario,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const Key('campo_nombre_producto'),
+                controller: _nombre,
+                textCapitalization: TextCapitalization.sentences,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: 'Nombre del producto',
+                  errorText: _errorNombre,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const Key('campo_precio_producto'),
+                controller: _precio,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: 'Precio de venta',
+                  errorText: _errorPrecio,
+                ),
+              ),
+              const SizedBox(height: 12),
+              CamposDetalleProducto(
+                marca: _marca,
+                tamano: _tamano,
+                envase: _envase,
+                tipo: _tipo,
+                onEnvase: (v) => setState(() => _envase = v),
+                onTipo: (v) => setState(() => _tipo = v),
+                marcas: ref.watch(marcasUsadasProvider).valueOrNull ?? const [],
+              ),
+            ]),
+            _tarjeta('PROVEEDORES Y COSTO', [
+              for (final f in _filas)
+                Row(
+                  key: Key('fila_proveedor_${f.clave}'),
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        key: Key('editar_proveedor_${f.clave}'),
+                        onTap: () => _editarPrecio(f),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  f.nombre,
+                                  style: TextStyle(
+                                    color: f.activo
+                                        ? null
+                                        : ColoresApp.of(context)
+                                              .textoSecundario,
+                                  ),
                                 ),
                               ),
-                            ),
-                            Text(formatoMoneda(f.precioCompra)),
-                          ],
+                              Text(formatoMoneda(f.precioCompra)),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    key: Key('preferido_${f.clave}'),
-                    tooltip: 'Preferido',
-                    icon: Icon(
-                      f.preferido
-                          ? Icons.star_rounded
-                          : Icons.star_border_rounded,
-                      color: f.preferido ? ColoresApp.of(context).fiado : null,
+                    IconButton(
+                      key: Key('preferido_${f.clave}'),
+                      tooltip: 'Preferido',
+                      icon: Icon(
+                        f.preferido
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
+                        color: f.preferido
+                            ? ColoresApp.of(context).fiado
+                            : null,
+                      ),
+                      onPressed: () => _marcarPreferido(f),
                     ),
-                    onPressed: () => _marcarPreferido(f),
+                    IconButton(
+                      key: Key('quitar_proveedor_${f.clave}'),
+                      tooltip: 'Quitar',
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => _quitar(f),
+                    ),
+                  ],
+                ),
+              TextButton.icon(
+                key: const Key('boton_agregar_proveedor'),
+                onPressed: _cargando ? null : _agregarProveedor,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Agregar proveedor'),
+              ),
+              const SizedBox(height: 12),
+              _resumen(),
+            ]),
+            _tarjeta('EXISTENCIAS', [
+              SwitchListTile(
+                key: const Key('interruptor_existencias'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Controlar existencias'),
+                value: _controla,
+                onChanged: _cargando ? null : _cambiarControl,
+              ),
+              if (_controla &&
+                  _controlabaAlAbrir &&
+                  widget.producto != null) ...[
+                Text(
+                  'Hay ${ref.watch(existenciasProductoProvider(widget.producto!.id)).valueOrNull ?? 0} u',
+                  key: const Key('texto_existencias_producto'),
+                ),
+                TextButton(
+                  key: const Key('boton_ajustar_conteo_producto'),
+                  onPressed: () => mostrarHojaAjusteConteo(
+                    context,
+                    producto: widget.producto!,
                   ),
-                  IconButton(
-                    key: Key('quitar_proveedor_${f.clave}'),
-                    tooltip: 'Quitar',
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => _quitar(f),
+                  child: const Text('Ajustar conteo'),
+                ),
+              ],
+              if (_controla && !_controlabaAlAbrir) const SizedBox(height: 12),
+              if (_controla && !_controlabaAlAbrir)
+                TextField(
+                  key: const Key('campo_hay_ahora'),
+                  controller: _hayAhora,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Hay ahora',
+                    errorText: _errorHay,
                   ),
-                ],
-              ),
-            TextButton.icon(
-              key: const Key('boton_agregar_proveedor'),
-              onPressed: _cargando ? null : _agregarProveedor,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Agregar proveedor'),
-            ),
-            const SizedBox(height: 12),
-            _resumen(),
-          ]),
-          _tarjeta('EXISTENCIAS', [
-            SwitchListTile(
-              key: const Key('interruptor_existencias'),
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Controlar existencias'),
-              value: _controla,
-              onChanged: _cargando ? null : _cambiarControl,
-            ),
-            if (_controla && _controlabaAlAbrir && widget.producto != null) ...[
-              Text(
-                'Hay ${ref.watch(existenciasProductoProvider(widget.producto!.id)).valueOrNull ?? 0} u',
-                key: const Key('texto_existencias_producto'),
-              ),
-              TextButton(
-                key: const Key('boton_ajustar_conteo_producto'),
-                onPressed: () =>
-                    mostrarHojaAjusteConteo(context, producto: widget.producto!),
-                child: const Text('Ajustar conteo'),
-              ),
-            ],
-            if (_controla && !_controlabaAlAbrir) const SizedBox(height: 12),
-            if (_controla && !_controlabaAlAbrir)
-              TextField(
-                key: const Key('campo_hay_ahora'),
-                controller: _hayAhora,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Hay ahora',
-                  errorText: _errorHay,
+                ),
+              if (_controla) const SizedBox(height: 12),
+              if (_controla)
+                TextField(
+                  key: const Key('campo_minimo'),
+                  controller: _minimo,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Mínimo',
+                    errorText: _errorMinimo,
+                  ),
+                ),
+              if (_controla) const SizedBox(height: 12),
+              if (_controla)
+                TextField(
+                  key: const Key('campo_pedir_hasta'),
+                  controller: _pedirHasta,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Pedir hasta',
+                    errorText: _errorPedirHasta,
+                  ),
+                ),
+            ]),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: ColoresApp.of(context).sale),
                 ),
               ),
-            if (_controla) const SizedBox(height: 12),
-            if (_controla)
-              TextField(
-                key: const Key('campo_minimo'),
-                controller: _minimo,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Mínimo',
-                  errorText: _errorMinimo,
-                ),
-              ),
-            if (_controla) const SizedBox(height: 12),
-            if (_controla)
-              TextField(
-                key: const Key('campo_pedir_hasta'),
-                controller: _pedirHasta,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Pedir hasta',
-                  errorText: _errorPedirHasta,
-                ),
-              ),
-          ]),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                _error!,
-                style: TextStyle(color: ColoresApp.of(context).sale),
-              ),
+            const SizedBox(height: 24),
+            BotonPrincipal(
+              key: const Key('boton_guardar_producto'),
+              texto: 'Guardar',
+              onPressed: _guardando || _cargando ? null : _guardar,
             ),
-          const SizedBox(height: 24),
-          BotonPrincipal(
-            key: const Key('boton_guardar_producto'),
-            texto: 'Guardar',
-            onPressed: _guardando || _cargando ? null : _guardar,
-          ),
-        ],
+          ],
         ),
       ),
     );
@@ -725,8 +764,10 @@ class _HojaAgregarProveedorState extends ConsumerState<_HojaAgregarProveedor> {
         if (proveedor != null && !proveedor.activo) {
           final nombre = proveedor.nombre;
           if (mounted) {
-            setState(() => _error =
-                '$nombre está desactivado: reactívalo en Proveedores');
+            setState(
+              () => _error =
+                  '$nombre está desactivado: reactívalo en Proveedores',
+            );
           }
           return;
         }
