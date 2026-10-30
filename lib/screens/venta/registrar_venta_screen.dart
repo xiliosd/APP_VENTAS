@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/aviso_por_pedir_provider.dart';
+import '../../providers/consejos_provider.dart';
 import '../../providers/orden_productos_provider.dart';
 import '../../providers/productos_providers.dart';
 import '../../providers/repository_providers.dart';
@@ -10,6 +11,7 @@ import '../../providers/sesion_provider.dart';
 import '../../providers/ticket_provider.dart';
 import '../../repositories/venta_repository.dart';
 import '../../ui/avisos.dart';
+import '../../ui/boton_escanear.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
@@ -21,6 +23,7 @@ import '../../servicios/lector_codigo.dart';
 import '../../util/aviso_existencias.dart';
 import '../../util/busqueda_producto.dart';
 import '../configuracion/producto_screen.dart';
+import '../escaner/consejos_escaner.dart';
 import '../../util/catalogo_producto.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/interpretar_dictado.dart';
@@ -77,7 +80,14 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
   DateTime? _ultimaLectura;
 
   Future<void> _escanear() async {
-    final codigo = await ref.read(lectorCodigoProvider).leer(context);
+    // Tocar el botón con el consejo abierto lo da por entendido.
+    _consejo?.cerrar();
+    final codigo = await ref
+        .read(lectorCodigoProvider)
+        .leer(
+          context,
+          uso: widget.practica ? UsoEscaner.practica : UsoEscaner.venta,
+        );
     if (codigo == null || !mounted) return;
     await _usarCodigo(codigo);
   }
@@ -273,12 +283,27 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
   /// Globos de la venta de práctica (solo con [RegistrarVentaScreen.practica]).
   ControladorGlobos? _globos;
 
+  /// Consejo de primera vez sobre "Escanear código".
+  ControladorGlobos? _consejo;
+
   @override
   void initState() {
     super.initState();
     if (widget.dictarAlAbrir && !widget.practica) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _dictar();
+      });
+    }
+    // En la práctica ya hay guía, y al dictar el consejo estorbaría.
+    if (!widget.practica && !widget.dictarAlAbrir) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final vistos = ref.read(consejosVistosProvider);
+        if (vistos.contains(Consejo.escanearVenta)) return;
+        ref
+            .read(consejosVistosProvider.notifier)
+            .marcarVisto(Consejo.escanearVenta);
+        _consejo = mostrarConsejo(context, consejoEscanearVenta);
       });
     }
     if (widget.practica && widget.conGlobos) {
@@ -298,6 +323,7 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     // Cerrar la pantalla mientras escucha apaga el micrófono.
     _dictado?.detener();
     _globos?.cerrar();
+    _consejo?.cerrar();
     _busqueda.dispose();
     super.dispose();
   }
@@ -382,10 +408,7 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     final notifier = ref.read(ticketProvider.notifier);
     // En la práctica, la capa de globos pasa encima de la hoja.
     if (widget.practica && _globos?.indice == 1) _globos!.avanzar();
-    final forma = await mostrarHojaComoPaga(
-      context,
-      practica: widget.practica,
-    );
+    final forma = await mostrarHojaComoPaga(context, practica: widget.practica);
     if (!mounted) return;
     if (forma == null) {
       notifier.cambiarFiado(false);
@@ -425,21 +448,25 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       if (cliente != null) {
         clienteId =
             cliente.id ??
-            await ref.read(clienteRepositoryProvider).crearCliente(
-              nombre: cliente.nombre,
-              apellido: cliente.apellido,
-              telefono: cliente.telefono,
-            );
+            await ref
+                .read(clienteRepositoryProvider)
+                .crearCliente(
+                  nombre: cliente.nombre,
+                  apellido: cliente.apellido,
+                  telefono: cliente.telefono,
+                );
         // Con el id en el ticket, un reintento no vuelve a crear al cliente.
         if (cliente.id == null) {
-          ref.read(ticketProvider.notifier).elegirCliente(
-            ClienteTicket(
-              id: clienteId,
-              nombre: cliente.nombre,
-              apellido: cliente.apellido,
-              telefono: cliente.telefono,
-            ),
-          );
+          ref
+              .read(ticketProvider.notifier)
+              .elegirCliente(
+                ClienteTicket(
+                  id: clienteId,
+                  nombre: cliente.nombre,
+                  apellido: cliente.apellido,
+                  telefono: cliente.telefono,
+                ),
+              );
         }
       }
       final ventaRepo = ref.read(ventaRepositoryProvider);
@@ -524,8 +551,7 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
               productos,
               orden,
               vendidos: orden == OrdenProductos.masVendidos
-                  ? ref.watch(unidadesVendidasProvider).valueOrNull ??
-                        const {}
+                  ? ref.watch(unidadesVendidasProvider).valueOrNull ?? const {}
                   : const {},
             );
             final visibles = [
@@ -622,13 +648,6 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
               icon: const Icon(Icons.mic_rounded),
               onPressed: _oyendo == null ? _dictar : null,
             ),
-          if (!widget.practica)
-            IconButton(
-              key: const Key('boton_escanear_venta'),
-              tooltip: 'Escanear',
-              icon: const Icon(Icons.qr_code_scanner_rounded),
-              onPressed: _escanear,
-            ),
         ],
       ),
       body: Column(
@@ -676,6 +695,16 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
                 style: TextStyle(color: c.fiado, fontWeight: FontWeight.w700),
               ),
             ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: ObjetivoRecorrido(
+              id: 'boton_escanear_venta',
+              child: BotonEscanear(
+                key: const Key('boton_escanear_venta'),
+                onPressed: _escanear,
+              ),
+            ),
+          ),
           // Fijo arriba: sigue a la vista aunque se baje por la lista.
           if (conBuscador)
             Padding(

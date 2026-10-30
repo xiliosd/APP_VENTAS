@@ -30,36 +30,50 @@ void main() {
   tearDown(() => db.close());
 
   /// Monta [pantalla] en modo oscuro en una vista de 800×1600 dp.
-  Future<void> montarOscuro(WidgetTester tester, Widget pantalla,
-      {double escalaLetra = 1, String? pasoRecorrido}) async {
+  Future<void> montarOscuro(
+    WidgetTester tester,
+    Widget pantalla, {
+    double escalaLetra = 1,
+    String? pasoRecorrido,
+  }) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    SharedPreferences.setMockInitialValues(
-        pasoRecorrido == null ? {} : {'recorrido_paso': pasoRecorrido});
-    final container = await containerConSesion(db,
-        preferencias: await SharedPreferences.getInstance());
+    SharedPreferences.setMockInitialValues({
+      ...consejosVistos,
+      'recorrido_paso': ?pasoRecorrido,
+    });
+    final container = await containerConSesion(
+      db,
+      preferencias: await SharedPreferences.getInstance(),
+    );
     addTearDown(container.dispose);
     final productoId = await db
         .into(db.productos)
         .insert(ProductosCompanion.insert(nombre: 'Pan', precio: 2000));
-    await db.into(db.ventas).insert(VentasCompanion.insert(
-          monto: 2000,
-          fecha: DateTime.now(),
-          productoId: Value(productoId),
-          usuarioId: 1,
-        ));
-    await tester.pumpWidget(appDePrueba(
-      container,
-      tema: temaOscuro(),
-      inicio: Builder(
-        builder: (context) => MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(textScaler: TextScaler.linear(escalaLetra)),
-          child: pantalla,
+    await db
+        .into(db.ventas)
+        .insert(
+          VentasCompanion.insert(
+            monto: 2000,
+            fecha: DateTime.now(),
+            productoId: Value(productoId),
+            usuarioId: 1,
+          ),
+        );
+    await tester.pumpWidget(
+      appDePrueba(
+        container,
+        tema: temaOscuro(),
+        inicio: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(escalaLetra)),
+            child: pantalla,
+          ),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
   }
 
@@ -75,8 +89,12 @@ void main() {
     expect(find.byKey(const Key('barra_acciones_inicio')), findsOneWidget);
 
     for (final pestana in ['Fiado', 'Inventario', 'Historial', 'Ajustes']) {
-      await tester.tap(find.descendant(
-          of: find.byType(NavigationBar), matching: find.text(pestana)));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text(pestana),
+        ),
+      );
       await tester.pumpAndSettle();
       verificarOscuro(tester, find.byType(HomeScreen));
     }
@@ -102,8 +120,15 @@ void main() {
   });
 
   testWidgets('el PIN se dibuja en oscuro', (tester) async {
-    final usuario = (await db.into(db.usuarios).insertReturning(
-        UsuariosCompanion.insert(nombre: 'Luis', rol: 'vendedor', pinHash: 'x')));
+    final usuario = (await db
+        .into(db.usuarios)
+        .insertReturning(
+          UsuariosCompanion.insert(
+            nombre: 'Luis',
+            rol: 'vendedor',
+            pinHash: 'x',
+          ),
+        ));
     await montarOscuro(tester, IngresarPinScreen(usuario: usuario));
     verificarOscuro(tester, find.byType(IngresarPinScreen));
   });
@@ -137,18 +162,23 @@ void main() {
     final id = await db
         .into(db.clientes)
         .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
-    await db.into(db.ventas).insert(VentasCompanion.insert(
-          monto: 45000,
-          fecha: DateTime.now().subtract(const Duration(days: 40)),
-          esFiado: const Value(true),
-          clienteId: Value(id),
-          usuarioId: 1,
-        ));
+    await db
+        .into(db.ventas)
+        .insert(
+          VentasCompanion.insert(
+            monto: 45000,
+            fecha: DateTime.now().subtract(const Duration(days: 40)),
+            esFiado: const Value(true),
+            clienteId: Value(id),
+            usuarioId: 1,
+          ),
+        );
     return (db.select(db.clientes)..where((c) => c.id.equals(id))).getSingle();
   }
 
-  testWidgets('la lista de fiado se dibuja en oscuro y con letra grande',
-      (tester) async {
+  testWidgets('la lista de fiado se dibuja en oscuro y con letra grande', (
+    tester,
+  ) async {
     await montarOscuro(tester, const Scaffold(body: ListaFiadoScreen()));
     await deudor();
     await tester.pumpAndSettle();
@@ -157,8 +187,11 @@ void main() {
   });
 
   testWidgets('la lista de fiado con letra 1,6× no desborda', (tester) async {
-    await montarOscuro(tester, const Scaffold(body: ListaFiadoScreen()),
-        escalaLetra: 1.6);
+    await montarOscuro(
+      tester,
+      const Scaffold(body: ListaFiadoScreen()),
+      escalaLetra: 1.6,
+    );
     await deudor();
     await tester.pumpAndSettle();
     verificarOscuro(tester, find.byType(ListaFiadoScreen));
@@ -166,8 +199,15 @@ void main() {
 
   testWidgets('el detalle del cliente se dibuja en oscuro', (tester) async {
     // Un usuario antes del montaje, para poder crear la deuda antes.
-    await db.into(db.usuarios).insert(
-        UsuariosCompanion.insert(nombre: 'Luis', rol: 'vendedor', pinHash: 'x'));
+    await db
+        .into(db.usuarios)
+        .insert(
+          UsuariosCompanion.insert(
+            nombre: 'Luis',
+            rol: 'vendedor',
+            pinHash: 'x',
+          ),
+        );
     final cliente = await deudor();
     await montarOscuro(
       tester,
@@ -175,8 +215,9 @@ void main() {
         clienteConSaldo: ClienteConSaldo(
           cliente: cliente,
           saldo: 45000,
-          fechaDeudaMasAntigua:
-              DateTime.now().subtract(const Duration(days: 40)),
+          fechaDeudaMasAntigua: DateTime.now().subtract(
+            const Duration(days: 40),
+          ),
         ),
       ),
     );
@@ -193,12 +234,23 @@ void main() {
   });
 
   for (final escala in [1.0, 1.6]) {
-    testWidgets('el historial se dibuja en oscuro (letra $escala×)',
-        (tester) async {
-      await montarOscuro(tester, const Scaffold(body: HistorialScreen()),
-          escalaLetra: escala);
-      await db.into(db.gastos).insert(GastosCompanion.insert(
-          monto: 700, fecha: DateTime.now(), usuarioId: 1));
+    testWidgets('el historial se dibuja en oscuro (letra $escala×)', (
+      tester,
+    ) async {
+      await montarOscuro(
+        tester,
+        const Scaffold(body: HistorialScreen()),
+        escalaLetra: escala,
+      );
+      await db
+          .into(db.gastos)
+          .insert(
+            GastosCompanion.insert(
+              monto: 700,
+              fecha: DateTime.now(),
+              usuarioId: 1,
+            ),
+          );
       await tester.pumpAndSettle();
       verificarOscuro(tester, find.byType(HistorialScreen));
       expect(find.byKey(const Key('resumen_historial')), findsOneWidget);
