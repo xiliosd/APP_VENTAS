@@ -519,7 +519,10 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       if (!mounted) return;
       // Se lee antes del pop: el Deshacer vive más que esta pantalla.
       final avisoNotifier = ref.read(avisoPorPedirProvider.notifier);
-      if (avisos.isNotEmpty) avisoNotifier.mostrar(avisos);
+      try {
+        await avisoNotifier.trasVenta(avisos);
+      } catch (_) {}
+      if (!mounted) return;
       avisar(
         context,
         'Venta registrada · ${formatoMoneda(ticket.total)}',

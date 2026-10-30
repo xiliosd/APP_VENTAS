@@ -28,6 +28,19 @@ class AvisoPorPedirNotifier extends Notifier<List<AvisoExistencias>> {
       });
   }
 
+  /// Tras cobrar: suma los avisos nuevos y refresca la cantidad de los que ya
+  /// estaban abiertos (una segunda venta baja el número sin cruzar el mínimo).
+  /// Si recalcular falla se conserva la unión: el aviso puede tener un número
+  /// viejo, pero sigue siendo cierto que hay que pedir.
+  Future<void> trasVenta(List<AvisoExistencias> nuevos) async {
+    // Caso común de toda venta: nada que unir ni que refrescar, sin tocar la base.
+    if (nuevos.isEmpty && state.isEmpty) return;
+    mostrar(nuevos);
+    try {
+      await recalcular();
+    } catch (_) {}
+  }
+
   void cerrar() => state = const [];
 
   /// Tras deshacer una venta, quita los productos que ya no están en el mínimo.

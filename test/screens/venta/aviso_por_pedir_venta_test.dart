@@ -149,4 +149,21 @@ void main() {
     expect(await db.select(db.ventas).get(), isEmpty);
     expect(container.read(avisoPorPedirProvider), isEmpty);
   });
+
+  testWidgets('dos ventas seguidas: la franja muestra el número nuevo', (
+    tester,
+  ) async {
+    await abrirVenta(tester);
+    await cobrarUnProducto(tester);
+    expect(container.read(avisoPorPedirProvider).single.existencias, 5);
+
+    navegador.currentState!.push(
+      MaterialPageRoute(builder: (_) => const RegistrarVentaScreen()),
+    );
+    await tester.pumpAndSettle();
+    await cobrarUnProducto(tester);
+
+    final avisos = container.read(avisoPorPedirProvider);
+    expect(avisos.single.existencias, 4);
+  });
 }

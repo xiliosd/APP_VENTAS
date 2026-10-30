@@ -1,5 +1,8 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/aviso_por_pedir_provider.dart';
+import 'package:app_ventas/repositories/inventario_repository.dart';
+import 'package:app_ventas/repositories/producto_repository.dart';
+import 'package:app_ventas/repositories/venta_repository.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/util/aviso_existencias.dart';
 import 'package:drift/native.dart';
@@ -78,5 +81,74 @@ void main() {
         .map((a) => a.nombre)
         .toList();
     expect(nombres, ['Zumo', 'Coca', 'Pan']);
+  });
+  group('trasVenta', () {
+    late int productoId;
+
+    setUp(() async {
+      final usuario = container.read(sesionProvider).usuarioActivo!;
+      productoId = await ProductoRepository(db)
+          .guardarProducto(nombre: 'Arroz', precio: 1000);
+      // Conteo fechado una hora antes para que las ventas cuenten como posteriores.
+      await InventarioRepository(
+        db,
+        reloj: () => DateTime.now().subtract(const Duration(hours: 1)),
+      ).activarControl(productoId, cantidad: 6, minimo: 5, por: usuario);
+    });
+
+    Future<void> vender(int cantidad) async {
+      await VentaRepository(db).registrarVenta(
+        monto: 1000 * cantidad,
+        esFiado: false,
+        usuarioId: container.read(sesionProvider).usuarioActivo!.id,
+        lineas: [
+          LineaNueva(
+            productoId: productoId,
+            descripcion: 'Arroz',
+            precioUnitario: 1000,
+            cantidad: cantidad,
+          ),
+        ],
+      );
+    }
+
+    test('actualiza la cantidad de un aviso que ya estaba', () async {
+      final notifier = container.read(avisoPorPedirProvider.notifier);
+      final inventario = InventarioRepository(db);
+      var antes = await inventario.existenciasDe([productoId]);
+      await vender(2);
+      await notifier.trasVenta(await inventario.avisosTrasVenta(antes));
+      expect(container.read(avisoPorPedirProvider).single.existencias, 4);
+
+      antes = await inventario.existenciasDe([productoId]);
+      await vender(2);
+      // La segunda venta no cruza el mínimo: no hay avisos nuevos.
+      await notifier.trasVenta(await inventario.avisosTrasVenta(antes));
+      expect(container.read(avisoPorPedirProvider).single.existencias, 2);
+    });
+
+    test('quita los que ya no están en el mínimo', () async {
+      final notifier = container.read(avisoPorPedirProvider.notifier);
+      await vender(2);
+      await notifier.trasVenta([aviso(productoId, 'Arroz', 4)]);
+      expect(container.read(avisoPorPedirProvider), hasLength(1));
+
+      await InventarioRepository(db).activarControl(
+        productoId,
+        cantidad: 20,
+        minimo: 5,
+        por: container.read(sesionProvider).usuarioActivo!,
+      );
+      await notifier.trasVenta(const []);
+      expect(container.read(avisoPorPedirProvider), isEmpty);
+    });
+
+    test('sin avisos nuevos ni abiertos no consulta la base', () async {
+      final notifier = container.read(avisoPorPedirProvider.notifier);
+      await db.close();
+      await notifier.trasVenta(const []);
+      expect(container.read(avisoPorPedirProvider), isEmpty);
+      db = AppDatabase(NativeDatabase.memory());
+    });
   });
 }
