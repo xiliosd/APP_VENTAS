@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../repositories/fiado_repository.dart';
+import '../util/extracto_fiado.dart';
 import 'database_provider.dart';
 import 'repository_providers.dart';
 
@@ -32,4 +33,10 @@ final movimientosClienteProvider = FutureProvider.autoDispose
     .family<List<MovimientoFiado>, int>((ref, clienteId) {
   ref.watch(_cambiosFiadoProvider);
   return ref.watch(fiadoRepositoryProvider).movimientosCliente(clienteId);
+});
+
+final extractoClienteProvider =
+    FutureProvider.autoDispose.family<ExtractoFiado, int>((ref, clienteId) {
+  ref.watch(_cambiosFiadoProvider);
+  return ref.watch(fiadoRepositoryProvider).extractoCliente(clienteId);
 });

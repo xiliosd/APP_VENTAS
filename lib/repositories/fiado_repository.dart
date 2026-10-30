@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../data/database.dart';
+import '../util/extracto_fiado.dart';
 import '../util/fecha_util.dart';
 import '../util/nombre_cliente.dart';
 import 'correccion_repository.dart';
@@ -218,6 +219,27 @@ class FiadoRepository {
           ultimaCorreccion: correccionesPagos[p.id],
         ),
     ]..sort((a, b) => b.fecha.compareTo(a.fecha));
+  }
+
+  /// Extracto del cliente. Las correcciones reescriben monto y líneas en su
+  /// sitio, así que las filas actuales ya son los valores vigentes.
+  Future<ExtractoFiado> extractoCliente(int clienteId) async {
+    final movimientos = await movimientosCliente(clienteId);
+    final idsVentas = [
+      for (final m in movimientos)
+        if (m.tipo == TipoMovimientoFiado.venta && !m.anulado) m.id,
+    ];
+    final lineas = idsVentas.isEmpty
+        ? <LineaVenta>[]
+        : await (_db.select(_db.lineasVenta)
+              ..where((l) => l.ventaId.isIn(idsVentas))
+              ..orderBy([(l) => OrderingTerm.asc(l.id)]))
+            .get();
+    final porVenta = <int, List<LineaVenta>>{};
+    for (final l in lineas) {
+      porVenta.putIfAbsent(l.ventaId, () => []).add(l);
+    }
+    return armarExtracto(movimientos, porVenta);
   }
 
   /// Ventas fiadas y abonos no anulados hasta el cierre de [dia].
