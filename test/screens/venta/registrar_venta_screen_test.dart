@@ -38,10 +38,10 @@ void main() {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
-    await tester
-        .pumpWidget(appDePrueba(container, navegador: navegador));
+    await tester.pumpWidget(appDePrueba(container, navegador: navegador));
     navegador.currentState!.push(
-        MaterialPageRoute(builder: (_) => const RegistrarVentaScreen()));
+      MaterialPageRoute(builder: (_) => const RegistrarVentaScreen()),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -67,8 +67,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('tocar montos suma al ticket y solo Cobrar registra la venta',
-      (tester) async {
+  testWidgets('tocar montos suma al ticket y solo Cobrar registra la venta', (
+    tester,
+  ) async {
     await abrirVenta(tester);
 
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
@@ -97,8 +98,15 @@ void main() {
   });
 
   testWidgets('Deshacer elimina la venta recién registrada', (tester) async {
-    await db.into(db.ventas).insert(VentasCompanion.insert(
-        monto: 999, fecha: DateTime.now(), usuarioId: 1));
+    await db
+        .into(db.ventas)
+        .insert(
+          VentasCompanion.insert(
+            monto: 999,
+            fecha: DateTime.now(),
+            usuarioId: 1,
+          ),
+        );
     await abrirVenta(tester);
 
     await tester.tap(find.byKey(const Key('monto_rapido_2000')));
@@ -125,15 +133,20 @@ void main() {
     await tester.tap(find.byKey(const Key('boton_cliente_nuevo')));
     await tester.pumpAndSettle();
     await tester.enterText(
-        find.byKey(const Key('campo_nombre_cliente')), nombre);
+      find.byKey(const Key('campo_nombre_cliente')),
+      nombre,
+    );
     await tester.enterText(
-        find.byKey(const Key('campo_apellido_cliente')), apellido);
+      find.byKey(const Key('campo_apellido_cliente')),
+      apellido,
+    );
     await tester.tap(find.byKey(const Key('boton_continuar_cliente')));
     await tester.pumpAndSettle();
   }
 
-  testWidgets('fiado sin cliente no deja cobrar; con cliente nuevo sí',
-      (tester) async {
+  testWidgets('fiado sin cliente no deja cobrar; con cliente nuevo sí', (
+    tester,
+  ) async {
     await abrirVenta(tester);
 
     await tester.tap(find.byKey(const Key('monto_rapido_2000')));
@@ -154,8 +167,9 @@ void main() {
     expect(ventas.single.clienteId, clientes.single.id);
   });
 
-  testWidgets('elegir un cliente existente no crea un duplicado',
-      (tester) async {
+  testWidgets('elegir un cliente existente no crea un duplicado', (
+    tester,
+  ) async {
     final pedro = await db
         .into(db.clientes)
         .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
@@ -175,11 +189,12 @@ void main() {
     expect((await db.select(db.ventas).get()).single.clienteId, pedro);
   });
 
-  testWidgets('un ticket con un solo producto guarda el producto',
-      (tester) async {
-    final arepa = await db.into(db.productos).insert(
-          ProductosCompanion.insert(nombre: 'Arepa', precio: 3500),
-        );
+  testWidgets('un ticket con un solo producto guarda el producto', (
+    tester,
+  ) async {
+    final arepa = await db
+        .into(db.productos)
+        .insert(ProductosCompanion.insert(nombre: 'Arepa', precio: 3500));
     await abrirVenta(tester);
 
     await tester.tap(find.byKey(Key('producto_$arepa')));
@@ -193,9 +208,9 @@ void main() {
   });
 
   testWidgets('Ver ticket permite restar y quitar líneas', (tester) async {
-    final arepa = await db.into(db.productos).insert(
-          ProductosCompanion.insert(nombre: 'Arepa', precio: 3500),
-        );
+    final arepa = await db
+        .into(db.productos)
+        .insert(ProductosCompanion.insert(nombre: 'Arepa', precio: 3500));
     await abrirVenta(tester);
 
     await tester.tap(find.byKey(Key('producto_$arepa')));
@@ -236,59 +251,75 @@ void main() {
     navegador.currentState!.pop();
     await tester.pumpAndSettle();
     navegador.currentState!.push(
-        MaterialPageRoute(builder: (_) => const RegistrarVentaScreen()));
+      MaterialPageRoute(builder: (_) => const RegistrarVentaScreen()),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Agrega algo para cobrar'), findsOneWidget);
     expect(await db.select(db.ventas).get(), isEmpty);
   });
 
-  testWidgets('escribir el nombre sin elegir cliente no deja fiar',
-      (tester) async {
+  testWidgets('escribir el nombre sin elegir cliente no deja fiar', (
+    tester,
+  ) async {
     await abrirVenta(tester);
 
     await tester.tap(find.byKey(const Key('monto_rapido_1000')));
     await tester.pump();
     await abrirFiado(tester);
-    await tester.enterText(find.byKey(const Key('campo_cliente')), 'don pedro ');
+    await tester.enterText(
+      find.byKey(const Key('campo_cliente')),
+      'don pedro ',
+    );
     await tester.pump();
 
     expect(botonFiar(tester).onPressed, isNull);
   });
 
-  testWidgets('los productos no se desbordan con letra grande en celular pequeño',
-      (tester) async {
-    await db.into(db.productos).insert(
-        ProductosCompanion.insert(nombre: 'Arroz Diana libra', precio: 3800));
-    await db.into(db.productos).insert(
-        ProductosCompanion.insert(nombre: 'Pan', precio: 123456789));
-    await tester.pumpWidget(appDePrueba(container, navegador: navegador));
-    tester.view.physicalSize = const Size(720, 1560);
-    tester.view.devicePixelRatio = 2;
-    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
-    addTearDown(tester.view.reset);
-    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    navegador.currentState!.push(
-        MaterialPageRoute(builder: (_) => const RegistrarVentaScreen()));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'los productos no se desbordan con letra grande en celular pequeño',
+    (tester) async {
+      await db
+          .into(db.productos)
+          .insert(
+            ProductosCompanion.insert(
+              nombre: 'Arroz Diana libra',
+              precio: 3800,
+            ),
+          );
+      await db
+          .into(db.productos)
+          .insert(ProductosCompanion.insert(nombre: 'Pan', precio: 123456789));
+      await tester.pumpWidget(appDePrueba(container, navegador: navegador));
+      tester.view.physicalSize = const Size(720, 1560);
+      tester.view.devicePixelRatio = 2;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      navegador.currentState!.push(
+        MaterialPageRoute(builder: (_) => const RegistrarVentaScreen()),
+      );
+      await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-  });
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('en un celular de 360 dp "Ver ticket" se lee completo',
-      (tester) async {
+  testWidgets('en un celular de 360 dp "Ver ticket" se lee completo', (
+    tester,
+  ) async {
     await abrirVenta(tester);
     tester.view.physicalSize = const Size(720, 1560);
     tester.view.devicePixelRatio = 2;
     await tester.pumpAndSettle();
 
-    final texto =
-        tester.renderObject<RenderParagraph>(find.text('Ver ticket'));
+    final texto = tester.renderObject<RenderParagraph>(find.text('Ver ticket'));
     expect(texto.didExceedMaxLines, isFalse);
   });
 
-  testWidgets('Transferencia: el QR se muestra y Recibido guarda la venta',
-      (tester) async {
+  testWidgets('Transferencia: el QR se muestra y Recibido guarda la venta', (
+    tester,
+  ) async {
     await ConfiguracionRepository(db).guardarImagenQr(pngDePrueba);
     await abrirVenta(tester);
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
@@ -306,8 +337,9 @@ void main() {
     expect(find.text(r'Venta registrada · $5.000'), findsOneWidget);
   });
 
-  testWidgets('Cancelar en el QR no guarda y deja el ticket igual',
-      (tester) async {
+  testWidgets('Cancelar en el QR no guarda y deja el ticket igual', (
+    tester,
+  ) async {
     await abrirVenta(tester);
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
     await tester.pump();
@@ -320,8 +352,9 @@ void main() {
     expect(find.text(r'Cobrar $5.000'), findsOneWidget);
   });
 
-  testWidgets('volver atrás desde el QR no guarda y deja el ticket igual',
-      (tester) async {
+  testWidgets('volver atrás desde el QR no guarda y deja el ticket igual', (
+    tester,
+  ) async {
     await abrirVenta(tester);
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
     await tester.pump();
@@ -335,8 +368,9 @@ void main() {
     expect(find.byKey(const Key('boton_cobrar')), findsOneWidget);
   });
 
-  testWidgets('Nueva venta ya no muestra selectores de pago arriba',
-      (tester) async {
+  testWidgets('Nueva venta ya no muestra selectores de pago arriba', (
+    tester,
+  ) async {
     await abrirVenta(tester);
     expect(find.byKey(const Key('selector_tipo_venta')), findsNothing);
     expect(find.byKey(const Key('selector_medio_pago')), findsNothing);
@@ -348,15 +382,18 @@ void main() {
     await tester.pump();
     await cobrarCon(tester, 'pago_efectivo');
 
-    expect((await db.select(db.ventas).get()).single.medioPago,
-        MedioPago.efectivo);
+    expect(
+      (await db.select(db.ventas).get()).single.medioPago,
+      MedioPago.efectivo,
+    );
   });
 
-  testWidgets('cobrar un ticket guarda una línea por producto o monto',
-      (tester) async {
-    final arepa = await db.into(db.productos).insert(
-          ProductosCompanion.insert(nombre: 'Arepa', precio: 3500),
-        );
+  testWidgets('cobrar un ticket guarda una línea por producto o monto', (
+    tester,
+  ) async {
+    final arepa = await db
+        .into(db.productos)
+        .insert(ProductosCompanion.insert(nombre: 'Arepa', precio: 3500));
     await abrirVenta(tester);
 
     await tester.tap(find.byKey(Key('producto_$arepa')));
@@ -379,9 +416,9 @@ void main() {
   });
 
   testWidgets('Deshacer no deja líneas huérfanas', (tester) async {
-    final arepa = await db.into(db.productos).insert(
-          ProductosCompanion.insert(nombre: 'Arepa', precio: 3500),
-        );
+    final arepa = await db
+        .into(db.productos)
+        .insert(ProductosCompanion.insert(nombre: 'Arepa', precio: 3500));
     await abrirVenta(tester);
 
     await tester.tap(find.byKey(Key('producto_$arepa')));
@@ -406,8 +443,9 @@ void main() {
 
   const siete = ['Café', 'Pan', 'Leche', 'Arroz', 'Huevos', 'Azúcar', 'Sal'];
 
-  testWidgets('el buscador filtra sin importar tildes y mayúsculas',
-      (tester) async {
+  testWidgets('el buscador filtra sin importar tildes y mayúsculas', (
+    tester,
+  ) async {
     await crearProductos(siete);
     await abrirVenta(tester);
     await tester.enterText(find.byKey(const Key('buscador_productos')), 'CAFE');
@@ -438,8 +476,9 @@ void main() {
     expect(find.text('Pan'), findsOneWidget);
   });
 
-  testWidgets('con muchos productos el buscador sigue a la vista al bajar',
-      (tester) async {
+  testWidgets('con muchos productos el buscador sigue a la vista al bajar', (
+    tester,
+  ) async {
     await crearProductos([for (var i = 0; i < 40; i++) 'Producto $i']);
     await abrirVenta(tester);
     await tester.drag(find.text('Producto 0'), const Offset(0, -1500));
@@ -448,8 +487,10 @@ void main() {
     expect(buscador, findsOneWidget);
     expect(tester.getRect(buscador).top, greaterThanOrEqualTo(0));
     // La lista bajó por debajo del buscador, que se quedó arriba.
-    expect(tester.getRect(find.text('Producto 0')).bottom,
-        lessThan(tester.getRect(buscador).bottom));
+    expect(
+      tester.getRect(find.text('Producto 0')).bottom,
+      lessThan(tester.getRect(buscador).bottom),
+    );
     await tester.enterText(buscador, 'producto 3');
     await tester.pump();
     expect(find.text('Producto 3'), findsOneWidget);
@@ -468,29 +509,40 @@ void main() {
     expect(find.byKey(const Key('borrar_busqueda')), findsNothing);
   });
 
-  testWidgets('el − del mosaico resta y en 1 muestra la caneca y lo quita',
-      (tester) async {
+  testWidgets('el − del mosaico resta y en 1 muestra la caneca y lo quita', (
+    tester,
+  ) async {
     await crearProductos(['Pan']);
     await abrirVenta(tester);
     final pan = find.byKey(const Key('producto_1'));
     Finder restar() => find.descendant(
-        of: pan, matching: find.byKey(const Key('restar_mosaico')));
+      of: pan,
+      matching: find.byKey(const Key('restar_mosaico')),
+    );
     expect(restar(), findsNothing);
 
     await tester.tap(find.text('Pan'));
     await tester.tap(find.text('Pan'));
     await tester.pumpAndSettle();
     expect(find.descendant(of: pan, matching: find.text('2')), findsOneWidget);
-    expect(find.descendant(of: restar(), matching: find.byIcon(Icons.remove_rounded)),
-        findsOneWidget);
+    expect(
+      find.descendant(
+        of: restar(),
+        matching: find.byIcon(Icons.remove_rounded),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(restar());
     await tester.pumpAndSettle();
     expect(find.descendant(of: pan, matching: find.text('1')), findsOneWidget);
     expect(
-        find.descendant(
-            of: restar(), matching: find.byIcon(Icons.delete_outline_rounded)),
-        findsOneWidget);
+      find.descendant(
+        of: restar(),
+        matching: find.byIcon(Icons.delete_outline_rounded),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(restar());
     await tester.pumpAndSettle();
@@ -504,8 +556,9 @@ void main() {
     expect(find.byKey(const Key('buscador_productos')), findsNothing);
   });
 
-  testWidgets('la hoja ofrece Efectivo, Transferencia y Fiado con el total',
-      (tester) async {
+  testWidgets('la hoja ofrece Efectivo, Transferencia y Fiado con el total', (
+    tester,
+  ) async {
     await abrirVenta(tester);
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
     await tester.pump();
@@ -519,8 +572,9 @@ void main() {
     }
   });
 
-  testWidgets('cerrar la hoja tras escoger Fiado deja el ticket de contado',
-      (tester) async {
+  testWidgets('cerrar la hoja tras escoger Fiado deja el ticket de contado', (
+    tester,
+  ) async {
     await abrirVenta(tester);
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
     await tester.pump();
@@ -537,20 +591,26 @@ void main() {
     expect(venta.clienteId, isNull);
   });
 
-  testWidgets('doble toque en Efectivo registra una sola venta', (tester) async {
+  testWidgets('doble toque en Efectivo registra una sola venta', (
+    tester,
+  ) async {
     await abrirVenta(tester);
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('boton_cobrar')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pago_efectivo')));
-    await tester.tap(find.byKey(const Key('pago_efectivo')), warnIfMissed: false);
+    await tester.tap(
+      find.byKey(const Key('pago_efectivo')),
+      warnIfMissed: false,
+    );
     await tester.pumpAndSettle();
     expect(await db.select(db.ventas).get(), hasLength(1));
   });
 
-  testWidgets('al escoger Fiado la hoja deja solo el cliente y Fiar',
-      (tester) async {
+  testWidgets('al escoger Fiado la hoja deja solo el cliente y Fiar', (
+    tester,
+  ) async {
     await abrirVenta(tester);
     await tester.tap(find.byKey(const Key('monto_rapido_5000')));
     await tester.pump();
@@ -561,15 +621,21 @@ void main() {
     expect(find.byKey(const Key('boton_fiar')), findsOneWidget);
   });
 
-  Future<void> abrirVentaCon(WidgetTester tester,
-      {required List<String?> codigos,
-      DatosProducto? datos,
-      String rol = 'admin'}) async {
+  Future<void> abrirVentaCon(
+    WidgetTester tester, {
+    required List<String?> codigos,
+    DatosProducto? datos,
+    String rol = 'admin',
+  }) async {
     container.dispose();
-    container = await containerConSesion(db, rol: rol, overrides: [
-      lectorCodigoProvider.overrideWithValue(LectorFalso(codigos)),
-      consultaProductoProvider.overrideWithValue(_Consulta(datos)),
-    ]);
+    container = await containerConSesion(
+      db,
+      rol: rol,
+      overrides: [
+        lectorCodigoProvider.overrideWithValue(LectorFalso(codigos)),
+        consultaProductoProvider.overrideWithValue(_Consulta(datos)),
+      ],
+    );
     await abrirVenta(tester);
   }
 
@@ -578,115 +644,155 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('escanear un producto conocido lo suma al ticket', (tester) async {
+  testWidgets('escanear un producto conocido lo suma al ticket', (
+    tester,
+  ) async {
     final id = await ProductoRepository(db).guardarProducto(
-        nombre: 'Gaseosa',
-        precio: 4500,
-        detalles: const DetallesProducto(codigoBarras: '7702'));
+      nombre: 'Gaseosa',
+      precio: 4500,
+      detalles: const DetallesProducto(codigoBarras: '7702'),
+    );
     await abrirVentaCon(tester, codigos: ['7702']);
     await escanear(tester);
     expect(container.read(ticketProvider).cantidadDe('p$id'), 1);
     expect(find.text('Gaseosa agregado'), findsOneWidget);
   });
 
-  testWidgets('el mismo código dos veces seguidas solo suma uno',
-      (tester) async {
+  testWidgets('el mismo código dos veces seguidas solo suma uno', (
+    tester,
+  ) async {
     final id = await ProductoRepository(db).guardarProducto(
-        nombre: 'Gaseosa',
-        precio: 4500,
-        detalles: const DetallesProducto(codigoBarras: '7702'));
+      nombre: 'Gaseosa',
+      precio: 4500,
+      detalles: const DetallesProducto(codigoBarras: '7702'),
+    );
     await abrirVentaCon(tester, codigos: ['7702', '7702']);
     await escanear(tester);
     await escanear(tester);
     expect(container.read(ticketProvider).cantidadDe('p$id'), 1);
   });
 
-  testWidgets('un código desconocido abre la hoja, pide precio y lo agrega',
-      (tester) async {
-    await abrirVentaCon(tester,
-        codigos: ['7702'],
-        datos: const DatosProducto(
-            nombre: 'Gaseosa Colombiana', marca: 'Postobón', tipo: 'bebidas'));
+  testWidgets('un código desconocido abre la hoja, pide precio y lo agrega', (
+    tester,
+  ) async {
+    await abrirVentaCon(
+      tester,
+      codigos: ['7702'],
+      datos: const DatosProducto(
+        nombre: 'Gaseosa Colombiana',
+        marca: 'Postobón',
+        tipo: 'bebidas',
+      ),
+    );
     await escanear(tester);
     expect(find.byKey(const Key('hoja_producto_rapido')), findsOneWidget);
     expect(
-        tester
-            .widget<TextField>(find.byKey(const Key('campo_nombre_rapido')))
-            .controller!
-            .text,
-        'Gaseosa Colombiana');
+      tester
+          .widget<TextField>(find.byKey(const Key('campo_nombre_rapido')))
+          .controller!
+          .text,
+      'Gaseosa Colombiana',
+    );
     await tester.tap(find.byKey(const Key('boton_guardar_producto_rapido')));
     await tester.pumpAndSettle();
     expect(find.text('Escribe un precio válido'), findsOneWidget);
-    await tester.enterText(find.byKey(const Key('campo_precio_rapido')), '4.500');
+    await tester.enterText(
+      find.byKey(const Key('campo_precio_rapido')),
+      '4.500',
+    );
     await tester.tap(find.byKey(const Key('boton_guardar_producto_rapido')));
     await tester.pumpAndSettle();
 
     final p = await db.select(db.productos).getSingle();
-    expect((p.nombre, p.precio, p.codigoBarras, p.marca, p.tipo),
-        ('Gaseosa Colombiana', 4500, '7702', 'Postobón', 'bebidas'));
+    expect(
+      (p.nombre, p.precio, p.codigoBarras, p.marca, p.tipo),
+      ('Gaseosa Colombiana', 4500, '7702', 'Postobón', 'bebidas'),
+    );
     expect(container.read(ticketProvider).cantidadDe('p${p.id}'), 1);
   });
 
-  testWidgets('un vendedor también puede crear el producto escaneado',
-      (tester) async {
+  testWidgets('un vendedor también puede crear el producto escaneado', (
+    tester,
+  ) async {
     await abrirVentaCon(tester, codigos: ['555'], rol: 'vendedor');
     await escanear(tester);
-    await tester.enterText(find.byKey(const Key('campo_nombre_rapido')), 'Arepa');
-    await tester.enterText(find.byKey(const Key('campo_precio_rapido')), '2.000');
+    await tester.enterText(
+      find.byKey(const Key('campo_nombre_rapido')),
+      'Arepa',
+    );
+    await tester.enterText(
+      find.byKey(const Key('campo_precio_rapido')),
+      '2.000',
+    );
     await tester.tap(find.byKey(const Key('boton_guardar_producto_rapido')));
     await tester.pumpAndSettle();
     expect((await db.select(db.productos).getSingle()).codigoBarras, '555');
   });
 
-  testWidgets('un código de un producto inactivo avisa y no crea otro',
-      (tester) async {
+  testWidgets('un código de un producto inactivo avisa y no crea otro', (
+    tester,
+  ) async {
     final repo = ProductoRepository(db);
     final id = await repo.guardarProducto(
-        nombre: 'Pan viejo',
-        precio: 500,
-        detalles: const DetallesProducto(codigoBarras: '123'));
+      nombre: 'Pan viejo',
+      precio: 500,
+      detalles: const DetallesProducto(codigoBarras: '123'),
+    );
     await repo.desactivarProducto(id);
     await abrirVentaCon(tester, codigos: ['123']);
     await escanear(tester);
     expect(find.byKey(const Key('hoja_producto_rapido')), findsNothing);
-    expect(find.text('Ese código es de Pan viejo (inactivo). Reactívalo en '
-        'Productos'), findsOneWidget);
+    expect(
+      find.text(
+        'Ese código es de Pan viejo (inactivo). Reactívalo en '
+        'Productos',
+      ),
+      findsOneWidget,
+    );
     expect((await db.select(db.productos).get()).length, 1);
   });
 
-  testWidgets('código exacto + Enter en el buscador agrega el producto',
-      (tester) async {
+  testWidgets('código exacto + Enter en el buscador agrega el producto', (
+    tester,
+  ) async {
     await crearProductos(siete);
     final id = await ProductoRepository(db).guardarProducto(
-        nombre: 'Gaseosa',
-        precio: 4500,
-        detalles: const DetallesProducto(codigoBarras: '7702'));
+      nombre: 'Gaseosa',
+      precio: 4500,
+      detalles: const DetallesProducto(codigoBarras: '7702'),
+    );
     await abrirVenta(tester);
-    await tester.enterText(find.byKey(const Key('buscador_productos')), '7702\n');
+    await tester.enterText(
+      find.byKey(const Key('buscador_productos')),
+      '7702\n',
+    );
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
     expect(container.read(ticketProvider).cantidadDe('p$id'), 1);
     expect(
-        tester
-            .widget<TextField>(find.byKey(const Key('buscador_productos')))
-            .controller!
-            .text,
-        '');
+      tester
+          .widget<TextField>(find.byKey(const Key('buscador_productos')))
+          .controller!
+          .text,
+      '',
+    );
   });
 
-  testWidgets('los chips de tipo filtran y el mosaico muestra el tamaño',
-      (tester) async {
+  testWidgets('los chips de tipo filtran y el mosaico muestra el tamaño', (
+    tester,
+  ) async {
     await crearProductos(siete);
     final repo = ProductoRepository(db);
     final coca = await repo.guardarProducto(
-        nombre: 'Gaseosa',
-        precio: 4500,
-        detalles: const DetallesProducto(tipo: 'bebidas', tamano: '1,5 L'));
+      nombre: 'Gaseosa',
+      precio: 4500,
+      detalles: const DetallesProducto(tipo: 'bebidas', tamano: '1,5 L'),
+    );
     await repo.guardarProducto(
-        nombre: 'Yogur',
-        precio: 2500,
-        detalles: const DetallesProducto(tipo: 'lacteos'));
+      nombre: 'Yogur',
+      precio: 2500,
+      detalles: const DetallesProducto(tipo: 'lacteos'),
+    );
     await abrirVenta(tester);
     expect(find.text(r'1,5 L · $4.500'), findsOneWidget);
     await tester.tap(find.byKey(const Key('filtro_tipo_venta_bebidas')));
@@ -696,14 +802,16 @@ void main() {
     expect(find.text('Pan'), findsNothing);
   });
 
-
-  testWidgets('en la venta de práctica hay botón de escanear',
-      (tester) async {
+  testWidgets('en la venta de práctica hay botón de escanear', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(appDePrueba(container,
-        inicio: const RegistrarVentaScreen(practica: true, conGlobos: false)));
+    await tester.pumpWidget(
+      appDePrueba(
+        container,
+        inicio: const RegistrarVentaScreen(practica: true, conGlobos: false),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('boton_escanear_venta')), findsOneWidget);
   });

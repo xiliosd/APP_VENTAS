@@ -28,11 +28,12 @@ Future<ProviderContainer> containerConSesion(
     SharedPreferences.setMockInitialValues({...consejosVistos});
     preferencias = await SharedPreferences.getInstance();
   }
-  final id = await db.into(db.usuarios).insert(
-        UsuariosCompanion.insert(nombre: nombre, rol: rol, pinHash: 'x'),
-      );
-  final usuario =
-      await (db.select(db.usuarios)..where((u) => u.id.equals(id))).getSingle();
+  final id = await db
+      .into(db.usuarios)
+      .insert(UsuariosCompanion.insert(nombre: nombre, rol: rol, pinHash: 'x'));
+  final usuario = await (db.select(
+    db.usuarios,
+  )..where((u) => u.id.equals(id))).getSingle();
   final container = ProviderContainer(
     overrides: [
       databaseProvider.overrideWithValue(db),
@@ -40,8 +41,9 @@ Future<ProviderContainer> containerConSesion(
       ...overrides,
     ],
   );
-  container.read(sesionProvider.notifier).state =
-      SesionState(usuarioActivo: usuario);
+  container.read(sesionProvider.notifier).state = SesionState(
+    usuarioActivo: usuario,
+  );
   return container;
 }
 
@@ -57,6 +59,9 @@ Widget appDePrueba(
   return UncontrolledProviderScope(
     container: container,
     child: MaterialApp(
-        theme: tema ?? temaClaro(), navigatorKey: navegador, home: inicio),
+      theme: tema ?? temaClaro(),
+      navigatorKey: navegador,
+      home: inicio,
+    ),
   );
 }

@@ -9,8 +9,11 @@ import 'objetivo_recorrido.dart';
 /// llama a [ControladorGlobos.avanzar], y el toque en el hueco llega al
 /// elemento.
 class PasoGlobo {
-  const PasoGlobo(
-      {required this.objetivos, required this.texto, this.deAccion = false});
+  const PasoGlobo({
+    required this.objetivos,
+    required this.texto,
+    this.deAccion = false,
+  });
 
   final List<String> objetivos;
   final String texto;
@@ -18,10 +21,18 @@ class PasoGlobo {
 }
 
 /// Muestra los globos [pasos] encima de todo y devuelve su controlador.
-ControladorGlobos mostrarGlobos(BuildContext context, List<PasoGlobo> pasos,
-    {VoidCallback? onTerminar, VoidCallback? onSaltar}) {
-  final ctrl = ControladorGlobos._(Overlay.of(context, rootOverlay: true),
-      pasos, onTerminar, onSaltar);
+ControladorGlobos mostrarGlobos(
+  BuildContext context,
+  List<PasoGlobo> pasos, {
+  VoidCallback? onTerminar,
+  VoidCallback? onSaltar,
+}) {
+  final ctrl = ControladorGlobos._(
+    Overlay.of(context, rootOverlay: true),
+    pasos,
+    onTerminar,
+    onSaltar,
+  );
   ctrl._mostrar();
   return ctrl;
 }
@@ -30,15 +41,24 @@ ControladorGlobos mostrarGlobos(BuildContext context, List<PasoGlobo> pasos,
 /// "Entendido" para cerrarlo, y el toque en el hueco llega al elemento.
 ControladorGlobos mostrarConsejo(BuildContext context, PasoGlobo paso) {
   final ctrl = ControladorGlobos._(
-      Overlay.of(context, rootOverlay: true), [paso], null, null,
-      esConsejo: true);
+    Overlay.of(context, rootOverlay: true),
+    [paso],
+    null,
+    null,
+    esConsejo: true,
+  );
   ctrl._mostrar();
   return ctrl;
 }
 
 class ControladorGlobos {
-  ControladorGlobos._(this._overlay, this._pasos, this._onTerminar, this._onSaltar,
-      {this.esConsejo = false});
+  ControladorGlobos._(
+    this._overlay,
+    this._pasos,
+    this._onTerminar,
+    this._onSaltar, {
+    this.esConsejo = false,
+  });
 
   final bool esConsejo;
 
@@ -77,9 +97,11 @@ class ControladorGlobos {
         return;
       }
       final objetivo = _contexto(_pasos[_indice])!;
-      await Scrollable.ensureVisible(objetivo,
-          alignment: 0.5,
-          duration: Movimiento.duracion(objetivo, Movimiento.media));
+      await Scrollable.ensureVisible(
+        objetivo,
+        alignment: 0.5,
+        duration: Movimiento.duracion(objetivo, Movimiento.media),
+      );
       if (_cerrado || _entrada != null) return;
       final paso = _pasos[_indice];
       final esUltimo = _indice == _pasos.length - 1;
@@ -190,8 +212,10 @@ class _CapaGlobosState extends State<CapaGlobos> {
     final hueco = _hueco;
     final ancho = (pantalla.width - 32).clamp(0.0, 320.0);
     final centroX = hueco?.center.dx ?? pantalla.width / 2;
-    final izquierda =
-        (centroX - ancho / 2).clamp(16.0, pantalla.width - 16 - ancho);
+    final izquierda = (centroX - ancho / 2).clamp(
+      16.0,
+      pantalla.width - 16 - ancho,
+    );
     final arriba = hueco != null && hueco.top > pantalla.height - hueco.bottom;
 
     final burbuja = TweenAnimationBuilder<double>(
@@ -214,8 +238,10 @@ class _CapaGlobosState extends State<CapaGlobos> {
                 liveRegion: true,
                 child: Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: Text(widget.paso.texto,
-                      style: TextStyle(fontSize: 16, color: c.texto)),
+                  child: Text(
+                    widget.paso.texto,
+                    style: TextStyle(fontSize: 16, color: c.texto),
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -280,8 +306,12 @@ class _CapaGlobosState extends State<CapaGlobos> {
 /// Oscurece toda la pantalla salvo [hueco]. Absorbe los toques fuera del
 /// hueco; dentro, los deja pasar solo si [dejaPasar] (globos de acción).
 class _Velo extends LeafRenderObjectWidget {
-  const _Velo(
-      {super.key, required this.hueco, required this.color, required this.dejaPasar});
+  const _Velo({
+    super.key,
+    required this.hueco,
+    required this.color,
+    required this.dejaPasar,
+  });
 
   final Rect? hueco;
   final Color color;
@@ -346,10 +376,12 @@ class _RenderVelo extends RenderBox {
         : Path.combine(
             PathOperation.difference,
             todo,
-            Path()
-              ..addRRect(RRect.fromRectAndRadius(
-                  hueco.shift(offset - localToGlobal(Offset.zero)),
-                  const Radius.circular(18))),
+            Path()..addRRect(
+              RRect.fromRectAndRadius(
+                hueco.shift(offset - localToGlobal(Offset.zero)),
+                const Radius.circular(18),
+              ),
+            ),
           );
     context.canvas.drawPath(camino, Paint()..color = _color);
   }
