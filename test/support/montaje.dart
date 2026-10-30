@@ -7,9 +7,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Consejos de primera vez ya vistos: así no tapan las pantallas en las
+/// pruebas que no hablan de ellos.
+const consejosVistos = {
+  'consejo_visto_escanearVenta': true,
+  'consejo_visto_escanearProducto': true,
+};
+
 /// Crea un usuario en [db] y devuelve un ProviderContainer con esa base y la
 /// sesión de ese usuario activa. Quien llama debe hacer `container.dispose`.
-/// Sin [preferencias] usa unas vacías (como un celular recién instalado).
+/// Sin [preferencias] usa unas con los consejos ya vistos.
 Future<ProviderContainer> containerConSesion(
   AppDatabase db, {
   String nombre = 'Ana',
@@ -18,7 +25,7 @@ Future<ProviderContainer> containerConSesion(
   SharedPreferences? preferencias,
 }) async {
   if (preferencias == null) {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({...consejosVistos});
     preferencias = await SharedPreferences.getInstance();
   }
   final id = await db.into(db.usuarios).insert(

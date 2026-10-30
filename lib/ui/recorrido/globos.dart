@@ -26,8 +26,21 @@ ControladorGlobos mostrarGlobos(BuildContext context, List<PasoGlobo> pasos,
   return ctrl;
 }
 
+/// Muestra un consejo de un solo paso: sin "Saltar recorrido", con
+/// "Entendido" para cerrarlo, y el toque en el hueco llega al elemento.
+ControladorGlobos mostrarConsejo(BuildContext context, PasoGlobo paso) {
+  final ctrl = ControladorGlobos._(
+      Overlay.of(context, rootOverlay: true), [paso], null, null,
+      esConsejo: true);
+  ctrl._mostrar();
+  return ctrl;
+}
+
 class ControladorGlobos {
-  ControladorGlobos._(this._overlay, this._pasos, this._onTerminar, this._onSaltar);
+  ControladorGlobos._(this._overlay, this._pasos, this._onTerminar, this._onSaltar,
+      {this.esConsejo = false});
+
+  final bool esConsejo;
 
   final OverlayState _overlay;
   final List<PasoGlobo> _pasos;
@@ -76,6 +89,7 @@ class ControladorGlobos {
           esUltimo: esUltimo,
           onSiguiente: avanzar,
           onSaltar: saltar,
+          esConsejo: esConsejo,
         ),
       );
       _overlay.insert(_entrada!);
@@ -124,12 +138,16 @@ class CapaGlobos extends StatefulWidget {
     required this.esUltimo,
     required this.onSiguiente,
     required this.onSaltar,
+    this.esConsejo = false,
   });
 
   final PasoGlobo paso;
   final bool esUltimo;
   final VoidCallback onSiguiente;
   final VoidCallback onSaltar;
+
+  /// Consejo de primera vez: un solo paso, se cierra con "Entendido".
+  final bool esConsejo;
 
   @override
   State<CapaGlobos> createState() => _CapaGlobosState();
@@ -205,12 +223,19 @@ class _CapaGlobosState extends State<CapaGlobos> {
                 alignment: WrapAlignment.spaceBetween,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  TextButton(
-                    key: const Key('boton_saltar_recorrido'),
-                    onPressed: widget.onSaltar,
-                    child: const Text('Saltar recorrido'),
-                  ),
-                  if (!widget.paso.deAccion)
+                  if (widget.esConsejo)
+                    FilledButton(
+                      key: const Key('boton_entendido_consejo'),
+                      onPressed: widget.onSiguiente,
+                      child: const Text('Entendido'),
+                    )
+                  else
+                    TextButton(
+                      key: const Key('boton_saltar_recorrido'),
+                      onPressed: widget.onSaltar,
+                      child: const Text('Saltar recorrido'),
+                    ),
+                  if (!widget.paso.deAccion && !widget.esConsejo)
                     FilledButton(
                       key: const Key('boton_siguiente_globo'),
                       onPressed: widget.onSiguiente,
@@ -232,7 +257,7 @@ class _CapaGlobosState extends State<CapaGlobos> {
             key: const Key('velo_recorrido'),
             hueco: hueco,
             color: c.velo,
-            dejaPasar: widget.paso.deAccion,
+            dejaPasar: widget.paso.deAccion || widget.esConsejo,
           ),
         ),
         Positioned(
