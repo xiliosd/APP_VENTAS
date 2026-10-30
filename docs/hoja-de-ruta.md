@@ -49,6 +49,8 @@ Actualizada: 2026-10-26. Cada fase pasa por especificación (`docs/superpowers/s
 
 ## Después
 
+- Consultar precio por código de barras — escanear el código de barras de un producto para ver
+  su precio sin agregarlo a una venta; requiere especificación y plan antes de programarse.
 - Monetización sin cobrarle al tendero (ideas presentadas el 2026-10-13): pedido digital al
   distribuidor (recomendado para empezar), promociones de marca, crédito y pagos con
   bancos/billeteras, recargas y pagos de servicios, datos agregados a escala; requiere
