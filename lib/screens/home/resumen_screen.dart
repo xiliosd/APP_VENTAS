@@ -21,13 +21,17 @@ import '../../widgets/selector_fecha.dart';
 import '../gasto/registrar_gasto_screen.dart';
 import '../reportes/reportes_screen.dart';
 import '../venta/registrar_venta_screen.dart';
+import 'franja_por_pedir.dart';
 import 'mini_grafica_semana.dart';
 
 class ResumenScreen extends ConsumerStatefulWidget {
-  const ResumenScreen({super.key, this.onVerFiado});
+  const ResumenScreen({super.key, this.onVerFiado, this.onVerPorPedir});
 
   /// Se llama al tocar "Por cobrar" (la estructura principal abre Fiado).
   final VoidCallback? onVerFiado;
+
+  /// Se llama desde la franja y el indicador de "por pedir" (abre Inventario).
+  final VoidCallback? onVerPorPedir;
 
   @override
   ConsumerState<ResumenScreen> createState() => _ResumenScreenState();
@@ -46,12 +50,16 @@ class _ResumenScreenState extends ConsumerState<ResumenScreen> {
           MaterialPageRoute(builder: (_) => const ReportesScreen()),
         );
 
+    void verPorPedir() => widget.onVerPorPedir?.call();
+
     return Column(
       children: [
         Expanded(
           child: ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
+        FranjaPorPedir(onVerPorPedir: verPorPedir),
+        IndicadorPorPedir(onVerPorPedir: verPorPedir),
         SelectorFecha(
           dia: _dia,
           onCambio: (dia) => setState(() => _dia = inicioDelDia(dia)),

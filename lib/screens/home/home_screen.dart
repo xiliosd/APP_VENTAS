@@ -129,7 +129,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final tabs = <_Pestana>[
       _Pestana('Inicio', Icons.space_dashboard_outlined,
           Icons.space_dashboard_rounded,
-          ResumenScreen(onVerFiado: () => setState(() => _tabActual = 1))),
+          ResumenScreen(
+              onVerFiado: () => setState(() => _tabActual = 1),
+              onVerPorPedir: () => setState(() => _tabActual = 2))),
       const _Pestana('Fiado', Icons.people_outline_rounded,
           Icons.people_rounded, ListaFiadoScreen()),
       const _Pestana('Inventario', Icons.inventory_2_outlined,
