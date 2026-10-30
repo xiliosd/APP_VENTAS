@@ -70,7 +70,8 @@ Actualizada: 2026-10-30. Cada fase pasa por especificación (`docs/superpowers/s
 - 2026-10-30, por el usuario: ingreso con huella, cobro por QR (2D), corregir y anular (3A),
   reportes (3B), detalle de tickets (3C), catálogo (4A), inventario (4B), pedido sugerido (4C),
   modo oscuro (R1), recorrido de primer uso (R2b), inicio de marca, venta por voz y orden de
-  productos.
+  productos; después, proveedores y nombre de la tienda (4A), pulido tandas 1 y 2, renovación
+  R2a, código de barras con productos reales y pedidos guardados con recepción como gasto.
 - 2026-10-13, por el usuario: cámara del código de barras.
 
 ## Falla en celular real
@@ -80,13 +81,8 @@ Actualizada: 2026-10-30. Cada fase pasa por especificación (`docs/superpowers/s
 
 ## Pendiente de verificar
 
-- Proveedores y nombre de la tienda (4A).
-- Pulido tandas 1 y 2 (incluido el ícono temático en Android 13+).
-- Renovación R2a (Inicio tipo tablero, "¿Cómo paga?", "¿Quién eres?" y PIN), R3a (fiado y
-  gastos), R3b (reportes, historial con filtros, corrección y cobro QR renovados) y R4
-  (administración).
-- Código de barras con productos reales: crear con Open Food Facts y vender escaneando.
-- Pedidos guardados con recepción como gasto.
+- Renovación R3a (fiado y gastos), R3b (reportes, historial con filtros, corrección y cobro QR
+  renovados) y R4 (administración).
 - Mejoras de tienda, tanda 1 (clientes con apellido, pantalla Clientes, cliente habitual y
   reportes de clientes).
 - Mejoras de tienda, tanda 2 (tamaño de letra en las tres opciones, editar producto desde venta,
