@@ -279,4 +279,47 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('el error se ve aunque la lista esté desplazada al final', (
+    tester,
+  ) async {
+    final p = await preparar(tester);
+    final repo = ProductoRepository(db);
+    for (var n = 0; n < 15; n++) {
+      final id = await repo.guardarProducto(nombre: 'Extra $n', precio: 500);
+      await db
+          .into(db.lineasPedido)
+          .insert(
+            LineasPedidoCompanion.insert(
+              pedidoId: p.pedido,
+              productoId: id,
+              cantidad: 1,
+            ),
+          );
+    }
+    await tester.tap(find.byKey(Key('pedido_por_llegar_${p.pedido}')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('boton_anular_pedido')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await (db.update(db.pedidos)..where((x) => x.id.equals(p.pedido))).write(
+      const PedidosCompanion(estado: Value(EstadoPedido.anulado)),
+    );
+
+    await tester.tap(find.byKey(const Key('boton_anular_pedido')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmar_anular_pedido')));
+    await tester.pumpAndSettle();
+
+    final error = find.text('Este pedido ya se recibió o se anuló');
+    expect(error, findsOneWidget);
+    final pantalla = tester.view.physicalSize / tester.view.devicePixelRatio;
+    final rect = tester.getRect(error);
+    expect(rect.top, greaterThanOrEqualTo(0));
+    expect(rect.bottom, lessThanOrEqualTo(pantalla.height));
+    expect(error.hitTestable(), findsOneWidget);
+  });
 }

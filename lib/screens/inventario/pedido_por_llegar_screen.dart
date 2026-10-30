@@ -59,14 +59,19 @@ class _PedidoPorLlegarScreenState extends ConsumerState<PedidoPorLlegarScreen> {
     );
     if (producto == null || !mounted) return;
     // El precio que ya se acordó con este proveedor para el producto, si lo hay.
-    final delProveedor = await ref
-        .read(proveedorRepositoryProvider)
-        .productosDe(proveedorId);
+    int? precioCompra;
+    try {
+      final delProveedor = await ref
+          .read(proveedorRepositoryProvider)
+          .productosDe(proveedorId);
+      precioCompra = delProveedor
+          .where((x) => x.producto.id == producto.id)
+          .map((x) => x.precioCompra)
+          .firstOrNull;
+    } catch (_) {
+      // Sin el precio acordado igual se agrega el producto, con "Sin precio".
+    }
     if (!mounted) return;
-    final precioCompra = delProveedor
-        .where((x) => x.producto.id == producto.id)
-        .map((x) => x.precioCompra)
-        .firstOrNull;
     setState(() => _lineas!.add(_Linea(producto, 1, precioCompra)));
   }
 
@@ -119,6 +124,7 @@ class _PedidoPorLlegarScreenState extends ConsumerState<PedidoPorLlegarScreen> {
       ),
     );
     if (confirmado != true || !mounted) return;
+    setState(() => _error = null);
     try {
       await ref
           .read(pedidoRepositoryProvider)
@@ -185,111 +191,129 @@ class _PedidoPorLlegarScreenState extends ConsumerState<PedidoPorLlegarScreen> {
               ),
             )
           : null,
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
         children: [
-          Text(
-            'pedido el ${fechaCorta(pedido.fecha)} · por ${detalle.resumen.usuario}',
-            style: TextStyle(color: c.textoSecundario),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            // En el cuerpo y no en la barra: si perdió permiso, la barra ya no está.
-            Text(_error!, style: TextStyle(color: c.sale)),
-          ],
-          const SizedBox(height: 12),
-          for (final l in lineas)
-            Card(
+          // Fijo sobre la lista: se ve sin importar el scroll, y también cuando
+          // la barra inferior ya no está porque se perdió el permiso.
+          if (_error != null)
+            Semantics(
+              liveRegion: true,
               child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: puedeEditar
-                    ? Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  l.producto.nombre,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                Text(
-                                  l.precioEsperado == null
-                                      ? 'Sin precio'
-                                      : formatoMoneda(l.precioEsperado!),
-                                  style: TextStyle(color: c.textoSecundario),
-                                ),
-                              ],
-                            ),
-                          ),
-                          BotonCantidad(
-                            key: Key('restar_pedido_${l.producto.id}'),
-                            icono: Icons.remove_rounded,
-                            tooltip: 'Restar',
-                            onPressed: l.cantidad > 1
-                                ? () => setState(() => l.cantidad--)
-                                : null,
-                          ),
-                          InkWell(
-                            onTap: () async {
-                              final n = await pedirCantidad(
-                                context,
-                                actual: l.cantidad,
-                                minimo: 1,
-                              );
-                              if (n != null && mounted) {
-                                setState(() => l.cantidad = n);
-                              }
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 12,
-                              ),
-                              child: Text(
-                                '${l.cantidad}',
-                                key: Key('cantidad_pedido_${l.producto.id}'),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          ),
-                          BotonCantidad(
-                            key: Key('sumar_pedido_${l.producto.id}'),
-                            icono: Icons.add_rounded,
-                            tooltip: 'Sumar',
-                            onPressed: () => setState(() => l.cantidad++),
-                          ),
-                          IconButton(
-                            key: Key('quitar_pedido_${l.producto.id}'),
-                            tooltip: 'Quitar',
-                            icon: const Icon(Icons.close_rounded),
-                            onPressed: () => setState(() => lineas.remove(l)),
-                          ),
-                        ],
-                      )
-                    : Text('${l.cantidad} × ${l.producto.nombre}'),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Text(_error!, style: TextStyle(color: c.sale)),
               ),
             ),
-          if (puedeEditar) ...[
-            TextButton.icon(
-              key: const Key('boton_agregar_producto_pedido'),
-              onPressed: () => _agregarProducto(detalle.resumen.proveedor.id),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Agregar producto'),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(
+                  'pedido el ${fechaCorta(pedido.fecha)} · por ${detalle.resumen.usuario}',
+                  style: TextStyle(color: c.textoSecundario),
+                ),
+                const SizedBox(height: 12),
+                for (final l in lineas)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: puedeEditar
+                          ? Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        l.producto.nombre,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        l.precioEsperado == null
+                                            ? 'Sin precio'
+                                            : formatoMoneda(l.precioEsperado!),
+                                        style: TextStyle(
+                                          color: c.textoSecundario,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                BotonCantidad(
+                                  key: Key('restar_pedido_${l.producto.id}'),
+                                  icono: Icons.remove_rounded,
+                                  tooltip: 'Restar',
+                                  onPressed: l.cantidad > 1
+                                      ? () => setState(() => l.cantidad--)
+                                      : null,
+                                ),
+                                InkWell(
+                                  onTap: () async {
+                                    final n = await pedirCantidad(
+                                      context,
+                                      actual: l.cantidad,
+                                      minimo: 1,
+                                    );
+                                    if (n != null && mounted) {
+                                      setState(() => l.cantidad = n);
+                                    }
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 12,
+                                    ),
+                                    child: Text(
+                                      '${l.cantidad}',
+                                      key: Key(
+                                        'cantidad_pedido_${l.producto.id}',
+                                      ),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                BotonCantidad(
+                                  key: Key('sumar_pedido_${l.producto.id}'),
+                                  icono: Icons.add_rounded,
+                                  tooltip: 'Sumar',
+                                  onPressed: () => setState(() => l.cantidad++),
+                                ),
+                                IconButton(
+                                  key: Key('quitar_pedido_${l.producto.id}'),
+                                  tooltip: 'Quitar',
+                                  icon: const Icon(Icons.close_rounded),
+                                  onPressed: () =>
+                                      setState(() => lineas.remove(l)),
+                                ),
+                              ],
+                            )
+                          : Text('${l.cantidad} × ${l.producto.nombre}'),
+                    ),
+                  ),
+                if (puedeEditar) ...[
+                  TextButton.icon(
+                    key: const Key('boton_agregar_producto_pedido'),
+                    onPressed: () =>
+                        _agregarProducto(detalle.resumen.proveedor.id),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Agregar producto'),
+                  ),
+                  const SizedBox(height: 24),
+                  BotonPrincipal(
+                    key: const Key('boton_anular_pedido'),
+                    texto: 'Anular pedido',
+                    variante: VarianteBoton.peligro,
+                    onPressed: _anular,
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 24),
-            BotonPrincipal(
-              key: const Key('boton_anular_pedido'),
-              texto: 'Anular pedido',
-              variante: VarianteBoton.peligro,
-              onPressed: _anular,
-            ),
-          ],
+          ),
         ],
       ),
     );
