@@ -44,7 +44,8 @@ Actualizada: 2026-10-26. Cada fase pasa por especificación (`docs/superpowers/s
     contado y por transferencia, y reportes de clientes (habituales, de paso y mejores clientes).
   - Tanda 2 — hecha: letra grande (normal, grande y muy grande, guardada por celular) y
     edición de productos desde Nueva venta, escáner, inventario y Productos.
-  - Tanda 3 — pendiente: aviso por pedir y extracto de fiado.
+  - Tanda 3 — hecha: aviso al vender cuando un producto queda en su mínimo o se agota, franja e
+    indicador "N por pedir" en el Inicio, y extracto de fiado en pantalla con consolidado por abono.
   - Tanda 4 — pendiente: escáner y recorrido.
 
 ## Después
@@ -70,3 +71,4 @@ Actualizada: 2026-10-26. Cada fase pasa por especificación (`docs/superpowers/s
   sin conexión descargado) y orden de productos y mejoras de tienda, tanda 1 (clientes con apellido, pantalla Clientes,
   cliente habitual y reportes de clientes).
 - tanda 2 en celular real (tamaño de letra en las tres opciones, editar producto desde venta, escáner, inventario y productos).
+- tanda 3 en celular real (aviso por pedir al vender, Deshacer, indicador del Inicio y extracto de fiado).

@@ -6,6 +6,7 @@ import 'package:app_ventas/providers/repository_providers.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/repositories/fiado_repository.dart';
 import 'package:app_ventas/screens/fiado/detalle_cliente_screen.dart';
+import 'package:app_ventas/screens/fiado/extracto_fiado_screen.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
 import 'package:app_ventas/ui/monto.dart';
 import 'package:app_ventas/ui/tema_app.dart';
@@ -362,6 +363,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(saldo(textoDebeDesde(DateTime(2026, 9, 20, 9), DateTime.now())),
         findsOneWidget);
+  });
+
+  testWidgets(
+      'Ver extracto aparece con movimientos y abre la pantalla; no aparece sin ellos',
+      (tester) async {
+    await montarDetalle(tester);
+    expect(find.byKey(const Key('boton_ver_extracto')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('boton_ver_extracto')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ExtractoFiadoScreen), findsOneWidget);
+    expect(find.textContaining('Extracto al '), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await (db.update(db.ventas))
+        .write(const VentasCompanion(anulado: Value(true)));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('boton_ver_extracto')), findsNothing);
   });
 
   testWidgets('la línea de tiempo no se desborda con letra grande y millones',

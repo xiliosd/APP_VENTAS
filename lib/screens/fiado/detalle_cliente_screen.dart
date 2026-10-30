@@ -24,6 +24,7 @@ import '../../util/saldos_fiado.dart';
 import '../correccion/hoja_movimiento.dart';
 import '../correccion/texto_correccion.dart';
 import '../qr/cobro_qr_screen.dart';
+import 'extracto_fiado_screen.dart';
 
 class DetalleClienteScreen extends ConsumerWidget {
   const DetalleClienteScreen({super.key, required this.clienteConSaldo});
@@ -62,6 +63,10 @@ class DetalleClienteScreen extends ConsumerWidget {
       for (final m in movimientosAsync.valueOrNull ?? const <MovimientoFiado>[])
         if (m.tipo == TipoMovimientoFiado.venta && !m.anulado) m.fecha,
     ];
+    // Sin movimientos vigentes el extracto estaría vacío.
+    final hayMovimientosVigentes = (movimientosAsync.valueOrNull ??
+            const <MovimientoFiado>[])
+        .any((m) => !m.anulado);
     final fechaDeuda = ventasVigentes.isNotEmpty
         ? ventasVigentes.reduce((a, b) => a.isBefore(b) ? a : b)
         : clienteConSaldo.fechaDeudaMasAntigua ?? DateTime.now();
@@ -103,6 +108,23 @@ class DetalleClienteScreen extends ConsumerWidget {
                     texto: 'Registrar abono',
                     variante: VarianteBoton.entra,
                     onPressed: () => _abrirAbono(context, saldo),
+                  ),
+                ],
+                if (hayMovimientosVigentes) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    key: const Key('boton_ver_extracto'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: c.sobreTarjetaPrincipal,
+                      minimumSize: const Size.fromHeight(48),
+                      side: BorderSide(color: c.sobreTarjetaPrincipal),
+                    ),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => ExtractoFiadoScreen(cliente: cliente),
+                      ),
+                    ),
+                    child: const Text('Ver extracto'),
                   ),
                 ],
               ],
