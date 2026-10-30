@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../servicios/lector_codigo.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/vibracion.dart';
@@ -62,7 +63,9 @@ class _DialogoCodigoState extends State<_DialogoCodigo> {
 
 /// Cámara a pantalla completa que se cierra con el primer código leído.
 class EscanerScreen extends StatefulWidget {
-  const EscanerScreen({super.key});
+  const EscanerScreen({super.key, this.uso = UsoEscaner.venta});
+
+  final UsoEscaner uso;
 
   @override
   State<EscanerScreen> createState() => _EscanerScreenState();
@@ -150,27 +153,67 @@ class _EscanerScreenState extends State<EscanerScreen> {
             right: 16,
             bottom: 24,
             child: SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Apunta al código de barras',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: ColoresApp.blancoMarca, fontSize: 16),
-                  ),
-                  const SizedBox(height: 12),
-                  BotonPrincipal(
-                    key: const Key('boton_escribir_codigo'),
-                    texto: 'Escribir código',
-                    icono: Icons.keyboard_rounded,
-                    onPressed: _escribir,
-                  ),
-                ],
+              child: PieEscaner(
+                uso: widget.uso,
+                onEscribir: _escribir,
+                onSeguirSinCamara: () => Navigator.of(context).pop(),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Parte baja del escáner: instrucción, qué hará la app con el código y las
+/// salidas sin cámara. Separada para poder probarla sin abrir la cámara.
+class PieEscaner extends StatelessWidget {
+  const PieEscaner({
+    super.key,
+    required this.uso,
+    required this.onEscribir,
+    required this.onSeguirSinCamara,
+  });
+
+  final UsoEscaner uso;
+  final VoidCallback onEscribir;
+  final VoidCallback onSeguirSinCamara;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Apunta al código de barras',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: ColoresApp.blancoMarca, fontSize: 16),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          uso.ayuda,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: ColoresApp.blancoMarca, fontSize: 14),
+        ),
+        const SizedBox(height: 12),
+        BotonPrincipal(
+          key: const Key('boton_escribir_codigo'),
+          texto: 'Escribir código',
+          icono: Icons.keyboard_rounded,
+          onPressed: onEscribir,
+        ),
+        if (uso.conSeguirSinCamara)
+          TextButton(
+            key: const Key('boton_seguir_sin_camara'),
+            style: TextButton.styleFrom(
+              foregroundColor: ColoresApp.blancoMarca,
+              minimumSize: const Size(48, 48),
+            ),
+            onPressed: onSeguirSinCamara,
+            child: const Text('Seguir sin cámara'),
+          ),
+      ],
     );
   }
 }
