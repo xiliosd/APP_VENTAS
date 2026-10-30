@@ -6,6 +6,8 @@ import 'package:app_ventas/repositories/proveedor_repository.dart';
 import 'package:app_ventas/screens/inventario/inventario_screen.dart';
 import 'package:app_ventas/screens/inventario/pedido_por_llegar_screen.dart';
 import 'package:app_ventas/ui/boton_principal.dart';
+import 'package:app_ventas/util/formato_moneda.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,27 +38,42 @@ void main() {
     final sesion = container.read(sesionProvider).usuarioActivo!;
     var autor = sesion;
     if (otroAutor) {
-      final id = await db.into(db.usuarios).insert(UsuariosCompanion.insert(
-          nombre: 'Beto', rol: 'vendedor', pinHash: 'x'));
-      autor = await (db.select(db.usuarios)..where((u) => u.id.equals(id)))
-          .getSingle();
+      final id = await db
+          .into(db.usuarios)
+          .insert(
+            UsuariosCompanion.insert(
+              nombre: 'Beto',
+              rol: 'vendedor',
+              pinHash: 'x',
+            ),
+          );
+      autor = await (db.select(
+        db.usuarios,
+      )..where((u) => u.id.equals(id))).getSingle();
     }
     final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
     final productos = ProductoRepository(db);
     final coca = await productos.guardarProducto(nombre: 'Coca', precio: 1500);
     final pan = await productos.guardarProducto(nombre: 'Pan', precio: 600);
-    final pedido = await PedidoRepository(db,
-            reloj: () => DateTime(2026, 10, 16, 8))
-        .guardarPedido(
-      proveedorId: postobon,
-      lineas: [
-        LineaPedidoNueva(productoId: coca, cantidad: 24, precioEsperado: 900),
-        LineaPedidoNueva(productoId: pan, cantidad: 10),
-      ],
-      por: autor,
+    final pedido =
+        await PedidoRepository(
+          db,
+          reloj: () => DateTime(2026, 10, 16, 8),
+        ).guardarPedido(
+          proveedorId: postobon,
+          lineas: [
+            LineaPedidoNueva(
+              productoId: coca,
+              cantidad: 24,
+              precioEsperado: 900,
+            ),
+            LineaPedidoNueva(productoId: pan, cantidad: 10),
+          ],
+          por: autor,
+        );
+    await tester.pumpWidget(
+      appDePrueba(container, inicio: const Scaffold(body: InventarioScreen())),
     );
-    await tester.pumpWidget(appDePrueba(container,
-        inicio: const Scaffold(body: InventarioScreen())));
     await tester.pumpAndSettle();
     return (pedido: pedido, postobon: postobon, coca: coca, pan: pan);
   }
@@ -68,13 +85,16 @@ void main() {
     final tarjeta = find.byKey(Key('pedido_por_llegar_${p.pedido}'));
     expect(tarjeta, findsOneWidget);
     expect(
-        find.descendant(of: tarjeta, matching: find.text('Postobón')),
-        findsOneWidget);
+      find.descendant(of: tarjeta, matching: find.text('Postobón')),
+      findsOneWidget,
+    );
     expect(
-        find.descendant(
-            of: tarjeta,
-            matching: find.text(r'pedido el 16 oct · 2 productos · $21.600')),
-        findsOneWidget);
+      find.descendant(
+        of: tarjeta,
+        matching: find.text(r'pedido el 16 oct · 2 productos · $21.600'),
+      ),
+      findsOneWidget,
+    );
     expect(habilitado(tester, 'llego_pedido_${p.pedido}'), isTrue);
   });
 
@@ -84,8 +104,9 @@ void main() {
     addTearDown(tester.view.reset);
     final container = await containerConSesion(db);
     addTearDown(container.dispose);
-    await tester.pumpWidget(appDePrueba(container,
-        inicio: const Scaffold(body: InventarioScreen())));
+    await tester.pumpWidget(
+      appDePrueba(container, inicio: const Scaffold(body: InventarioScreen())),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('POR LLEGAR'), findsNothing);
@@ -96,8 +117,10 @@ void main() {
     await ProveedorRepository(db).desactivar(p.postobon);
     await tester.pumpAndSettle();
 
-    expect(find.text('Proveedor inactivo: actívalo para recibir'),
-        findsOneWidget);
+    expect(
+      find.text('Proveedor inactivo: actívalo para recibir'),
+      findsOneWidget,
+    );
     expect(habilitado(tester, 'llego_pedido_${p.pedido}'), isFalse);
   });
 
@@ -107,8 +130,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PedidoPorLlegarScreen), findsOneWidget);
     expect(
-        tester.widget<Text>(find.byKey(Key('cantidad_pedido_${p.coca}'))).data,
-        '24');
+      tester.widget<Text>(find.byKey(Key('cantidad_pedido_${p.coca}'))).data,
+      '24',
+    );
 
     await tester.tap(find.byKey(Key('restar_pedido_${p.coca}')));
     await tester.tap(find.byKey(Key('quitar_pedido_${p.pan}')));
@@ -119,8 +143,10 @@ void main() {
     expect(find.byType(InventarioScreen), findsOneWidget);
     expect(find.text('Pedido actualizado'), findsOneWidget);
     final lineas = await db.select(db.lineasPedido).get();
-    expect([for (final l in lineas) (l.productoId, l.cantidad, l.precioEsperado)],
-        [(p.coca, 23, 900)]);
+    expect(
+      [for (final l in lineas) (l.productoId, l.cantidad, l.precioEsperado)],
+      [(p.coca, 23, 900)],
+    );
   });
 
   testWidgets('se agrega un producto al pedido', (tester) async {
@@ -138,12 +164,15 @@ void main() {
     await tester.pumpAndSettle();
 
     final lineas = await db.select(db.lineasPedido).get();
-    expect([for (final l in lineas) (l.productoId, l.cantidad)],
-        [(p.coca, 24), (p.pan, 10), (agua, 1)]);
+    expect(
+      [for (final l in lineas) (l.productoId, l.cantidad)],
+      [(p.coca, 24), (p.pan, 10), (agua, 1)],
+    );
   });
 
-  testWidgets('anular pide confirmación y lo saca de Por llegar',
-      (tester) async {
+  testWidgets('anular pide confirmación y lo saca de Por llegar', (
+    tester,
+  ) async {
     final p = await preparar(tester);
     await tester.tap(find.byKey(Key('pedido_por_llegar_${p.pedido}')));
     await tester.pumpAndSettle();
@@ -158,8 +187,9 @@ void main() {
     expect(find.text('POR LLEGAR'), findsNothing);
   });
 
-  testWidgets('un vendedor no edita ni anula el pedido de otro',
-      (tester) async {
+  testWidgets('un vendedor no edita ni anula el pedido de otro', (
+    tester,
+  ) async {
     final p = await preparar(tester, rol: 'vendedor', otroAutor: true);
     await tester.tap(find.byKey(Key('pedido_por_llegar_${p.pedido}')));
     await tester.pumpAndSettle();
@@ -168,5 +198,85 @@ void main() {
     expect(find.byKey(const Key('boton_guardar_cambios_pedido')), findsNothing);
     expect(find.byKey(Key('sumar_pedido_${p.coca}')), findsNothing);
     expect(find.text('24 × Coca'), findsOneWidget);
+  });
+
+  testWidgets('al agregar un producto del proveedor usa su precio de compra', (
+    tester,
+  ) async {
+    final p = await preparar(tester);
+    final agua = await ProductoRepository(db).guardarProducto(
+      nombre: 'Agua',
+      precio: 1000,
+      proveedores: [
+        ProveedorDeProducto(
+          proveedorId: p.postobon,
+          precioCompra: 2500,
+          preferido: true,
+        ),
+      ],
+    );
+    await tester.tap(find.byKey(Key('pedido_por_llegar_${p.pedido}')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('boton_agregar_producto_pedido')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(Key('opcion_producto_recibir_$agua')));
+    await tester.pumpAndSettle();
+
+    // 24 × 900 + 1 × 2500
+    expect(find.text('Total estimado ${formatoMoneda(24100)}'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('boton_guardar_cambios_pedido')));
+    await tester.pumpAndSettle();
+
+    final lineas = await db.select(db.lineasPedido).get();
+    expect(
+      [for (final l in lineas) (l.productoId, l.precioEsperado)],
+      [(p.coca, 900), (p.pan, null), (agua, 2500)],
+    );
+  });
+
+  testWidgets('si el pedido ya no está por llegar, lo dice al guardar', (
+    tester,
+  ) async {
+    final p = await preparar(tester);
+    await tester.tap(find.byKey(Key('pedido_por_llegar_${p.pedido}')));
+    await tester.pumpAndSettle();
+    await (db.update(db.pedidos)..where((x) => x.id.equals(p.pedido))).write(
+      const PedidosCompanion(estado: Value(EstadoPedido.anulado)),
+    );
+
+    await tester.tap(find.byKey(const Key('boton_guardar_cambios_pedido')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Este pedido ya se recibió o se anuló'), findsOneWidget);
+  });
+
+  testWidgets('sin permiso, lo dice al anular', (tester) async {
+    // La sesión es la autora; luego el pedido pasa a ser de otro usuario.
+    final p = await preparar(tester, rol: 'vendedor');
+    final beto = await db
+        .into(db.usuarios)
+        .insert(
+          UsuariosCompanion.insert(
+            nombre: 'Beto',
+            rol: 'vendedor',
+            pinHash: 'x',
+          ),
+        );
+    await tester.tap(find.byKey(Key('pedido_por_llegar_${p.pedido}')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_anular_pedido')));
+    await tester.pumpAndSettle();
+    // El pedido cambia de dueño mientras el diálogo de confirmación está abierto.
+    await (db.update(db.pedidos)..where((x) => x.id.equals(p.pedido))).write(
+      PedidosCompanion(usuarioId: Value(beto)),
+    );
+    await tester.tap(find.byKey(const Key('confirmar_anular_pedido')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No tienes permiso para cambiar este pedido'),
+      findsOneWidget,
+    );
   });
 }

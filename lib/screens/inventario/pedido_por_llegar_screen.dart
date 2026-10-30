@@ -5,6 +5,7 @@ import '../../data/database.dart';
 import '../../providers/inventario_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
+import '../../repositories/correccion_repository.dart';
 import '../../repositories/pedido_repository.dart';
 import '../../ui/barra_accion_fija.dart';
 import '../../ui/boton_cantidad.dart';
@@ -41,7 +42,15 @@ class _PedidoPorLlegarScreenState extends ConsumerState<PedidoPorLlegarScreen> {
   bool _guardando = false;
   String? _error;
 
-  Future<void> _agregarProducto() async {
+  /// Texto para el usuario según por qué falló guardar o anular.
+  String _motivo(Object error, String generico) => switch (error) {
+    PermisoDenegado() => 'No tienes permiso para cambiar este pedido',
+    ArgumentError(message: 'El pedido ya no está por llegar') =>
+      'Este pedido ya se recibió o se anuló',
+    _ => generico,
+  };
+
+  Future<void> _agregarProducto(int proveedorId) async {
     final producto = await mostrarHojaInferior<Producto>(
       context,
       titulo: 'Agregar producto',
@@ -49,7 +58,16 @@ class _PedidoPorLlegarScreenState extends ConsumerState<PedidoPorLlegarScreen> {
           HojaProductos(excluir: {for (final l in _lineas!) l.producto.id}),
     );
     if (producto == null || !mounted) return;
-    setState(() => _lineas!.add(_Linea(producto, 1, null)));
+    // El precio que ya se acordó con este proveedor para el producto, si lo hay.
+    final delProveedor = await ref
+        .read(proveedorRepositoryProvider)
+        .productosDe(proveedorId);
+    if (!mounted) return;
+    final precioCompra = delProveedor
+        .where((x) => x.producto.id == producto.id)
+        .map((x) => x.precioCompra)
+        .firstOrNull;
+    setState(() => _lineas!.add(_Linea(producto, 1, precioCompra)));
   }
 
   Future<void> _guardar() async {
@@ -58,20 +76,20 @@ class _PedidoPorLlegarScreenState extends ConsumerState<PedidoPorLlegarScreen> {
       _error = null;
     });
     try {
-      await ref
-          .read(pedidoRepositoryProvider)
-          .editarPedido(widget.pedidoId, [
-            for (final l in _lineas!)
-              LineaPedidoNueva(
-                productoId: l.producto.id,
-                cantidad: l.cantidad,
-                precioEsperado: l.precioEsperado,
-              ),
-          ], por: ref.read(sesionProvider).usuarioActivo!);
+      await ref.read(pedidoRepositoryProvider).editarPedido(widget.pedidoId, [
+        for (final l in _lineas!)
+          LineaPedidoNueva(
+            productoId: l.producto.id,
+            cantidad: l.cantidad,
+            precioEsperado: l.precioEsperado,
+          ),
+      ], por: ref.read(sesionProvider).usuarioActivo!);
       if (mounted) Navigator.of(context).pop('Pedido actualizado');
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        setState(() => _error = 'No se pudo guardar, intenta de nuevo');
+        setState(
+          () => _error = _motivo(error, 'No se pudo guardar, intenta de nuevo'),
+        );
       }
     } finally {
       if (mounted) setState(() => _guardando = false);
@@ -109,14 +127,18 @@ class _PedidoPorLlegarScreenState extends ConsumerState<PedidoPorLlegarScreen> {
             por: ref.read(sesionProvider).usuarioActivo!,
           );
       if (mounted) Navigator.of(context).pop('Pedido anulado');
-    } catch (_) {
-      if (mounted) setState(() => _error = 'No se pudo anular el pedido');
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = _motivo(error, 'No se pudo anular el pedido'));
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final detalle = ref.watch(detallePedidoProvider(widget.pedidoId)).valueOrNull;
+    final detalle = ref
+        .watch(detallePedidoProvider(widget.pedidoId))
+        .valueOrNull;
     if (detalle == null) {
       return Scaffold(
         appBar: AppBar(),
@@ -139,14 +161,14 @@ class _PedidoPorLlegarScreenState extends ConsumerState<PedidoPorLlegarScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text('Pedido · ${detalle.resumen.proveedor.nombre}')),
+      appBar: AppBar(
+        title: Text('Pedido · ${detalle.resumen.proveedor.nombre}'),
+      ),
       bottomNavigationBar: puedeEditar
           ? BarraAccionFija(
               total: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_error != null)
-                    Text(_error!, style: TextStyle(color: c.sale)),
                   Text(
                     'Total estimado ${formatoMoneda(total)}',
                     style: const TextStyle(
@@ -170,6 +192,11 @@ class _PedidoPorLlegarScreenState extends ConsumerState<PedidoPorLlegarScreen> {
             'pedido el ${fechaCorta(pedido.fecha)} · por ${detalle.resumen.usuario}',
             style: TextStyle(color: c.textoSecundario),
           ),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            // En el cuerpo y no en la barra: si perdió permiso, la barra ya no está.
+            Text(_error!, style: TextStyle(color: c.sale)),
+          ],
           const SizedBox(height: 12),
           for (final l in lineas)
             Card(
@@ -251,7 +278,7 @@ class _PedidoPorLlegarScreenState extends ConsumerState<PedidoPorLlegarScreen> {
           if (puedeEditar) ...[
             TextButton.icon(
               key: const Key('boton_agregar_producto_pedido'),
-              onPressed: _agregarProducto,
+              onPressed: () => _agregarProducto(detalle.resumen.proveedor.id),
               icon: const Icon(Icons.add_rounded),
               label: const Text('Agregar producto'),
             ),
