@@ -48,19 +48,19 @@ Actualizada: 2026-10-30. Cada fase pasa por especificación (`docs/superpowers/s
 
 ## Orden de lo que falta
 
-Cada paso depende del anterior o conviene hacerlo antes que el siguiente.
+Orden elegido por el usuario el 2026-10-30; la monetización queda para después.
 
-1. Vibración — revisar "vibración al tocar" en los ajustes del celular; si sigue sin vibrar,
-   diagnosticar y arreglar en la app.
-2. Prueba en celular de lo que falta — compilar un APK con la tanda 4 y probar R3a, R3b, R4 y
-   las tandas 1 a 4 de mejoras de tienda (ver "Pendiente de verificar").
-3. Arreglos y orden de la casa — corregir lo que falle en el paso 2, los detalles menores
-   diferidos de cada tanda y el README con las once secciones de los lineamientos.
-4. Consultar precio por código de barras — función pequeña y local, sin dependencias externas.
-5. Preparar para uso real — llave de firma propia, claves de Supabase (respaldo en la nube) y,
+1. Vibración — diagnosticada: en el celular de prueba (Redmi Note 13, HyperOS 2, Android 15)
+   la "respuesta háptica" del sistema está apagada (`haptic_feedback_enabled=0`) y la app,
+   por diseño, la respeta.
+2. Arreglos y orden de la casa — los detalles menores diferidos de cada tanda y el README con
+   las once secciones de los lineamientos.
+3. Consultar precio por código de barras — función pequeña y local, sin dependencias externas.
+4. Preparar para uso real — llave de firma propia, claves de Supabase (respaldo en la nube) y,
    si se publica, requisitos de Play Store.
-6. Tienda centralizada — necesita Supabase listo del paso 5.
-7. Monetización — necesita la sincronización de la tienda centralizada (paso 6).
+5. Tienda centralizada — necesita Supabase listo del paso 4.
+6. Prueba en celular de lo que falta — compilar un APK y probar R3a, R3b, R4, las tandas 1 a 4
+   de mejoras de tienda y lo nuevo de los pasos 2 a 5 (ver "Pendiente de verificar").
 
 ## Después
 
@@ -89,7 +89,8 @@ Cada paso depende del anterior o conviene hacerlo antes que el siguiente.
 ## Falla en celular real
 
 - Vibración (R1): no se siente en el celular. La app usa `HapticFeedback` de Flutter, que
-  depende de la opción "vibración al tocar" del sistema; falta diagnosticar.
+  respeta la "respuesta háptica" del sistema; en el celular de prueba está apagada
+  (`haptic_feedback_enabled=0`, leído por adb el 2026-10-30).
 
 ## Pendiente de verificar
 
