@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../data/database.dart';
+import '../util/aviso_existencias.dart';
 import '../util/categorias_gasto.dart';
 import '../util/permisos.dart';
 import 'correccion_repository.dart';
@@ -204,6 +205,48 @@ class InventarioRepository {
     }
     return resultado;
   }
+
+  /// Productos que cruzaron su mínimo desde [antes] (existencias leídas antes
+  /// de la venta) hasta ahora.
+  Future<List<AvisoExistencias>> avisosTrasVenta(Map<int, int> antes) async {
+    if (antes.isEmpty) return const [];
+    final despues = await existenciasDe(antes.keys);
+    return productosQueCruzaron(
+      antes: antes,
+      despues: despues,
+      productos: await _productosPorId(antes.keys),
+    );
+  }
+
+  /// De [avisos], los que siguen en o bajo el mínimo, con las existencias de
+  /// hoy (la venta pudo deshacerse).
+  Future<List<AvisoExistencias>> avisosVigentes(
+    List<AvisoExistencias> avisos,
+  ) async {
+    if (avisos.isEmpty) return const [];
+    final ids = avisos.map((a) => a.productoId);
+    final existencias = await existenciasDe(ids);
+    final productos = await _productosPorId(ids);
+    return [
+      for (final a in avisos)
+        if (existencias[a.productoId] != null &&
+            productos[a.productoId] != null &&
+            existencias[a.productoId]! <= productos[a.productoId]!.minimo)
+          AvisoExistencias(
+            productoId: a.productoId,
+            nombre: productos[a.productoId]!.nombre,
+            existencias: existencias[a.productoId]!,
+            minimo: productos[a.productoId]!.minimo,
+          ),
+    ];
+  }
+
+  Future<Map<int, Producto>> _productosPorId(Iterable<int> ids) async => {
+    for (final p in await (_db.select(
+      _db.productos,
+    )..where((p) => p.id.isIn(ids.toList()))).get())
+      p.id: p,
+  };
 
   // ---- Control y conteos ----
 
