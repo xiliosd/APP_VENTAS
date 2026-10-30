@@ -38,31 +38,43 @@ void main() {
     final postobon = await ProveedorRepository(db).crear(nombre: 'Postobón');
     final productos = ProductoRepository(db);
     final coca = await productos.guardarProducto(
-        nombre: 'Coca',
-        precio: 1500,
-        proveedores: [
-          ProveedorDeProducto(proveedorId: postobon, precioCompra: 900, preferido: true),
-        ]);
+      nombre: 'Coca',
+      precio: 1500,
+      proveedores: [
+        ProveedorDeProducto(
+          proveedorId: postobon,
+          precioCompra: 900,
+          preferido: true,
+        ),
+      ],
+    );
     final pan = await productos.guardarProducto(
-        nombre: 'Pan',
-        precio: 600,
-        proveedores: [
-          ProveedorDeProducto(proveedorId: postobon, precioCompra: 400, preferido: true),
-        ]);
+      nombre: 'Pan',
+      precio: 600,
+      proveedores: [
+        ProveedorDeProducto(
+          proveedorId: postobon,
+          precioCompra: 400,
+          preferido: true,
+        ),
+      ],
+    );
     final agua = await productos.guardarProducto(nombre: 'Agua', precio: 1000);
     final inv = InventarioRepository(db, reloj: () => DateTime(2026, 10, 7, 8));
     await inv.activarControl(coca, cantidad: 2, minimo: 6, por: ana);
     await inv.cambiarPedirHasta(coca, 24);
     await inv.activarControl(pan, cantidad: 1, minimo: 5, por: ana);
     await inv.activarControl(agua, cantidad: 0, minimo: 0, por: ana);
-    await tester.pumpWidget(appDePrueba(container,
-        inicio: const Scaffold(body: InventarioScreen())));
+    await tester.pumpWidget(
+      appDePrueba(container, inicio: const Scaffold(body: InventarioScreen())),
+    );
     await tester.pumpAndSettle();
     return (postobon, coca, pan, agua);
   }
 
-  testWidgets('muestra sugeridos, precios y total, y se puede editar',
-      (tester) async {
+  testWidgets('muestra sugeridos, precios y total, y se puede editar', (
+    tester,
+  ) async {
     final (postobon, coca, pan, _) = await preparar(tester);
 
     await tester.tap(find.byKey(Key('ver_pedido_$postobon')));
@@ -72,16 +84,22 @@ void main() {
     expect(find.text('quedan 2 · mín. 6 · hasta 24'), findsOneWidget);
     expect(find.text('quedan 1 · mín. 5'), findsOneWidget);
     expect(
-        tester.widget<Text>(find.byKey(Key('cantidad_pedido_$coca'))).data, '22');
+      tester.widget<Text>(find.byKey(Key('cantidad_pedido_$coca'))).data,
+      '22',
+    );
     expect(
-        tester.widget<Text>(find.byKey(Key('cantidad_pedido_$pan'))).data, '9');
+      tester.widget<Text>(find.byKey(Key('cantidad_pedido_$pan'))).data,
+      '9',
+    );
     expect(find.text(r'22 × $900 = $19.800'), findsOneWidget);
     expect(find.text(r'Total estimado $23.400'), findsOneWidget);
     expect(
-        find.ancestor(
-            of: find.byKey(const Key('total_pedido')),
-            matching: find.byType(BarraAccionFija)),
-        findsOneWidget);
+      find.ancestor(
+        of: find.byKey(const Key('total_pedido')),
+        matching: find.byType(BarraAccionFija),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(Key('restar_pedido_$coca')));
     await tester.tap(find.byKey(Key('sumar_pedido_$pan')));
@@ -94,16 +112,19 @@ void main() {
     await tester.tap(find.byKey(const Key('aceptar_cantidad')));
     await tester.pumpAndSettle();
     expect(
-        tester.widget<Text>(find.byKey(Key('cantidad_pedido_$pan'))).data, '0');
+      tester.widget<Text>(find.byKey(Key('cantidad_pedido_$pan'))).data,
+      '0',
+    );
   });
 
   Future<List<(int, int, int?)>> lineasGuardadas() async => [
-        for (final l in await db.select(db.lineasPedido).get())
-          (l.productoId, l.cantidad, l.precioEsperado),
-      ];
+    for (final l in await db.select(db.lineasPedido).get())
+      (l.productoId, l.cantidad, l.precioEsperado),
+  ];
 
-  testWidgets('Guardar pedido guarda lo editado y vuelve con el aviso',
-      (tester) async {
+  testWidgets('Guardar pedido guarda lo editado y vuelve con el aviso', (
+    tester,
+  ) async {
     final (postobon, coca, pan, _) = await preparar(tester);
     await tester.tap(find.byKey(Key('ver_pedido_$postobon')));
     await tester.pumpAndSettle();
@@ -127,11 +148,15 @@ void main() {
     expect(await InventarioRepository(db).existencias(coca), 2);
   });
 
-  testWidgets('sin proveedor hay que elegir uno antes de guardar',
-      (tester) async {
+  testWidgets('sin proveedor hay que elegir uno antes de guardar', (
+    tester,
+  ) async {
     final (postobon, _, _, agua) = await preparar(tester);
 
-    await tester.scrollUntilVisible(find.byKey(const Key('ver_pedido_sin')), 200);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('ver_pedido_sin')),
+      200,
+    );
     await tester.tap(find.byKey(const Key('ver_pedido_sin')));
     await tester.pumpAndSettle();
 
@@ -155,8 +180,9 @@ void main() {
     expect(await lineasGuardadas(), [(agua, 1, null)]);
   });
 
-  testWidgets('con un proveedor desactivado hay que elegir otro',
-      (tester) async {
+  testWidgets('con un proveedor desactivado hay que elegir otro', (
+    tester,
+  ) async {
     final (postobon, _, _, _) = await preparar(tester);
     await ProveedorRepository(db).desactivar(postobon);
     await tester.pumpAndSettle();
@@ -168,19 +194,22 @@ void main() {
     expect(find.byKey(Key('opcion_proveedor_pedido_$postobon')), findsNothing);
   });
 
-  testWidgets('descuenta lo que ya viene y lo muestra en Por pedir',
-      (tester) async {
+  testWidgets('descuenta lo que ya viene y lo muestra en Por pedir', (
+    tester,
+  ) async {
     final (postobon, coca, pan, _) = await preparar(tester);
     final ana = (await db.select(db.usuarios).get()).first;
     final pedidos = PedidoRepository(db);
     await pedidos.guardarPedido(
-        proveedorId: postobon,
-        lineas: [LineaPedidoNueva(productoId: coca, cantidad: 10)],
-        por: ana);
+      proveedorId: postobon,
+      lineas: [LineaPedidoNueva(productoId: coca, cantidad: 10)],
+      por: ana,
+    );
     await pedidos.guardarPedido(
-        proveedorId: postobon,
-        lineas: [LineaPedidoNueva(productoId: pan, cantidad: 9)],
-        por: ana);
+      proveedorId: postobon,
+      lineas: [LineaPedidoNueva(productoId: pan, cantidad: 9)],
+      por: ana,
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Ya pedido · llegan 9'), findsOneWidget);
@@ -190,38 +219,71 @@ void main() {
     await tester.tap(find.byKey(Key('ver_pedido_$postobon')));
     await tester.pumpAndSettle();
     expect(
-        tester.widget<Text>(find.byKey(Key('cantidad_pedido_$coca'))).data, '12');
+      tester.widget<Text>(find.byKey(Key('cantidad_pedido_$coca'))).data,
+      '12',
+    );
     expect(find.textContaining('llegan 10'), findsOneWidget);
     expect(find.byKey(Key('cantidad_pedido_$pan')), findsNothing);
   });
 
   Future<Proveedor> proveedorSinPedido() async {
     final id = await ProveedorRepository(db).crear(nombre: 'Alpina');
-    return (db.select(db.proveedores)..where((p) => p.id.equals(id)))
-        .getSingle();
+    return (db.select(
+      db.proveedores,
+    )..where((p) => p.id.equals(id))).getSingle();
   }
 
   testWidgets('sin nada que pedir lo dice', (tester) async {
     final proveedor = await proveedorSinPedido();
     final container = await containerConSesion(db);
     addTearDown(container.dispose);
-    await tester.pumpWidget(appDePrueba(container,
-        inicio: PedidoSugeridoScreen(proveedor: proveedor)));
+    await tester.pumpWidget(
+      appDePrueba(
+        container,
+        inicio: PedidoSugeridoScreen(proveedor: proveedor),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('No hay nada por pedir a este proveedor'), findsOneWidget);
     expect(find.byKey(const Key('boton_guardar_pedido')), findsNothing);
   });
 
+  testWidgets(
+    'sin proveedor y sin nada por pedir dice "No hay nada por pedir"',
+    (tester) async {
+      final container = await containerConSesion(db);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        appDePrueba(
+          container,
+          inicio: const PedidoSugeridoScreen(proveedor: null),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('No hay nada por pedir'), findsOneWidget);
+      expect(find.textContaining('a este proveedor'), findsNothing);
+    },
+  );
+
   testWidgets('mientras carga muestra el indicador', (tester) async {
     final proveedor = await proveedorSinPedido();
-    final container = await containerConSesion(db, overrides: [
-      sugerenciaPedidoProvider.overrideWith(
-          (ref, id) => Completer<List<LineaSugerida>>().future),
-    ]);
+    final container = await containerConSesion(
+      db,
+      overrides: [
+        sugerenciaPedidoProvider.overrideWith(
+          (ref, id) => Completer<List<LineaSugerida>>().future,
+        ),
+      ],
+    );
     addTearDown(container.dispose);
-    await tester.pumpWidget(appDePrueba(container,
-        inicio: PedidoSugeridoScreen(proveedor: proveedor)));
+    await tester.pumpWidget(
+      appDePrueba(
+        container,
+        inicio: PedidoSugeridoScreen(proveedor: proveedor),
+      ),
+    );
     await tester.pump();
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);

@@ -85,7 +85,9 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
       (s, l) => s + (l.precio == null ? 0 : _cantidad(l) * l.precio!),
     );
     final puedeGuardar =
-        !_guardando && _proveedor != null && lineas.any((l) => _cantidad(l) > 0);
+        !_guardando &&
+        _proveedor != null &&
+        lineas.any((l) => _cantidad(l) > 0);
     final proveedores = _proveedorFijo
         ? const <Proveedor>[]
         : ref.watch(proveedoresActivosProvider).valueOrNull ??
@@ -134,9 +136,11 @@ class _PedidoSugeridoScreenState extends ConsumerState<PedidoSugeridoScreen> {
                   )
                 : const Center(child: CircularProgressIndicator())
           : lineas.isEmpty
-          ? const EstadoVacio(
+          ? EstadoVacio(
               icono: Icons.inventory_2_outlined,
-              titulo: 'No hay nada por pedir a este proveedor',
+              titulo: widget.proveedor == null
+                  ? 'No hay nada por pedir'
+                  : 'No hay nada por pedir a este proveedor',
             )
           : ListView(
               padding: const EdgeInsets.all(16),
