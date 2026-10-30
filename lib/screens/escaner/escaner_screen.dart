@@ -182,38 +182,50 @@ class PieEscaner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'Apunta al código de barras',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: ColoresApp.blancoMarca, fontSize: 16),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          uso.ayuda,
-          textAlign: TextAlign.center,
-          style: TextStyle(color: ColoresApp.blancoMarca, fontSize: 14),
-        ),
-        const SizedBox(height: 12),
-        BotonPrincipal(
-          key: const Key('boton_escribir_codigo'),
-          texto: 'Escribir código',
-          icono: Icons.keyboard_rounded,
-          onPressed: onEscribir,
-        ),
-        if (uso.conSeguirSinCamara)
-          TextButton(
-            key: const Key('boton_seguir_sin_camara'),
-            style: TextButton.styleFrom(
-              foregroundColor: ColoresApp.blancoMarca,
-              minimumSize: const Size(48, 48),
+    // El fondo oscuro garantiza contraste >= 4,5:1 aunque la cámara apunte a
+    // una etiqueta clara.
+    return DecoratedBox(
+      key: const Key('fondo_pie_escaner'),
+      decoration: BoxDecoration(
+        color: ColoresApp.of(context).velo,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Apunta al código de barras',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: ColoresApp.blancoMarca, fontSize: 16),
             ),
-            onPressed: onSeguirSinCamara,
-            child: const Text('Seguir sin cámara'),
-          ),
-      ],
+            const SizedBox(height: 4),
+            Text(
+              uso.ayuda,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: ColoresApp.blancoMarca, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            BotonPrincipal(
+              key: const Key('boton_escribir_codigo'),
+              texto: 'Escribir código',
+              icono: Icons.keyboard_rounded,
+              onPressed: onEscribir,
+            ),
+            if (uso.conSeguirSinCamara)
+              TextButton(
+                key: const Key('boton_seguir_sin_camara'),
+                style: TextButton.styleFrom(
+                  foregroundColor: ColoresApp.blancoMarca,
+                  minimumSize: const Size(48, 48),
+                ),
+                onPressed: onSeguirSinCamara,
+                child: const Text('Seguir sin cámara'),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

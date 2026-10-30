@@ -131,7 +131,8 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
 
   /// Aviso de producto agregado; el admin puede tocar "Editar" desde él.
   void _avisarAgregado(Producto producto) {
-    final esAdmin = ref.read(sesionProvider).esAdmin;
+    // La práctica no ofrece editar: no debe tocar productos reales.
+    final esAdmin = ref.read(sesionProvider).esAdmin && !widget.practica;
     avisar(
       context,
       '${producto.nombre} agregado',

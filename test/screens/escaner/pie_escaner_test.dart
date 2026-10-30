@@ -1,5 +1,6 @@
 import 'package:app_ventas/screens/escaner/escaner_screen.dart';
 import 'package:app_ventas/servicios/lector_codigo.dart';
+import 'package:app_ventas/ui/colores_app.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -55,6 +56,23 @@ void main() {
     expect(find.text('Seguir sin cámara'), findsOneWidget);
     await tester.tap(find.byKey(const Key('boton_seguir_sin_camara')));
     expect(avisos, 1);
+  });
+
+  testWidgets('el texto de ayuda va sobre un fondo velo para el contraste', (
+    tester,
+  ) async {
+    await _montar(tester, UsoEscaner.practica);
+    final fondo = tester.widget<DecoratedBox>(
+      find.ancestor(
+        of: find.text('Apunta al código de barras'),
+        matching: find.byKey(const Key('fondo_pie_escaner')),
+      ),
+    );
+    final contexto = tester.element(find.byType(PieEscaner));
+    expect(
+      (fondo.decoration as BoxDecoration).color,
+      ColoresApp.of(contexto).velo,
+    );
   });
 
   testWidgets('los objetivos táctiles miden al menos 48', (tester) async {

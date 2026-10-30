@@ -1,4 +1,5 @@
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/repositories/producto_repository.dart';
 import 'package:app_ventas/screens/escaner/consejos_escaner.dart';
 import 'package:app_ventas/screens/venta/registrar_venta_screen.dart';
 import 'package:app_ventas/servicios/lector_codigo.dart';
@@ -33,12 +34,13 @@ void main() {
     String rol = 'admin',
     bool practica = false,
     bool consejoVisto = false,
+    List<String?> codigos = const [],
   }) async {
     SharedPreferences.setMockInitialValues({
       if (consejoVisto) ...consejosVistos,
     });
     preferencias = await SharedPreferences.getInstance();
-    lector = LectorFalso([]);
+    lector = LectorFalso(codigos);
     container = await containerConSesion(
       db,
       rol: rol,
@@ -129,5 +131,20 @@ void main() {
     await tester.tap(find.byKey(const Key('boton_escanear_venta')));
     await tester.pumpAndSettle();
     expect(lector.usos, [UsoEscaner.practica]);
+  });
+
+  testWidgets('en la práctica el aviso de agregado no ofrece Editar', (
+    tester,
+  ) async {
+    await ProductoRepository(db).guardarProducto(
+      nombre: 'Gaseosa',
+      precio: 4500,
+      detalles: const DetallesProducto(codigoBarras: '7702'),
+    );
+    await abrir(tester, practica: true, codigos: ['7702']);
+    await tester.tap(find.byKey(const Key('boton_escanear_venta')));
+    await tester.pumpAndSettle();
+    expect(find.text('Gaseosa agregado'), findsOneWidget);
+    expect(find.text('Editar'), findsNothing);
   });
 }
