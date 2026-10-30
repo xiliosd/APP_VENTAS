@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
+import '../../providers/aviso_por_pedir_provider.dart';
 import '../../providers/orden_productos_provider.dart';
 import '../../providers/productos_providers.dart';
 import '../../providers/repository_providers.dart';
@@ -17,6 +18,7 @@ import '../../ui/mosaico.dart';
 import '../../ui/teclado_monto.dart';
 import '../../servicios/dictado.dart';
 import '../../servicios/lector_codigo.dart';
+import '../../util/aviso_existencias.dart';
 import '../../util/busqueda_producto.dart';
 import '../configuracion/producto_screen.dart';
 import '../../util/catalogo_producto.dart';
@@ -441,6 +443,15 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
         }
       }
       final ventaRepo = ref.read(ventaRepositoryProvider);
+      final inventario = ref.read(inventarioRepositoryProvider);
+      // El aviso de reposición no debe impedir cobrar: ante cualquier error
+      // se vende sin aviso.
+      Map<int, int> antes = const {};
+      try {
+        antes = await inventario.existenciasDe(
+          ticket.lineas.map((l) => l.productoId).whereType<int>(),
+        );
+      } catch (_) {}
       final ventaId = await ventaRepo.registrarVenta(
         monto: ticket.total,
         productoId: ticket.productoIdUnico,
@@ -458,11 +469,21 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
             ),
         ],
       );
+      var avisos = const <AvisoExistencias>[];
+      try {
+        avisos = await inventario.avisosTrasVenta(antes);
+      } catch (_) {}
       if (!mounted) return;
+      // Se lee antes del pop: el Deshacer vive más que esta pantalla.
+      final avisoNotifier = ref.read(avisoPorPedirProvider.notifier);
+      if (avisos.isNotEmpty) avisoNotifier.mostrar(avisos);
       avisar(
         context,
         'Venta registrada · ${formatoMoneda(ticket.total)}',
-        onDeshacer: () => ventaRepo.eliminarVenta(ventaId),
+        onDeshacer: () async {
+          await ventaRepo.eliminarVenta(ventaId);
+          await avisoNotifier.recalcular();
+        },
       );
       Navigator.of(context).pop();
     } finally {
