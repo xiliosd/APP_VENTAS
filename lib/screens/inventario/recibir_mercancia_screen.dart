@@ -6,6 +6,7 @@ import '../../providers/proveedores_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../repositories/inventario_repository.dart';
+import '../../repositories/pedido_repository.dart';
 import '../../respaldo/respaldo_provider.dart';
 import '../../ui/barra_accion_fija.dart';
 import '../../ui/boton_cantidad.dart';
@@ -112,8 +113,7 @@ class _RecibirMercanciaScreenState
     if (widget.pedidoId != null) _cargarPedido(widget.pedidoId!);
     for (final l in widget.lineasIniciales) {
       _lineas.add(
-        _Linea(l.producto, l.precio?.toString() ?? '')
-          ..cantidad = l.cantidad,
+        _Linea(l.producto, l.precio?.toString() ?? '')..cantidad = l.cantidad,
       );
     }
   }
@@ -130,10 +130,25 @@ class _RecibirMercanciaScreenState
   /// Reemplaza las líneas por las del pedido: cada una arranca con lo
   /// pedido, para que el caso normal sea solo confirmar.
   Future<void> _cargarPedido(int pedidoId) async {
-    setState(() => _cargandoPedido = true);
-    final detalle = await ref
-        .read(pedidoRepositoryProvider)
-        .detallePedido(pedidoId);
+    setState(() {
+      _cargandoPedido = true;
+      _error = null;
+    });
+    final ({PedidoResumen resumen, List<LineaPedidoDetalle> lineas}) detalle;
+    try {
+      detalle = await ref
+          .read(pedidoRepositoryProvider)
+          .detallePedido(pedidoId);
+    } catch (_) {
+      // Las líneas escritas no se tocan: solo se avisa y se deja reintentar.
+      if (mounted) {
+        setState(() {
+          _error = 'No se pudo cargar el pedido, intenta de nuevo';
+          _cargandoPedido = false;
+        });
+      }
+      return;
+    }
     if (!mounted) return;
     setState(() {
       for (final l in _lineas) {
@@ -194,7 +209,34 @@ class _RecibirMercanciaScreenState
         ],
       ),
     );
-    if (elegido != null && mounted) await _cargarPedido(elegido);
+    if (elegido == null || !mounted) return;
+    // Cargar el pedido reemplaza las líneas: no se pierde lo escrito sin avisar.
+    if (_lineas.isNotEmpty && !await _confirmarReemplazo()) return;
+    if (mounted) await _cargarPedido(elegido);
+  }
+
+  Future<bool> _confirmarReemplazo() async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (contexto) => AlertDialog(
+        title: const Text('¿Reemplazar lo que escribiste?'),
+        content: const Text(
+          'Los productos que agregaste se cambian por los del pedido.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(contexto, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            key: const Key('confirmar_reemplazar'),
+            onPressed: () => Navigator.pop(contexto, true),
+            child: const Text('Reemplazar'),
+          ),
+        ],
+      ),
+    );
+    return confirmado == true && mounted;
   }
 
   Future<String> _precioSugerido(int productoId) async {
@@ -421,8 +463,7 @@ class _RecibirMercanciaScreenState
             Text(
               'Total ${formatoMoneda(_total)}',
               key: const Key('total_recibir'),
-              style:
-                  const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
             ),
           ],
         ),
@@ -473,8 +514,7 @@ class _RecibirMercanciaScreenState
               ],
             ),
           const SizedBox(height: 16),
-          if (_cargandoPedido)
-            const Center(child: CircularProgressIndicator()),
+          if (_cargandoPedido) const Center(child: CircularProgressIndicator()),
           if (conPedido) ...[
             Card(
               key: const Key('resumen_recepcion'),
@@ -632,7 +672,9 @@ class _RecibirMercanciaScreenState
                     Text(
                       formatoMoneda(l.cantidad * (l.precioValido ?? 0)),
                       textAlign: TextAlign.right,
-                      style: TextStyle(color: ColoresApp.of(context).textoSecundario),
+                      style: TextStyle(
+                        color: ColoresApp.of(context).textoSecundario,
+                      ),
                     ),
                   ],
                 ),
