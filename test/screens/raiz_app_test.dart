@@ -125,6 +125,30 @@ void main() {
     expect(find.textContaining('base dañada'), findsNothing);
   });
 
+  testWidgets('el inicio de marca sigue fundiéndose al salir', (tester) async {
+    await db
+        .into(db.usuarios)
+        .insert(
+          UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
+        );
+    await abrir(tester, valores: {'inicio_completo_visto': true});
+
+    await tester.pump(const Duration(seconds: 2, milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 150));
+
+    expect(find.byKey(const ValueKey('inicio_marca')), findsOneWidget);
+    final entrante = tester.widget<FadeTransition>(
+      find
+          .ancestor(
+            of: find.byType(SeleccionarUsuarioScreen),
+            matching: find.byType(FadeTransition),
+          )
+          .first,
+    );
+    expect(entrante.opacity.value, inExclusiveRange(0, 1));
+  });
+
   testWidgets('entrar a la sesión no funde las pantallas', (tester) async {
     final id = await db
         .into(db.usuarios)

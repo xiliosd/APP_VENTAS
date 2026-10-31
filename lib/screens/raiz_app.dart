@@ -58,6 +58,7 @@ class _RaizAppState extends ConsumerState<RaizApp> {
     // El inicio sigue quieto en su final si la consulta aún no responde.
     final Widget pantalla;
     var duracion = Duration.zero;
+    var duracionSalida = Duration.zero;
     // Un error no se espera: se muestra, para no dejar la app quieta.
     final esperando =
         !_yaMostrada &&
@@ -65,6 +66,8 @@ class _RaizAppState extends ConsumerState<RaizApp> {
         !hayUsuariosAsync.hasError;
     if (pendiente || (esperando && !sesion.haySesion)) {
       _desdeInicio = true;
+      // El controlador del inicio se crea al agregarlo: su salida se fija aquí.
+      duracionSalida = Movimiento.duracion(context, Movimiento.media);
       pantalla = InicioMarcaScreen(
         key: const ValueKey('inicio_marca'),
         completa: _inicioCompleto,
@@ -89,6 +92,10 @@ class _RaizAppState extends ConsumerState<RaizApp> {
               error: (_, _) => const Scaffold(body: ErrorCarga()),
             );
     }
-    return AnimatedSwitcher(duration: duracion, child: pantalla);
+    return AnimatedSwitcher(
+      duration: duracion,
+      reverseDuration: duracionSalida,
+      child: pantalla,
+    );
   }
 }
