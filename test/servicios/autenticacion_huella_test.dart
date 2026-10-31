@@ -109,6 +109,13 @@ void main() {
       }
     });
 
+    test('sensor ocupado o sin responder da noDisponible', () async {
+      falsa.error = error(
+        LocalAuthExceptionCode.biometricHardwareTemporarilyUnavailable,
+      );
+      expect(await huella.confirmar('x'), ResultadoHuella.noDisponible);
+    });
+
     test('cualquier otro error es cancelada, sin romper la pantalla', () async {
       falsa.error = error(LocalAuthExceptionCode.userCanceled);
       expect(await huella.confirmar('x'), ResultadoHuella.cancelada);

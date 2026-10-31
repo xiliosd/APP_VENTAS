@@ -3,7 +3,13 @@ import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 
 /// Cómo terminó un intento de entrar con la huella.
-enum ResultadoHuella { aprobada, cancelada, bloqueada, sinHuellas }
+enum ResultadoHuella {
+  aprobada,
+  cancelada,
+  bloqueada,
+  sinHuellas,
+  noDisponible,
+}
 
 /// La huella (u otra biometría) del celular, sin el PIN ni el patrón del
 /// celular: esos no prueban que sea el usuario de la app.
@@ -53,6 +59,8 @@ class AutenticacionHuellaLocal implements AutenticacionHuella {
         LocalAuthExceptionCode.noBiometricHardware ||
         LocalAuthExceptionCode.noBiometricsEnrolled ||
         LocalAuthExceptionCode.noCredentialsSet => ResultadoHuella.sinHuellas,
+        LocalAuthExceptionCode.biometricHardwareTemporarilyUnavailable =>
+          ResultadoHuella.noDisponible,
         _ => ResultadoHuella.cancelada,
       };
     } catch (_) {

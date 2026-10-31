@@ -43,21 +43,31 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
         .confirmar('Confirma que eres ${widget.usuario.nombre}');
     if (!mounted) return;
     var ok = false;
+    var fallo = false;
     if (resultado == ResultadoHuella.aprobada) {
-      ok = await ref
-          .read(sesionProvider.notifier)
-          .iniciarSesionConHuella(widget.usuario.id);
+      try {
+        ok = await ref
+            .read(sesionProvider.notifier)
+            .iniciarSesionConHuella(widget.usuario.id);
+      } catch (_) {
+        // Sin esto el botón quedaría bloqueado: el PIN sigue disponible.
+        fallo = true;
+      }
     }
     if (!mounted) return;
     setState(() {
       _usandoHuella = false;
-      _error = switch (resultado) {
-        ResultadoHuella.bloqueada =>
-          'Demasiados intentos con la huella: usa tu PIN',
-        ResultadoHuella.sinHuellas =>
-          'Este celular ya no tiene huellas registradas: usa tu PIN',
-        _ => null,
-      };
+      _error = fallo
+          ? 'No se pudo entrar con la huella: usa tu PIN'
+          : switch (resultado) {
+              ResultadoHuella.bloqueada =>
+                'Demasiados intentos con la huella: usa tu PIN',
+              ResultadoHuella.sinHuellas =>
+                'Este celular ya no tiene huellas registradas: usa tu PIN',
+              ResultadoHuella.noDisponible =>
+                'El sensor de huella no responde ahora: usa tu PIN',
+              _ => null,
+            };
     });
     if (ok && Navigator.of(context).canPop()) Navigator.of(context).pop();
   }
@@ -114,8 +124,9 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
                   children: [
                     NombreTienda(
                       estilo: TextStyle(
-                          color: ColoresApp.of(context).textoSecundario,
-                          fontWeight: FontWeight.w600),
+                        color: ColoresApp.of(context).textoSecundario,
+                        fontWeight: FontWeight.w600,
+                      ),
                       espacioAbajo: 12,
                     ),
                     Hero(
@@ -134,7 +145,9 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Ingresa tu PIN',
-                      style: TextStyle(color: ColoresApp.of(context).textoSecundario),
+                      style: TextStyle(
+                        color: ColoresApp.of(context).textoSecundario,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     IndicadoresPin(llenos: _pin.length, errores: _errores),
@@ -145,7 +158,9 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
                           : Center(
                               child: Text(
                                 _error!,
-                                style: TextStyle(color: ColoresApp.of(context).sale),
+                                style: TextStyle(
+                                  color: ColoresApp.of(context).sale,
+                                ),
                               ),
                             ),
                     ),
@@ -156,14 +171,11 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
                     ),
                     if (conHuella) ...[
                       const SizedBox(height: 8),
-                      Tooltip(
-                        message: 'Entrar con huella',
-                        child: TextButton.icon(
-                          key: const Key('boton_huella'),
-                          onPressed: _usandoHuella ? null : _entrarConHuella,
-                          icon: const Icon(Icons.fingerprint_rounded, size: 28),
-                          label: const Text('Entrar con huella'),
-                        ),
+                      TextButton.icon(
+                        key: const Key('boton_huella'),
+                        onPressed: _usandoHuella ? null : _entrarConHuella,
+                        icon: const Icon(Icons.fingerprint_rounded, size: 28),
+                        label: const Text('Entrar con huella'),
                       ),
                     ],
                     const SizedBox(height: 16),

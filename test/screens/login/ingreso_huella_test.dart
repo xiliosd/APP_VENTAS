@@ -100,7 +100,6 @@ void main() {
     await abrir(tester);
 
     expect(find.text('Entrar con huella'), findsOneWidget);
-    expect(find.byTooltip('Entrar con huella'), findsOneWidget);
     await tocarHuella(tester);
 
     expect(huella.motivo, 'Confirma que eres Ana');
@@ -134,6 +133,52 @@ void main() {
       findsOneWidget,
     );
     expect(container.read(sesionProvider).haySesion, isFalse);
+  });
+
+  testWidgets('con el sensor sin responder lo dice y sugiere el PIN', (
+    tester,
+  ) async {
+    huella.resultado = ResultadoHuella.noDisponible;
+    await abrir(tester);
+    await tocarHuella(tester);
+
+    expect(
+      find.text('El sensor de huella no responde ahora: usa tu PIN'),
+      findsOneWidget,
+    );
+    expect(container.read(sesionProvider).haySesion, isFalse);
+  });
+
+  testWidgets('si falla iniciar sesión, el botón vuelve a quedar disponible', (
+    tester,
+  ) async {
+    huella.pendiente = Completer();
+    await abrir(tester);
+    await tester.ensureVisible(find.byKey(const Key('boton_huella')));
+    await tester.tap(find.byKey(const Key('boton_huella')));
+    await tester.pump();
+    // Con la base cerrada, leer los usuarios lanza una excepción.
+    await db.close();
+    huella.pendiente!.complete(ResultadoHuella.aprobada);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No se pudo entrar con la huella: usa tu PIN'),
+      findsOneWidget,
+    );
+    final boton = tester.widget<ButtonStyleButton>(
+      find.byKey(const Key('boton_huella')),
+    );
+    expect(boton.onPressed, isNotNull);
+  });
+
+  testWidgets('el botón de huella no repite su texto como ayuda', (
+    tester,
+  ) async {
+    await abrir(tester);
+
+    expect(find.text('Entrar con huella'), findsOneWidget);
+    expect(find.byType(Tooltip), findsNothing);
   });
 
   testWidgets('dos toques seguidos piden la huella una sola vez', (
