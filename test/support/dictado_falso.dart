@@ -14,12 +14,20 @@ class DictadoFalso implements Dictado {
   void Function(String)? alOir;
   int escuchas = 0;
   int detenciones = 0;
+  int preparaciones = 0;
+
+  /// Si está, preparar() espera a que la prueba lo complete.
+  Completer<void>? esperaPreparar;
 
   /// Como el plugin real: tras detener aún entrega lo que oyó.
   String? oyeDespuesDeDetener;
 
   @override
-  Future<EstadoDictado> preparar() async => estado;
+  Future<EstadoDictado> preparar() async {
+    preparaciones++;
+    if (esperaPreparar != null) await esperaPreparar!.future;
+    return estado;
+  }
 
   @override
   Future<String?> escuchar({required void Function(String parcial) alOir}) {

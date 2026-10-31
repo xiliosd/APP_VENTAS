@@ -24,6 +24,8 @@ void main() {
     await nuevo('Empanada');
     await nuevo('Leche', marca: 'Alpina');
     await nuevo('Huevos');
+    await nuevo('Limón');
+    await nuevo('Arroz');
     final inactivo = await repo.guardarProducto(nombre: 'Tornillo', precio: 1);
     await repo.desactivarProducto(inactivo);
     activos = await (db.select(
@@ -179,6 +181,32 @@ void main() {
       expect(resumen('un destornillador grande'), [
         (1, TipoParteDictada.noEncontrada, ''),
       ]);
+    });
+
+    test('"unos" y "unas" no son productos', () {
+      expect(resumen('unos panes'), [(1, TipoParteDictada.reconocida, 'Pan')]);
+    });
+
+    test('plurales: raíz correcta', () {
+      const casos = {
+        'leches': 'Leche',
+        'panes': 'Pan',
+        'limones': 'Limón',
+        'arroces': 'Arroz',
+        'colas': 'Coca-Cola',
+        'huevos': 'Huevos',
+      };
+      casos.forEach((plural, producto) {
+        final partes = interpretarDictado('dos $plural', activos);
+        expect(partes, hasLength(1), reason: plural);
+        expect(partes.single.opciones, isNotEmpty, reason: plural);
+        // "colas" cae en las dos Coca-Cola (a elegir); el resto es exacto.
+        expect(
+          partes.single.opciones.every((o) => o.nombre == producto),
+          isTrue,
+          reason: plural,
+        );
+      });
     });
   });
 }

@@ -211,11 +211,15 @@ class _HojaDictadoState extends State<_HojaDictado> {
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      '${f.cantidad}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                    child: Semantics(
+                      label: 'Cantidad: ${f.cantidad}',
+                      excludeSemantics: true,
+                      child: Text(
+                        '${f.cantidad}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),

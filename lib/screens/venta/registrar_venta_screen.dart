@@ -200,10 +200,30 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
   /// Lo que va oyendo el dictado (null = no está escuchando).
   String? _oyendo;
 
+  /// Evita abrir dos dictados con un doble toque mientras se prepara.
+  bool _preparandoDictado = false;
+
   Future<void> _dictar() async {
+    if (_preparandoDictado) return;
+    var otraVez = true;
+    while (otraVez && mounted) {
+      otraVez = await _dictarUnaVez();
+    }
+  }
+
+  /// Un dictado completo; devuelve true si piden "Dictar otra vez".
+  Future<bool> _dictarUnaVez() async {
     final dictado = ref.read(dictadoProvider);
-    final estado = await dictado.preparar();
-    if (!mounted) return;
+    _preparandoDictado = true;
+    setState(() {});
+    final EstadoDictado estado;
+    try {
+      estado = await dictado.preparar();
+    } finally {
+      _preparandoDictado = false;
+      if (mounted) setState(() {});
+    }
+    if (!mounted) return false;
     switch (estado) {
       case EstadoDictado.sinPermiso:
         avisar(
@@ -212,17 +232,17 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
           'VeciTienda → Permisos',
           error: true,
         );
-        return;
+        return false;
       case EstadoDictado.noDisponible:
         _avisarSinDictado();
-        return;
+        return false;
       case EstadoDictado.sinDictadoLocal:
         avisar(
           context,
           'Este celular no permite dictar sin internet',
           error: true,
         );
-        return;
+        return false;
       case EstadoDictado.listo:
     }
     setState(() {
@@ -242,31 +262,31 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       texto = null;
       if (mounted) setState(() => _oyendo = null);
       _dictado = null;
-      return;
+      return false;
     }
     _dictado = null;
-    if (!mounted) return;
+    if (!mounted) return false;
     setState(() => _oyendo = null);
     if (texto == null || texto.trim().isEmpty) {
       avisar(context, 'No te escuché, intenta de nuevo', error: true);
-      return;
+      return false;
     }
     final productos = await ref.read(productosActivosProvider.future);
-    if (!mounted) return;
+    if (!mounted) return false;
     final partes = interpretarDictado(texto, productos);
     // Si no reconoció nada, lo oído sirve como búsqueda a mano.
     if (partes.every((p) => p.tipo == TipoParteDictada.noEncontrada)) {
       _buscarTexto(
         partes.isEmpty ? texto : partes.map((p) => p.texto).join(' '),
       );
-      return;
+      return false;
     }
     final respuesta = await mostrarHojaDictado(
       context,
       oido: texto,
       partes: partes,
     );
-    if (!mounted) return;
+    if (!mounted) return false;
     switch (respuesta) {
       case AgregarDictado(:final lineas):
         final ticket = ref.read(ticketProvider.notifier);
@@ -276,9 +296,10 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       case BuscarDictado(:final texto):
         _buscarTexto(texto);
       case DictarOtraVez():
-        await _dictar();
+        return true;
       case null:
     }
+    return false;
   }
 
   void _avisarSinDictado() => avisar(
@@ -687,7 +708,9 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
               key: const Key('boton_dictar'),
               tooltip: 'Dictar venta',
               icon: const Icon(Icons.mic_rounded),
-              onPressed: _oyendo == null ? _dictar : null,
+              onPressed: _oyendo == null && !_preparandoDictado
+                  ? _dictar
+                  : null,
             ),
         ],
       ),

@@ -287,7 +287,9 @@ void main() {
 
     expect(find.byKey(const Key('franja_dictado')), findsNothing);
     expect(
-      tester.widget<IconButton>(find.byKey(const Key('boton_dictar'))).onPressed,
+      tester
+          .widget<IconButton>(find.byKey(const Key('boton_dictar')))
+          .onPressed,
       isNotNull,
     );
   });
@@ -319,5 +321,51 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('Agregar al ticket (3)'), findsOneWidget);
+  });
+
+  testWidgets('doble toque en el micrófono abre un solo dictado', (
+    tester,
+  ) async {
+    dictado
+      ..esperaPreparar = Completer()
+      ..texto = 'un pan';
+    await abrir(tester);
+    await tester.tap(find.byKey(const Key('boton_dictar')));
+    await tester.pump();
+    await tester.tap(
+      find.byKey(const Key('boton_dictar')),
+      warnIfMissed: false,
+    );
+    await tester.pump();
+
+    expect(dictado.preparaciones, 1);
+    dictado.esperaPreparar!.complete();
+    await tester.pumpAndSettle();
+    expect(dictado.preparaciones, 1);
+  });
+
+  testWidgets('Dictar otra vez vuelve a escuchar', (tester) async {
+    await abrir(tester);
+    await dictar(tester, 'un pan');
+    await tester.tap(find.byKey(const Key('boton_dictar_otra_vez')));
+    await tester.pumpAndSettle();
+
+    expect(dictado.escuchas, 2);
+    expect(find.text('¿Agrego esto?'), findsOneWidget);
+  });
+
+  testWidgets('la cantidad del dictado se lee como "Cantidad: 2"', (
+    tester,
+  ) async {
+    final semantica = tester.ensureSemantics();
+    await abrir(tester);
+    await dictar(tester, 'dos panes');
+
+    // La fila une su texto en un solo nodo; la cantidad va dentro.
+    expect(
+      tester.getSemantics(find.text('2')),
+      matchesSemantics(label: 'Pan · \$500\nCantidad: 2'),
+    );
+    semantica.dispose();
   });
 }

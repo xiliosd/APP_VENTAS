@@ -41,7 +41,16 @@ const _separadores = {'y', 'mas'};
 
 const _vacias = {
   'de', 'del', 'la', 'el', 'los', 'las', 'con', 'por', 'favor', 'porfa', //
-  'dame', 'deme', 'regalame', 'regaleme', 'quiero', 'me', 'vendi', 'vendo',
+  'dame',
+  'deme',
+  'regalame',
+  'regaleme',
+  'quiero',
+  'me',
+  'vendi',
+  'vendo',
+  'unos',
+  'unas',
 };
 
 const _numeros = {
@@ -76,14 +85,18 @@ List<String> _palabras(String texto) =>
         .where((p) => p.isNotEmpty)
         .toList();
 
-/// Plural simple: "panes" → "pan", "colas" → "cola".
+/// Plural simple: "panes" → "pan", "arroces" → "arroz", "colas" → "cola".
+/// "es" solo se quita tras l, n, r, d, j, y, s: "leches" → "leche".
 String _raiz(String palabra) {
-  if (palabra.length > 3 && palabra.endsWith('es')) {
+  if (palabra.length <= 3) return palabra;
+  if (palabra.endsWith('ces')) {
+    return '${palabra.substring(0, palabra.length - 3)}z';
+  }
+  if (palabra.endsWith('es') &&
+      'lnrdjys'.contains(palabra[palabra.length - 3])) {
     return palabra.substring(0, palabra.length - 2);
   }
-  if (palabra.length > 3 && palabra.endsWith('s')) {
-    return palabra.substring(0, palabra.length - 1);
-  }
+  if (palabra.endsWith('s')) return palabra.substring(0, palabra.length - 1);
   return palabra;
 }
 
