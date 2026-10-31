@@ -68,8 +68,13 @@ Orden elegido por el usuario el 2026-10-30; la monetización queda para después
      mejor los plurales y no arranca dos veces, "Cantidad: N" para el lector de pantalla,
      "¿Quién compra?" una sola vez y fila quitada estable. Fuera de alcance: "1/2" en el dictado.
      Por verificar en el celular: pausa de la cámara y linterna.
-   - Tanda C (huella, clientes, mensajes de error claros en 10 pantallas y orden interno) —
-     pendiente.
+   - Tanda C (huella, clientes, mensajes de error claros y orden interno) — hecha: botón de
+     huella que no se traba y aviso de sensor ocupado, sin destello "Debe desde hoy", "Ver
+     extracto" desde Clientes, "No se pudo cargar · Cierra la app y vuelve a abrirla" en lugar
+     de errores técnicos (13 lugares, con una prueba que lo vigila), nombres de proveedor sin
+     espacios dobles, cambio de sesión sin fundido y orden interno (ciclo de imports y
+     comparador único). Fuera de alcance: `_yaMostrada` en la pantalla raíz.
+   - Paso 2 completo el 2026-10-31.
 3. Consultar precio por código de barras — función pequeña y local, sin dependencias externas.
 4. Preparar para uso real — llave de firma propia, claves de Supabase (respaldo en la nube) y,
    si se publica, requisitos de Play Store.
