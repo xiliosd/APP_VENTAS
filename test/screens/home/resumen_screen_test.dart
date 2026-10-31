@@ -1,6 +1,7 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/screens/home/resumen_screen.dart';
+import 'package:app_ventas/servicios/lector_codigo.dart';
 import 'package:app_ventas/screens/reportes/reportes_screen.dart';
 import 'package:app_ventas/ui/monto.dart';
 import 'package:app_ventas/util/fecha_util.dart';
@@ -12,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/lector_falso.dart';
 import '../../support/montaje.dart';
 
 void main() {
@@ -227,6 +229,63 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ReportesScreen), findsOneWidget);
+  });
+
+  Future<void> montarConLector(WidgetTester tester, String rol,
+      {double escala = 1.0, Size tamano = const Size(800, 2400)}) async {
+    tester.view.physicalSize = tamano;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await db.into(db.productos).insert(ProductosCompanion.insert(
+        nombre: 'Gaseosa', precio: 2500, codigoBarras: const Value('7702')));
+    final container = await containerConSesion(db,
+        nombre: 'Caro',
+        rol: rol,
+        overrides: [
+          lectorCodigoProvider.overrideWithValue(LectorFalso(['7702'])),
+        ]);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp(
+        theme: temaClaro(),
+        builder: (contexto, hijo) => MediaQuery(
+          data: MediaQuery.of(contexto)
+              .copyWith(textScaler: TextScaler.linear(escala)),
+          child: hijo!,
+        ),
+        home: const Scaffold(body: ResumenScreen()),
+      ),
+    ));
+    await tester.pumpAndSettle();
+  }
+
+  for (final rol in ['admin', 'vendedor']) {
+    testWidgets('el Inicio muestra Consultar precio sobre la barra y lo abre ($rol)',
+        (tester) async {
+      await montarConLector(tester, rol);
+      final boton = find.byKey(const Key('boton_consultar_precio'));
+      expect(boton, findsOneWidget);
+      expect(find.descendant(of: boton, matching: find.text('Consultar precio')),
+          findsOneWidget);
+      expect(tester.getRect(boton).bottom,
+          lessThanOrEqualTo(
+              tester.getRect(find.byKey(const Key('boton_nueva_venta'))).top));
+      expect(tester.getSize(boton).height, greaterThanOrEqualTo(48));
+
+      await tester.tap(boton);
+      await tester.pumpAndSettle();
+      expect(find.text('Gaseosa'), findsOneWidget);
+      expect(find.text('Listo'), findsOneWidget);
+    });
+  }
+
+  testWidgets('Inicio a letra 2,0× en 360 dp no desborda con el botón nuevo',
+      (tester) async {
+    await montarConLector(tester, 'admin',
+        escala: 2.0, tamano: const Size(360, 740));
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('boton_consultar_precio')), findsOneWidget);
   });
 
   testWidgets('el vendedor no ve Ver reportes', (tester) async {

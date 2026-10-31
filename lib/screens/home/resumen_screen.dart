@@ -19,6 +19,7 @@ import '../../util/comparacion_ventas.dart';
 import '../../util/formato_moneda.dart';
 import '../../util/texto_util.dart';
 import '../../widgets/selector_fecha.dart';
+import '../consulta/consultar_precio.dart';
 import '../gasto/registrar_gasto_screen.dart';
 import '../reportes/reportes_screen.dart';
 import '../venta/registrar_venta_screen.dart';
@@ -141,12 +142,13 @@ class _ResumenScreenState extends ConsumerState<ResumenScreen> {
   }
 }
 
-/// "+ Venta" y "− Gasto" fijos abajo del Inicio, siempre a mano del pulgar.
-class _BarraAcciones extends StatelessWidget {
+/// "Consultar precio", "+ Venta" y "− Gasto" fijos abajo del Inicio, siempre a
+/// mano del pulgar.
+class _BarraAcciones extends ConsumerWidget {
   const _BarraAcciones();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = ColoresApp.of(context);
     return DecoratedBox(
       key: const Key('barra_acciones_inicio'),
@@ -164,7 +166,28 @@ class _BarraAcciones extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ObjetivoRecorrido(
+                id: 'boton_consultar_precio',
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    key: const Key('boton_consultar_precio'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                      foregroundColor: c.primario,
+                      side: BorderSide(color: c.primario, width: 1.5),
+                    ),
+                    icon: const Icon(Icons.sell_outlined),
+                    label: const Text('Consultar precio'),
+                    onPressed: () => consultarPrecio(context, ref),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
             children: [
               Expanded(
                 flex: 5,
@@ -207,6 +230,8 @@ class _BarraAcciones extends StatelessWidget {
                   ),
                 ),
               ),
+            ],
+          ),
             ],
           ),
         ),

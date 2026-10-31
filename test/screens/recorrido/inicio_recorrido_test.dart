@@ -2,6 +2,7 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/recorrido_provider.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
 import 'package:app_ventas/screens/home/home_screen.dart';
+import 'package:app_ventas/screens/recorrido/globos_inicio.dart';
 import 'package:app_ventas/screens/recorrido/paso_productos_screen.dart';
 import 'package:app_ventas/screens/recorrido/paso_venta_screen.dart';
 import 'package:app_ventas/screens/venta/registrar_venta_screen.dart';
@@ -64,7 +65,7 @@ void main() {
         .tapAt(tester.getCenter(find.byKey(const Key('boton_nueva_venta'))));
     await tester.pumpAndSettle();
     expect(find.byType(RegistrarVentaScreen), findsNothing);
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 5; i++) {
       await tester.tap(find.byKey(const Key('boton_siguiente_globo')));
       await tester.pumpAndSettle();
     }
@@ -73,6 +74,17 @@ void main() {
     await tester.tap(find.byKey(const Key('boton_empezar_a_vender')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('hoja_listo')), findsNothing);
+  });
+
+  test('el recorrido del Inicio señala Consultar precio después de + Venta', () {
+    final i = globosInicio
+        .indexWhere((g) => g.objetivos.contains('boton_nueva_venta'));
+    expect(globosInicio[i + 1].objetivos, ['boton_consultar_precio']);
+    expect(
+      globosInicio[i + 1].texto,
+      '¿Te preguntan cuánto vale algo? '
+      'Escanéalo aquí y ves el precio sin vender.',
+    );
   });
 
   testWidgets('Saltar recorrido en el Inicio lo deja hecho', (tester) async {

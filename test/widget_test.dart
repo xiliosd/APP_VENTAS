@@ -63,7 +63,7 @@ void main() {
 
     // Paso 4 · Conoce tu Inicio
     expect(find.text('Hola, Ana'), findsOneWidget);
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 5; i++) {
       await tester.tap(find.byKey(const Key('boton_siguiente_globo')));
       await tester.pumpAndSettle();
     }
