@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../providers/fiado_providers.dart';
 import '../../ui/colores_app.dart';
+import '../../ui/error_carga.dart';
 import '../../ui/monto.dart';
 import '../../ui/tema_app.dart';
 import '../../ui/tipografia.dart';
@@ -35,7 +36,7 @@ class ExtractoFiadoScreen extends ConsumerWidget {
           skipLoadingOnReload: true,
           data: (extracto) => _Contenido(cliente: cliente, extracto: extracto),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, st) => const Center(child: Text('No se pudo cargar')),
+          error: (e, st) => const ErrorCarga(),
         ),
       ),
     );

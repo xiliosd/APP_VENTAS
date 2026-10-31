@@ -172,6 +172,26 @@ void main() {
     expect(boton.onPressed, isNotNull);
   });
 
+  testWidgets('huella aprobada pero sin poder abrir la sesión sugiere el PIN', (
+    tester,
+  ) async {
+    huella.pendiente = Completer();
+    await abrir(tester);
+    await tester.ensureVisible(find.byKey(const Key('boton_huella')));
+    await tester.tap(find.byKey(const Key('boton_huella')));
+    await tester.pump();
+    // Sin la huella activada, iniciarSesionConHuella devuelve false.
+    await container.read(usuariosConHuellaProvider.notifier).desactivar(ana.id);
+    huella.pendiente!.complete(ResultadoHuella.aprobada);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No se pudo entrar con la huella: usa tu PIN'),
+      findsOneWidget,
+    );
+    expect(container.read(sesionProvider).haySesion, isFalse);
+  });
+
   testWidgets('el botón de huella no repite su texto como ayuda', (
     tester,
   ) async {

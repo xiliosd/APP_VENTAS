@@ -19,10 +19,23 @@ class ErrorCarga extends StatelessWidget {
         style: TextStyle(color: ColoresApp.of(context).textoSecundario),
       );
     }
-    return const EstadoVacio(
-      icono: Icons.error_outline_rounded,
-      titulo: 'No se pudo cargar',
-      mensaje: 'Cierra esta pantalla y vuelve a abrirla',
+    // Con poco alto (filtros arriba, letra grande) se desplaza en vez de
+    // desbordar; con espacio de sobra queda centrado.
+    return LayoutBuilder(
+      builder: (context, restricciones) {
+        const aviso = EstadoVacio(
+          icono: Icons.error_outline_rounded,
+          titulo: 'No se pudo cargar',
+          mensaje: 'Cierra la app y vuelve a abrirla',
+        );
+        if (!restricciones.hasBoundedHeight) return aviso;
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: restricciones.maxHeight),
+            child: aviso,
+          ),
+        );
+      },
     );
   }
 }

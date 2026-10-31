@@ -53,6 +53,8 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
         // Sin esto el botón quedaría bloqueado: el PIN sigue disponible.
         fallo = true;
       }
+      // Aprobada pero sin sesión (p. ej. huella desactivada): lo mismo.
+      if (!ok) fallo = true;
     }
     if (!mounted) return;
     setState(() {

@@ -32,6 +32,7 @@ class DetalleClienteGeneralScreen extends ConsumerWidget {
         ref.watch(comprasClienteProvider(clienteId)).valueOrNull ??
         const <Venta>[];
     final tieneFiado = saldo != 0 || movimientos.isNotEmpty;
+    final tieneMovimientosVigentes = movimientos.any((m) => !m.anulado);
 
     return Scaffold(
       appBar: AppBar(title: Text(cliente?.nombreCompleto ?? 'Cliente')),
@@ -62,16 +63,17 @@ class DetalleClienteGeneralScreen extends ConsumerWidget {
                         icon: const Icon(Icons.volunteer_activism_rounded),
                         label: const Text('Ver fiado'),
                       ),
-                      OutlinedButton(
-                        key: const Key('boton_ver_extracto_cliente'),
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                ExtractoFiadoScreen(cliente: cliente),
+                      if (tieneMovimientosVigentes)
+                        OutlinedButton(
+                          key: const Key('boton_ver_extracto_cliente'),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ExtractoFiadoScreen(cliente: cliente),
+                            ),
                           ),
+                          child: const Text('Ver extracto'),
                         ),
-                        child: const Text('Ver extracto'),
-                      ),
                     ],
                   ),
                 ],

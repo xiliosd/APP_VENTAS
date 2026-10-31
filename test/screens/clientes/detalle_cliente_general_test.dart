@@ -144,6 +144,34 @@ void main() {
     expect(find.byKey(const Key('boton_ver_extracto_cliente')), findsNothing);
   });
 
+  testWidgets('con solo movimientos anulados no ofrece "Ver extracto"', (
+    tester,
+  ) async {
+    await montar(
+      tester,
+      sembrar: (usuarioId) async {
+        final id = await db
+            .into(db.clientes)
+            .insert(ClientesCompanion.insert(nombre: 'Luis'));
+        await db
+            .into(db.ventas)
+            .insert(
+              VentasCompanion.insert(
+                monto: 8000,
+                fecha: DateTime(2026, 3, 5, 9, 5),
+                esFiado: const Value(true),
+                anulado: const Value(true),
+                clienteId: Value(id),
+                usuarioId: usuarioId,
+              ),
+            );
+        return id;
+      },
+    );
+    expect(find.byKey(const Key('boton_ver_fiado')), findsOneWidget);
+    expect(find.byKey(const Key('boton_ver_extracto_cliente')), findsNothing);
+  });
+
   testWidgets('detalle de cliente a letra 2,0× no desborda', (tester) async {
     tester.view.physicalSize = const Size(360 * 3, 690 * 3);
     tester.view.devicePixelRatio = 3;

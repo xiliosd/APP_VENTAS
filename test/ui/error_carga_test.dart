@@ -19,16 +19,13 @@ void main() {
   testWidgets('muestra el texto amable en modo normal', (tester) async {
     await tester.pumpWidget(_envolver(const ErrorCarga()));
     expect(find.text('No se pudo cargar'), findsOneWidget);
-    expect(
-      find.text('Cierra esta pantalla y vuelve a abrirla'),
-      findsOneWidget,
-    );
+    expect(find.text('Cierra la app y vuelve a abrirla'), findsOneWidget);
   });
 
   testWidgets('muestra el texto amable en modo compacto', (tester) async {
     await tester.pumpWidget(_envolver(const ErrorCarga(compacto: true)));
     expect(find.text('No se pudo cargar'), findsOneWidget);
-    expect(find.text('Cierra esta pantalla y vuelve a abrirla'), findsNothing);
+    expect(find.text('Cierra la app y vuelve a abrirla'), findsNothing);
   });
 
   for (final compacto in [false, true]) {
@@ -44,6 +41,27 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('con poco alto se desplaza en vez de desbordar', (tester) async {
+    await tester.pumpWidget(
+      _envolver(
+        const Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(height: 120, child: ErrorCarga()),
+        ),
+        escala: 2,
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('con alto sin límite no falla', (tester) async {
+    await tester.pumpWidget(
+      _envolver(const SingleChildScrollView(child: ErrorCarga())),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('No se pudo cargar'), findsOneWidget);
+  });
 
   test('ninguna pantalla muestra el texto de una excepción', () {
     final patron = RegExp(r'''Text\(\s*['"]Error: \$''');

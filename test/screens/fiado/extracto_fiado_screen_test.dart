@@ -1,5 +1,7 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/providers/fiado_providers.dart';
+import 'package:app_ventas/util/extracto_fiado.dart';
 import 'package:app_ventas/repositories/fiado_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
 import 'package:app_ventas/screens/fiado/extracto_fiado_screen.dart';
@@ -191,5 +193,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('si falla la carga muestra el aviso amable', (tester) async {
+    final cliente = await (db.select(
+      db.clientes,
+    )..where((c) => c.id.equals(clienteId))).getSingle();
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        extractoClienteProvider.overrideWith(
+          (ref, id) => Future<ExtractoFiado>.error(StateError('base dañada')),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: temaClaro(),
+          home: ExtractoFiadoScreen(cliente: cliente),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('No se pudo cargar'), findsOneWidget);
+    expect(find.text('Cierra la app y vuelve a abrirla'), findsOneWidget);
+    expect(find.textContaining('base dañada'), findsNothing);
   });
 }

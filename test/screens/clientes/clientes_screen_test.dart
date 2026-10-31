@@ -1,4 +1,5 @@
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/providers/clientes_providers.dart';
 import 'package:app_ventas/screens/clientes/clientes_screen.dart';
 import 'package:app_ventas/screens/fiado/lista_fiado_screen.dart';
 import 'package:drift/drift.dart' show Value;
@@ -52,6 +53,28 @@ void main() {
           telefono: Value(telefono),
         ),
       );
+
+  testWidgets('si falla la carga muestra el aviso amable', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    container = await containerConSesion(
+      db,
+      overrides: [
+        listaClientesProvider.overrideWith(
+          (ref) => Future<List<Cliente>>.error(StateError('base dañada')),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      appDePrueba(container, inicio: const ClientesScreen()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('No se pudo cargar'), findsOneWidget);
+    expect(find.text('Cierra la app y vuelve a abrirla'), findsOneWidget);
+    expect(find.textContaining('base dañada'), findsNothing);
+  });
 
   testWidgets('sin clientes muestra el estado vacío', (tester) async {
     await montar(tester);

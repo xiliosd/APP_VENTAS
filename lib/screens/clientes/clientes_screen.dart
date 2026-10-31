@@ -6,6 +6,7 @@ import '../../providers/clientes_providers.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/entrada_escalonada.dart';
+import '../../ui/error_carga.dart';
 import '../../ui/estado_vacio.dart';
 import '../../ui/pildora.dart';
 import '../../util/nombre_cliente.dart';
@@ -124,7 +125,7 @@ class _ClientesScreenState extends ConsumerState<ClientesScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => const Center(child: Text('No se pudieron cargar')),
+        error: (e, st) => const ErrorCarga(),
       ),
     );
   }
