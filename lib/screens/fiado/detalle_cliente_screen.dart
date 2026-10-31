@@ -48,7 +48,8 @@ class DetalleClienteScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cliente = clienteConSaldo.cliente;
-    final saldo = ref.watch(saldoClienteProvider(cliente.id)).valueOrNull ??
+    final saldo =
+        ref.watch(saldoClienteProvider(cliente.id)).valueOrNull ??
         clienteConSaldo.saldo;
     final movimientosAsync = ref.watch(movimientosClienteProvider(cliente.id));
     final usuarios =
@@ -64,12 +65,15 @@ class DetalleClienteScreen extends ConsumerWidget {
         if (m.tipo == TipoMovimientoFiado.venta && !m.anulado) m.fecha,
     ];
     // Sin movimientos vigentes el extracto estaría vacío.
-    final hayMovimientosVigentes = (movimientosAsync.valueOrNull ??
-            const <MovimientoFiado>[])
-        .any((m) => !m.anulado);
-    final fechaDeuda = ventasVigentes.isNotEmpty
+    final hayMovimientosVigentes =
+        (movimientosAsync.valueOrNull ?? const <MovimientoFiado>[]).any(
+          (m) => !m.anulado,
+        );
+    // Sin fecha conocida (aún cargando) no se muestra "Debe desde": decir
+    // "hoy" por un instante confundiría a quien lleva días debiendo.
+    final DateTime? fechaDeuda = ventasVigentes.isNotEmpty
         ? ventasVigentes.reduce((a, b) => a.isBefore(b) ? a : b)
-        : clienteConSaldo.fechaDeudaMasAntigua ?? DateTime.now();
+        : clienteConSaldo.fechaDeudaMasAntigua;
 
     return Scaffold(
       appBar: AppBar(title: Text(cliente.nombreCompleto)),
@@ -86,21 +90,31 @@ class DetalleClienteScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(cliente.nombreCompleto,
-                    style: estiloTitulo(tamano: 14, color: suave)),
+                Text(
+                  cliente.nombreCompleto,
+                  style: estiloTitulo(tamano: 14, color: suave),
+                ),
                 const SizedBox(height: 4),
                 // Con saldo a favor se muestra el valor; el texto lo aclara.
-                Monto(saldo.abs(),
-                    tamano: 36, tono: TonoMonto.claro, animado: true),
-                const SizedBox(height: 4),
-                Text(
-                  saldo > 0
-                      ? textoDebeDesde(fechaDeuda, DateTime.now())
-                      : saldo == 0
-                          ? 'Al día'
-                          : 'Saldo a favor ${formatoMoneda(-saldo)}',
-                  style: TextStyle(color: suave, fontSize: 13),
+                Monto(
+                  saldo.abs(),
+                  tamano: 36,
+                  tono: TonoMonto.claro,
+                  animado: true,
                 ),
+                const SizedBox(height: 4),
+                if (saldo > 0 && fechaDeuda != null)
+                  Text(
+                    textoDebeDesde(fechaDeuda, DateTime.now()),
+                    style: TextStyle(color: suave, fontSize: 13),
+                  )
+                else if (saldo <= 0)
+                  Text(
+                    saldo == 0
+                        ? 'Al día'
+                        : 'Saldo a favor ${formatoMoneda(-saldo)}',
+                    style: TextStyle(color: suave, fontSize: 13),
+                  ),
                 if (saldo > 0) ...[
                   const SizedBox(height: 12),
                   BotonPrincipal(
@@ -138,8 +152,11 @@ class DetalleClienteScreen extends ConsumerWidget {
               nombres: nombres,
               onTap: (m) => abrirHojaMovimiento(
                 context,
-                MovimientoEditable.desdeFiado(m,
-                    clienteId: cliente.id, nombreCliente: cliente.nombreCompleto),
+                MovimientoEditable.desdeFiado(
+                  m,
+                  clienteId: cliente.id,
+                  nombreCliente: cliente.nombreCompleto,
+                ),
               ),
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -154,8 +171,11 @@ class DetalleClienteScreen extends ConsumerWidget {
 /// Movimientos del más reciente al más antiguo, agrupados por día, con el
 /// saldo que quedó después de cada uno.
 class _LineaTiempo extends StatelessWidget {
-  const _LineaTiempo(
-      {required this.movimientos, required this.nombres, required this.onTap});
+  const _LineaTiempo({
+    required this.movimientos,
+    required this.nombres,
+    required this.onTap,
+  });
 
   final List<MovimientoFiado> movimientos;
   final Map<int, String> nombres;
@@ -167,34 +187,41 @@ class _LineaTiempo extends StatelessWidget {
     final saldos = saldosAcumulados(movimientos);
     final hoy = DateTime.now();
     String titulo(DateTime dia) => switch (diasDesde(dia, hoy)) {
-          0 => 'Hoy',
-          1 => 'Ayer',
-          _ => fechaCortaConAnio(dia, hoy),
-        };
+      0 => 'Hoy',
+      1 => 'Ayer',
+      _ => fechaCortaConAnio(dia, hoy),
+    };
     final filas = <Widget>[];
     DateTime? diaActual;
     for (final m in movimientos) {
       final dia = inicioDelDia(m.fecha);
       if (dia != diaActual) {
         diaActual = dia;
-        filas.add(Padding(
-          key: Key('encabezado_dia_${dia.toIso8601String().substring(0, 10)}'),
-          padding: const EdgeInsets.fromLTRB(4, 16, 4, 4),
-          child: Text(
-            titulo(dia),
-            style: TextStyle(
+        filas.add(
+          Padding(
+            key: Key(
+              'encabezado_dia_${dia.toIso8601String().substring(0, 10)}',
+            ),
+            padding: const EdgeInsets.fromLTRB(4, 16, 4, 4),
+            child: Text(
+              titulo(dia),
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: c.textoSecundario),
+                color: c.textoSecundario,
+              ),
+            ),
           ),
-        ));
+        );
       }
-      filas.add(_FilaMovimiento(
-        movimiento: m,
-        nombres: nombres,
-        saldoTras: saldos[(m.tipo, m.id)],
-        onTap: () => onTap(m),
-      ));
+      filas.add(
+        _FilaMovimiento(
+          movimiento: m,
+          nombres: nombres,
+          saldoTras: saldos[(m.tipo, m.id)],
+          onTap: () => onTap(m),
+        ),
+      );
     }
     return Column(
       key: const Key('linea_tiempo'),
@@ -272,13 +299,15 @@ class _FilaMovimiento extends StatelessWidget {
                     Row(
                       children: [
                         Flexible(
-                          child: Text(esAbono ? 'Abono' : 'Venta fiada',
-                              overflow: TextOverflow.ellipsis,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600)),
+                          child: Text(
+                            esAbono ? 'Abono' : 'Venta fiada',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
                         ),
                         if (esAbono &&
-                            movimiento.medioPago == MedioPago.transferencia) ...[
+                            movimiento.medioPago ==
+                                MedioPago.transferencia) ...[
                           const SizedBox(width: 8),
                           const EtiquetaQr(),
                         ],
@@ -292,18 +321,23 @@ class _FilaMovimiento extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(esAbono ? '− ' : '+ ',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                          color: movimiento.anulado
-                                              ? c.textoSecundario
-                                              : color)),
-                                  Monto(movimiento.monto,
-                                      tamano: 16,
-                                      tono: esAbono
-                                          ? TonoMonto.entra
-                                          : TonoMonto.fiado,
-                                      tachado: movimiento.anulado),
+                                  Text(
+                                    esAbono ? '− ' : '+ ',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: movimiento.anulado
+                                          ? c.textoSecundario
+                                          : color,
+                                    ),
+                                  ),
+                                  Monto(
+                                    movimiento.monto,
+                                    tamano: 16,
+                                    tono: esAbono
+                                        ? TonoMonto.entra
+                                        : TonoMonto.fiado,
+                                    tachado: movimiento.anulado,
+                                  ),
                                 ],
                               ),
                             ),
@@ -315,7 +349,9 @@ class _FilaMovimiento extends StatelessWidget {
                     if (correccion != null)
                       Text(
                         textoCorreccion(
-                            correccion, nombres[correccion.usuarioId] ?? ''),
+                          correccion,
+                          nombres[correccion.usuarioId] ?? '',
+                        ),
                         style: secundario,
                       ),
                     if (!movimiento.anulado && saldo != null)
@@ -323,8 +359,10 @@ class _FilaMovimiento extends StatelessWidget {
                         saldo >= 0
                             ? 'Quedó debiendo ${formatoMoneda(saldo)}'
                             : 'Saldo a favor ${formatoMoneda(-saldo)}',
-                        key: Key('saldo_tras_${movimiento.tipo.name}_'
-                            '${movimiento.id}'),
+                        key: Key(
+                          'saldo_tras_${movimiento.tipo.name}_'
+                          '${movimiento.id}',
+                        ),
                         style: secundario,
                       ),
                   ],
@@ -373,8 +411,10 @@ class _HojaAbonoState extends ConsumerState<_HojaAbono> {
     final saldo = await fiadoRepo.saldoCliente(widget.clienteId);
     if (!mounted) return;
     if (_monto > saldo) {
-      setState(() => _error =
-          'El abono no puede ser mayor que la deuda (${formatoMoneda(saldo)})');
+      setState(
+        () => _error =
+            'El abono no puede ser mayor que la deuda (${formatoMoneda(saldo)})',
+      );
       return;
     }
     if (_medio == MedioPago.transferencia) {
@@ -450,8 +490,11 @@ class _HojaAbonoState extends ConsumerState<_HojaAbono> {
 
 /// Chips "Todo" y "Mitad" que llenan el monto del abono con un toque.
 class _AbonoRapido extends StatelessWidget {
-  const _AbonoRapido(
-      {required this.saldo, required this.monto, required this.onElegir});
+  const _AbonoRapido({
+    required this.saldo,
+    required this.monto,
+    required this.onElegir,
+  });
 
   final int saldo;
   final int monto;

@@ -1,6 +1,8 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/screens/clientes/detalle_cliente_general_screen.dart';
 import 'package:app_ventas/screens/fiado/detalle_cliente_screen.dart';
+import 'package:app_ventas/screens/fiado/extracto_fiado_screen.dart';
+import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -107,5 +109,65 @@ void main() {
     expect(find.text('Al día'), findsOneWidget);
     expect(find.byKey(const Key('boton_ver_fiado')), findsNothing);
     expect(find.text('Aún no tiene compras'), findsOneWidget);
+  });
+  Future<int> sembrarConFiado(int usuarioId) async {
+    final id = await db
+        .into(db.clientes)
+        .insert(
+          ClientesCompanion.insert(
+            nombre: 'Ana',
+            apellido: const Value('Gómez'),
+            telefono: const Value('3001112233'),
+            notas: const Value('Vive en el barrio San José, casa azul'),
+          ),
+        );
+    await venta(usuarioId, id, 8000, DateTime(2026, 3, 5, 9, 5), fiado: true);
+    return id;
+  }
+
+  testWidgets('desde Clientes se abre el extracto con un toque', (
+    tester,
+  ) async {
+    await montar(tester, sembrar: sembrarConFiado);
+    expect(find.text('Ver extracto'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('boton_ver_extracto_cliente')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ExtractoFiadoScreen), findsOneWidget);
+  });
+
+  testWidgets('sin fiado no ofrece "Ver extracto"', (tester) async {
+    await montar(
+      tester,
+      sembrar: (_) =>
+          db.into(db.clientes).insert(ClientesCompanion.insert(nombre: 'Luis')),
+    );
+    expect(find.byKey(const Key('boton_ver_extracto_cliente')), findsNothing);
+  });
+
+  testWidgets('detalle de cliente a letra 2,0× no desborda', (tester) async {
+    tester.view.physicalSize = const Size(360 * 3, 690 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    container = await containerConSesion(db);
+    addTearDown(container.dispose);
+    final usuarioId = (await db.select(db.usuarios).get()).first.id;
+    final clienteId = await sembrarConFiado(usuarioId);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: temaClaro(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(2.0)),
+            child: child!,
+          ),
+          home: DetalleClienteGeneralScreen(clienteId: clienteId),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('boton_ver_extracto_cliente')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

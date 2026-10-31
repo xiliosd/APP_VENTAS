@@ -1,6 +1,7 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/repository_providers.dart';
 import 'package:app_ventas/providers/ticket_provider.dart';
+import 'package:app_ventas/ui/tema_app.dart';
 import 'package:app_ventas/widgets/formulario_cliente.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -239,5 +240,39 @@ void main() {
         .listarClientes();
     expect(todos.single.id, id);
     expect(todos.single.apellido, 'Díaz');
+  });
+
+  testWidgets('formulario de cliente a letra 2,0× no desborda', (tester) async {
+    tester.view.physicalSize = const Size(360 * 3, 690 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    container = await containerConSesion(db);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: temaClaro(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(2.0)),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: Builder(
+              builder: (contexto) => TextButton(
+                key: const Key('abrir'),
+                onPressed: () => pedirClienteNuevo(contexto),
+                child: const Text('Abrir'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('abrir')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('campo_nombre_cliente')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

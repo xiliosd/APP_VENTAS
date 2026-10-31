@@ -13,6 +13,7 @@ import '../../util/formato_moneda.dart';
 import '../../util/nombre_cliente.dart';
 import '../../widgets/formulario_cliente.dart';
 import '../fiado/detalle_cliente_screen.dart';
+import '../fiado/extracto_fiado_screen.dart';
 
 /// Datos de un cliente y todas sus compras, de contado y fiadas.
 class DetalleClienteGeneralScreen extends ConsumerWidget {
@@ -42,20 +43,36 @@ class DetalleClienteGeneralScreen extends ConsumerWidget {
                 _Tarjeta(cliente: cliente, saldo: saldo),
                 if (tieneFiado) ...[
                   const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    key: const Key('boton_ver_fiado'),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => DetalleClienteScreen(
-                          clienteConSaldo: ClienteConSaldo(
-                            cliente: cliente,
-                            saldo: saldo,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        key: const Key('boton_ver_fiado'),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => DetalleClienteScreen(
+                              clienteConSaldo: ClienteConSaldo(
+                                cliente: cliente,
+                                saldo: saldo,
+                              ),
+                            ),
                           ),
                         ),
+                        icon: const Icon(Icons.volunteer_activism_rounded),
+                        label: const Text('Ver fiado'),
                       ),
-                    ),
-                    icon: const Icon(Icons.volunteer_activism_rounded),
-                    label: const Text('Ver fiado'),
+                      OutlinedButton(
+                        key: const Key('boton_ver_extracto_cliente'),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ExtractoFiadoScreen(cliente: cliente),
+                          ),
+                        ),
+                        child: const Text('Ver extracto'),
+                      ),
+                    ],
                   ),
                 ],
                 const SizedBox(height: 24),
