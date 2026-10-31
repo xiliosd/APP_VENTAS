@@ -4,7 +4,8 @@ enum UsoEscaner {
   venta,
   practica,
   producto,
-  primerosProductos;
+  primerosProductos,
+  consulta;
 
   static const _ayudaVenta =
       'Si el código no existe, te ofrezco crearlo; si existe, lo sumo a la venta';
@@ -14,6 +15,7 @@ enum UsoEscaner {
     venta || practica => _ayudaVenta,
     producto => 'Si conozco el código, lo lleno por ti',
     primerosProductos => 'Si el código no existe, te ofrezco crearlo',
+    consulta => 'Te muestro el precio; no se agrega a ninguna venta',
   };
 
   /// Solo el recorrido deja avanzar sin leer nada.
