@@ -61,6 +61,8 @@ void main() {
       'menu_usuarios',
       'menu_cobro_qr',
       'menu_respaldo',
+      'boton_repetir_recorrido',
+      'boton_preguntas_frecuentes',
     ]) {
       await tester.scrollUntilVisible(find.byKey(Key(clave)), 100);
       expect(find.byKey(Key(clave)), findsOneWidget);

@@ -16,6 +16,7 @@ import '../../ui/recorrido/objetivo_recorrido.dart';
 import '../../ui/tipografia.dart';
 import '../../ui/vibracion.dart';
 import '../../widgets/nombre_tienda.dart';
+import '../ayuda/preguntas_frecuentes_screen.dart';
 import '../configuracion/ajustes_screen.dart';
 import '../configuracion/hoja_nombre_tienda.dart';
 import '../fiado/lista_fiado_screen.dart';
@@ -253,10 +254,17 @@ class _MenuCuenta extends ConsumerWidget {
             : null,
       ),
       onSelected: (valor) {
-        if (valor == 'apariencia') {
-          mostrarHojaApariencia(context);
-        } else {
-          ref.read(sesionProvider.notifier).cerrarSesion();
+        switch (valor) {
+          case 'apariencia':
+            mostrarHojaApariencia(context);
+          case 'preguntas':
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const PreguntasFrecuentesScreen(),
+              ),
+            );
+          default:
+            ref.read(sesionProvider.notifier).cerrarSesion();
         }
       },
       itemBuilder: (_) => [
@@ -268,6 +276,18 @@ class _MenuCuenta extends ConsumerWidget {
               Icon(Icons.dark_mode_outlined),
               SizedBox(width: 12),
               Text('Apariencia'),
+            ],
+          ),
+        ),
+        // El vendedor no ve Ajustes: este menú es su entrada a la ayuda.
+        const PopupMenuItem<String>(
+          key: Key('menu_preguntas_frecuentes'),
+          value: 'preguntas',
+          child: Row(
+            children: [
+              Icon(Icons.help_outline_rounded),
+              SizedBox(width: 12),
+              Flexible(child: Text('Preguntas frecuentes')),
             ],
           ),
         ),

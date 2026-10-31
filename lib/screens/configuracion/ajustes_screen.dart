@@ -14,6 +14,7 @@ import '../../ui/entrada_escalonada.dart';
 import '../../ui/icono_cuadrado.dart';
 import '../../ui/tema_app.dart';
 import '../../ui/titulo_seccion.dart';
+import '../ayuda/preguntas_frecuentes_screen.dart';
 import '../qr/configurar_qr_screen.dart';
 import '../respaldo/respaldo_screen.dart';
 import '../clientes/clientes_screen.dart';
@@ -180,6 +181,14 @@ class AjustesScreen extends ConsumerWidget {
               onTap: () => ref
                   .read(recorridoProvider.notifier)
                   .irA(PasoRecorrido.venta),
+            ),
+            _Opcion(
+              key: const Key('boton_preguntas_frecuentes'),
+              icono: Icons.help_outline_rounded,
+              color: c.primario,
+              titulo: 'Preguntas frecuentes',
+              subtitulo: 'Cómo hacer cada cosa en la app',
+              onTap: () => abrir(const PreguntasFrecuentesScreen()),
             ),
           ]),
         ),
