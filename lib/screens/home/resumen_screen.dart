@@ -144,11 +144,29 @@ class _ResumenScreenState extends ConsumerState<ResumenScreen> {
 
 /// "Consultar precio", "+ Venta" y "− Gasto" fijos abajo del Inicio, siempre a
 /// mano del pulgar.
-class _BarraAcciones extends ConsumerWidget {
+class _BarraAcciones extends ConsumerStatefulWidget {
   const _BarraAcciones();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_BarraAcciones> createState() => _BarraAccionesState();
+}
+
+class _BarraAccionesState extends ConsumerState<_BarraAcciones> {
+  // Un doble toque rápido abriría dos escáneres de cámara a la vez.
+  bool _consultando = false;
+
+  Future<void> _consultarPrecio() async {
+    if (_consultando) return;
+    _consultando = true;
+    try {
+      await consultarPrecio(context, ref);
+    } finally {
+      _consultando = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final c = ColoresApp.of(context);
     return DecoratedBox(
       key: const Key('barra_acciones_inicio'),
@@ -182,7 +200,7 @@ class _BarraAcciones extends ConsumerWidget {
                     ),
                     icon: const Icon(Icons.sell_outlined),
                     label: const Text('Consultar precio'),
-                    onPressed: () => consultarPrecio(context, ref),
+                    onPressed: _consultarPrecio,
                   ),
                 ),
               ),

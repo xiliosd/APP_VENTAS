@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/screens/home/resumen_screen.dart';
@@ -15,6 +17,26 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/lector_falso.dart';
 import '../../support/montaje.dart';
+
+/// Lector que espera hasta que el test lo complete; cuenta las lecturas.
+class LectorPendiente implements LectorCodigo {
+  int llamadas = 0;
+  Completer<String?> _espera = Completer<String?>();
+
+  void completar(String? codigo) {
+    _espera.complete(codigo);
+    _espera = Completer<String?>();
+  }
+
+  @override
+  Future<String?> leer(
+    BuildContext context, {
+    UsoEscaner uso = UsoEscaner.venta,
+  }) {
+    llamadas++;
+    return _espera.future;
+  }
+}
 
 void main() {
   late AppDatabase db;
@@ -232,7 +254,9 @@ void main() {
   });
 
   Future<void> montarConLector(WidgetTester tester, String rol,
-      {double escala = 1.0, Size tamano = const Size(800, 2400)}) async {
+      {double escala = 1.0,
+      Size tamano = const Size(800, 2400),
+      LectorCodigo? lector}) async {
     tester.view.physicalSize = tamano;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -242,7 +266,7 @@ void main() {
         nombre: 'Caro',
         rol: rol,
         overrides: [
-          lectorCodigoProvider.overrideWithValue(LectorFalso(['7702'])),
+          lectorCodigoProvider.overrideWithValue(lector ?? LectorFalso(['7702'])),
         ]);
     addTearDown(container.dispose);
     await tester.pumpWidget(UncontrolledProviderScope(
@@ -279,6 +303,25 @@ void main() {
       expect(find.text('Listo'), findsOneWidget);
     });
   }
+
+  testWidgets('dos toques rápidos en Consultar precio abren un solo escáner',
+      (tester) async {
+    final lector = LectorPendiente();
+    await montarConLector(tester, 'admin', lector: lector);
+    final boton = find.byKey(const Key('boton_consultar_precio'));
+    await tester.tap(boton);
+    await tester.tap(boton);
+    await tester.pump();
+    expect(lector.llamadas, 1);
+    lector.completar(null);
+    await tester.pumpAndSettle();
+    // Terminada la consulta, el botón vuelve a funcionar.
+    await tester.tap(boton);
+    await tester.pump();
+    expect(lector.llamadas, 2);
+    lector.completar(null);
+    await tester.pumpAndSettle();
+  });
 
   testWidgets('Inicio a letra 2,0× en 360 dp no desborda con el botón nuevo',
       (tester) async {

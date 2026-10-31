@@ -65,9 +65,18 @@ void main() {
         .tapAt(tester.getCenter(find.byKey(const Key('boton_nueva_venta'))));
     await tester.pumpAndSettle();
     expect(find.byType(RegistrarVentaScreen), findsNothing);
+    final iVenta = globosInicio
+        .indexWhere((g) => g.objetivos.contains('boton_nueva_venta'));
     for (var i = 0; i < 5; i++) {
       await tester.tap(find.byKey(const Key('boton_siguiente_globo')));
       await tester.pumpAndSettle();
+      if (i == iVenta) {
+        expect(
+          find.text('¿Te preguntan cuánto vale algo? '
+              'Escanéalo aquí y ves el precio sin vender.'),
+          findsOneWidget,
+        );
+      }
     }
     expect(find.byKey(const Key('hoja_listo')), findsOneWidget);
     expect(container.read(recorridoProvider), PasoRecorrido.hecho);
