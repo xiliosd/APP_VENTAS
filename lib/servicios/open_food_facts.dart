@@ -31,12 +31,13 @@ abstract class ConsultaProducto {
 /// Open Food Facts: base abierta y gratuita de productos.
 class OpenFoodFacts implements ConsultaProducto {
   OpenFoodFacts({Uri? base, this.limite = const Duration(seconds: 5)})
-      : base = base ?? Uri.parse('https://world.openfoodfacts.org');
+    : base = base ?? Uri.parse('https://world.openfoodfacts.org');
 
   final Uri base;
   final Duration limite;
 
-  static const _campos = 'product_name,product_name_es,brands,quantity,'
+  static const _campos =
+      'product_name,product_name_es,brands,quantity,'
       'packaging_tags,categories_tags';
 
   @override
@@ -73,10 +74,16 @@ class OpenFoodFacts implements ConsultaProducto {
     List<String> etiquetas(Object? v) =>
         v is List ? v.whereType<String>().toList() : const [];
 
-    final marcas = texto(p['brands'])?.split(',');
+    // OFF a veces antepone comas o espacios: se toma la primera marca real.
+    final marca = p['brands'] is String
+        ? (p['brands'] as String)
+              .split(',')
+              .map(texto)
+              .firstWhere((m) => m != null, orElse: () => null)
+        : null;
     return DatosProducto(
       nombre: texto(p['product_name_es']) ?? texto(p['product_name']),
-      marca: marcas == null ? null : texto(marcas.first),
+      marca: marca,
       tamano: texto(p['quantity']),
       envase: envaseDesdeOff(etiquetas(p['packaging_tags'])),
       tipo: tipoDesdeOff(etiquetas(p['categories_tags'])),
@@ -84,5 +91,6 @@ class OpenFoodFacts implements ConsultaProducto {
   }
 }
 
-final consultaProductoProvider =
-    Provider<ConsultaProducto>((ref) => OpenFoodFacts());
+final consultaProductoProvider = Provider<ConsultaProducto>(
+  (ref) => OpenFoodFacts(),
+);

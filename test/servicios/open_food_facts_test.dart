@@ -22,15 +22,17 @@ void main() {
 
   OpenFoodFacts cliente({Duration limite = const Duration(seconds: 2)}) =>
       OpenFoodFacts(
-          base: Uri.parse('http://127.0.0.1:${servidor.port}'), limite: limite);
+        base: Uri.parse('http://127.0.0.1:${servidor.port}'),
+        limite: limite,
+      );
 
   void json(Object cuerpo, {int estado = 200}) => responder = (r) {
-        r.response
-          ..statusCode = estado
-          ..headers.contentType = ContentType.json
-          ..write(jsonEncode(cuerpo))
-          ..close();
-      };
+    r.response
+      ..statusCode = estado
+      ..headers.contentType = ContentType.json
+      ..write(jsonEncode(cuerpo))
+      ..close();
+  };
 
   test('una respuesta completa se traduce a DatosProducto', () async {
     json({
@@ -54,16 +56,35 @@ void main() {
     expect(ruta, startsWith('/api/v2/product/7702535011072?fields='));
   });
 
-  test('nombre en español vacío usa el general; campos vacíos son nulos',
-      () async {
+  test(
+    'nombre en español vacío usa el general; campos vacíos son nulos',
+    () async {
+      json({
+        'status': 1,
+        'product': {
+          'product_name': 'Avena',
+          'product_name_es': '',
+          'brands': '',
+        },
+      });
+      final d = (await cliente().buscar('1'))!;
+      expect(d.nombre, 'Avena');
+      expect(d.marca, isNull);
+      expect(d.tamano, isNull);
+    },
+  );
+
+  test('toma la primera marca no vacía', () async {
     json({
       'status': 1,
-      'product': {'product_name': 'Avena', 'product_name_es': '', 'brands': ''},
+      'product': {'product_name': 'Leche', 'brands': ' , Alpina, Colanta'},
     });
-    final d = (await cliente().buscar('1'))!;
-    expect(d.nombre, 'Avena');
-    expect(d.marca, isNull);
-    expect(d.tamano, isNull);
+    expect((await cliente().buscar('1'))!.marca, 'Alpina');
+    json({
+      'status': 1,
+      'product': {'product_name': 'Leche', 'brands': ' , '},
+    });
+    expect((await cliente().buscar('1'))!.marca, isNull);
   });
 
   test('status 0, 404 y JSON dañado dan null', () async {
@@ -85,8 +106,9 @@ void main() {
         ..close();
     };
     expect(
-        await cliente(limite: const Duration(milliseconds: 100)).buscar('1'),
-        isNull);
+      await cliente(limite: const Duration(milliseconds: 100)).buscar('1'),
+      isNull,
+    );
   });
 
   test('sin servidor da null', () async {

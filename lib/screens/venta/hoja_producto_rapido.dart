@@ -42,6 +42,7 @@ class _HojaProductoRapidoState extends ConsumerState<_HojaProductoRapido> {
   final _precio = TextEditingController();
   final _marca = TextEditingController();
   final _tamano = TextEditingController();
+  final _focoNombre = FocusNode();
   String? _envase;
   String? _tipo;
   String? _errorNombre;
@@ -61,27 +62,39 @@ class _HojaProductoRapidoState extends ConsumerState<_HojaProductoRapido> {
     for (final c in [_nombre, _precio, _marca, _tamano]) {
       c.dispose();
     }
+    _focoNombre.dispose();
     super.dispose();
   }
 
   Future<void> _autocompletar() async {
-    final datos = await ref
-        .read(consultaProductoProvider)
-        .buscar(widget.codigo);
+    DatosProducto? datos;
+    try {
+      datos = await ref.read(consultaProductoProvider).buscar(widget.codigo);
+    } catch (_) {
+      datos = null; // sin datos: se escribe a mano
+    }
     if (!mounted) return;
     setState(() {
       _buscando = false;
-      if (datos == null) return;
-      void llenar(TextEditingController c, String? v) {
-        if (c.text.trim().isEmpty && v != null) c.text = v;
-      }
-
-      llenar(_nombre, datos.nombre);
-      llenar(_marca, datos.marca);
-      llenar(_tamano, datos.tamano);
-      _envase ??= datos.envase;
-      _tipo ??= datos.tipo;
+      _llenarDesde(datos);
     });
+    // Si nada llenó el nombre y aún no hay precio, lo siguiente es escribirlo.
+    if (_nombre.text.trim().isEmpty && _precio.text.isEmpty) {
+      _focoNombre.requestFocus();
+    }
+  }
+
+  void _llenarDesde(DatosProducto? datos) {
+    if (datos == null) return;
+    void llenar(TextEditingController c, String? v) {
+      if (c.text.trim().isEmpty && v != null) c.text = v;
+    }
+
+    llenar(_nombre, datos.nombre);
+    llenar(_marca, datos.marca);
+    llenar(_tamano, datos.tamano);
+    _envase ??= datos.envase;
+    _tipo ??= datos.tipo;
   }
 
   Future<void> _guardar() async {
@@ -150,6 +163,7 @@ class _HojaProductoRapidoState extends ConsumerState<_HojaProductoRapido> {
         TextField(
           key: const Key('campo_nombre_rapido'),
           controller: _nombre,
+          focusNode: _focoNombre,
           textCapitalization: TextCapitalization.sentences,
           decoration: InputDecoration(
             labelText: 'Nombre',

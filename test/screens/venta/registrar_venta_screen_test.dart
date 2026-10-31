@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/ticket_provider.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
@@ -711,6 +713,64 @@ void main() {
     expect(container.read(ticketProvider).cantidadDe('p${p.id}'), 1);
   });
 
+  bool tieneFoco(WidgetTester tester, String clave) => tester
+      .widget<EditableText>(
+        find.descendant(
+          of: find.byKey(Key(clave)),
+          matching: find.byType(EditableText),
+        ),
+      )
+      .focusNode
+      .hasFocus;
+
+  testWidgets('si la consulta no trae nombre, el foco pasa a Nombre', (
+    tester,
+  ) async {
+    await abrirVentaCon(tester, codigos: ['9001']);
+    await escanear(tester);
+    expect(tieneFoco(tester, 'campo_nombre_rapido'), isTrue);
+  });
+
+  testWidgets('si la consulta trae nombre, el foco sigue en Precio', (
+    tester,
+  ) async {
+    await abrirVentaCon(
+      tester,
+      codigos: ['9001'],
+      datos: const DatosProducto(nombre: 'Galletas'),
+    );
+    await escanear(tester);
+    expect(tieneFoco(tester, 'campo_precio_rapido'), isTrue);
+  });
+
+  testWidgets('si ya se escribió el precio, el foco no se mueve', (
+    tester,
+  ) async {
+    final respuesta = Completer<DatosProducto?>();
+    container.dispose();
+    container = await containerConSesion(
+      db,
+      overrides: [
+        lectorCodigoProvider.overrideWithValue(LectorFalso(['9001'])),
+        consultaProductoProvider.overrideWithValue(
+          _ConsultaPendiente(respuesta.future),
+        ),
+      ],
+    );
+    await abrirVenta(tester);
+    await tester.tap(find.byKey(const Key('boton_escanear_venta')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.enterText(
+      find.byKey(const Key('campo_precio_rapido')),
+      '2.000',
+    );
+    respuesta.complete(null);
+    await tester.pumpAndSettle();
+    expect(tieneFoco(tester, 'campo_nombre_rapido'), isFalse);
+    expect(tieneFoco(tester, 'campo_precio_rapido'), isTrue);
+  });
+
   testWidgets('un vendedor también puede crear el producto escaneado', (
     tester,
   ) async {
@@ -872,4 +932,11 @@ class _Consulta implements ConsultaProducto {
   final DatosProducto? datos;
   @override
   Future<DatosProducto?> buscar(String codigo) async => datos;
+}
+
+class _ConsultaPendiente implements ConsultaProducto {
+  _ConsultaPendiente(this.respuesta);
+  final Future<DatosProducto?> respuesta;
+  @override
+  Future<DatosProducto?> buscar(String codigo) => respuesta;
 }
