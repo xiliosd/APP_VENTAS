@@ -54,7 +54,16 @@ Orden elegido por el usuario el 2026-10-30; la monetización queda para después
    la "respuesta háptica" del sistema está apagada (`haptic_feedback_enabled=0`) y la app,
    por diseño, la respeta.
 2. Arreglos y orden de la casa — los detalles menores diferidos de cada tanda y el README con
-   las once secciones de los lineamientos.
+   las once secciones de los lineamientos. Revisados el 2026-10-30: 36 de 74 ya estaban resueltos.
+   - README con las once secciones — hecho.
+   - Tanda A (inventario y pedidos) — hecha: confirmar antes de reemplazar lo escrito al recibir,
+     no quedarse cargando si falla el pedido, errores claros al editar un pedido por llegar,
+     precio de compra al agregar productos al pedido, número de la franja "por pedir" al día y
+     vacío del pedido sugerido sin proveedor. Fuera de alcance: comparación de una entrada
+     anulada con su pedido, `LineaInicial` y la venta en el mismo segundo de un conteo.
+   - Tanda B (venta, escáner y voz) — pendiente.
+   - Tanda C (huella, clientes, mensajes de error claros en 10 pantallas y orden interno) —
+     pendiente.
 3. Consultar precio por código de barras — función pequeña y local, sin dependencias externas.
 4. Preparar para uso real — llave de firma propia, claves de Supabase (respaldo en la nube) y,
    si se publica, requisitos de Play Store.
