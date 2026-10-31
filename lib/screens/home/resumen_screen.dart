@@ -188,50 +188,52 @@ class _BarraAcciones extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Row(
-            children: [
-              Expanded(
-                flex: 5,
-                child: ObjetivoRecorrido(
-                  id: 'boton_nueva_venta',
-                  child: BotonPrincipal(
-                    key: const Key('boton_nueva_venta'),
-                    texto: '+ Venta',
-                    variante: VarianteBoton.entra,
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const RegistrarVentaScreen()),
+                children: [
+                  Expanded(
+                    flex: 5,
+                    child: ObjetivoRecorrido(
+                      id: 'boton_nueva_venta',
+                      child: BotonPrincipal(
+                        key: const Key('boton_nueva_venta'),
+                        texto: '+ Venta',
+                        variante: VarianteBoton.entra,
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const RegistrarVentaScreen(),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filledTonal(
-                key: const Key('boton_vender_por_voz'),
-                tooltip: 'Vender por voz',
-                iconSize: 28,
-                icon: const Icon(Icons.mic_rounded),
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const RegistrarVentaScreen(dictarAlAbrir: true),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    key: const Key('boton_vender_por_voz'),
+                    tooltip: 'Vender por voz',
+                    iconSize: 28,
+                    icon: const Icon(Icons.mic_rounded),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const RegistrarVentaScreen(dictarAlAbrir: true),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 3,
-                child: BotonPrincipal(
-                  key: const Key('boton_nuevo_gasto'),
-                  texto: '− Gasto',
-                  variante: VarianteBoton.peligro,
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const RegistrarGastoScreen()),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: BotonPrincipal(
+                      key: const Key('boton_nuevo_gasto'),
+                      texto: '− Gasto',
+                      variante: VarianteBoton.peligro,
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const RegistrarGastoScreen(),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
             ],
           ),
         ),

@@ -288,6 +288,17 @@ void main() {
     expect(find.byKey(const Key('boton_consultar_precio')), findsOneWidget);
   });
 
+  testWidgets('Inicio a letra 2,0× en 360×640 no desborda y deja ver el tablero',
+      (tester) async {
+    await montarConLector(tester, 'admin',
+        escala: 2.0, tamano: const Size(360, 640));
+    expect(tester.takeException(), isNull);
+    final barra = tester.getRect(find.byKey(const Key('barra_acciones_inicio')));
+    final tarjeta = tester.getRect(find.byKey(const Key('tarjeta_ventas')));
+    expect(tarjeta.top, lessThan(barra.top));
+    expect(barra.top, greaterThan(100));
+  });
+
   testWidgets('el vendedor no ve Ver reportes', (tester) async {
     await montarConSesion(tester, 'vendedor');
 
