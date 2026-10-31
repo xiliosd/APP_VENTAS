@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/resumen_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../repositories/resumen_repository.dart';
+import '../../ui/error_carga.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
@@ -81,7 +82,7 @@ class _ResumenScreenState extends ConsumerState<ResumenScreen> {
             padding: EdgeInsets.all(24),
             child: Center(child: CircularProgressIndicator()),
           ),
-          error: (e, st) => Text('Error: $e'),
+          error: (_, _) => const ErrorCarga(compacto: true),
         ),
         const SizedBox(height: 24),
         Card(
@@ -125,7 +126,7 @@ class _ResumenScreenState extends ConsumerState<ResumenScreen> {
                     ],
                   ),
                   loading: () => const SizedBox.shrink(),
-                  error: (e, st) => Text('Error: $e'),
+                  error: (_, _) => const ErrorCarga(compacto: true),
                 ),
               ],
             ),

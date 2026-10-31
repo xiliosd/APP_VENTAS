@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/usuarios_providers.dart';
 import '../../data/database.dart';
+import '../../ui/error_carga.dart';
 import '../../ui/aplastable.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
@@ -45,7 +46,7 @@ class SeleccionarUsuarioScreen extends ConsumerWidget {
             ],
           ),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, st) => Center(child: Text('Error: $e')),
+          error: (_, _) => const ErrorCarga(),
         ),
       ),
     );

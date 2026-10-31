@@ -10,6 +10,7 @@ import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../providers/ticket_provider.dart';
 import '../../repositories/venta_repository.dart';
+import '../../ui/error_carga.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_escanear.dart';
 import '../../ui/boton_principal.dart';
@@ -681,7 +682,7 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, st) => Text('Error: $e'),
+          error: (_, _) => const ErrorCarga(compacto: true),
         ),
         const _Seccion('MONTOS RÁPIDOS'),
         MontoRapidoGrid(

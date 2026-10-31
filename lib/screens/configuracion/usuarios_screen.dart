@@ -5,6 +5,7 @@ import '../../data/database.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../providers/usuarios_providers.dart';
+import '../../ui/error_carga.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
@@ -93,7 +94,7 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
           ],
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
+        error: (_, _) => const ErrorCarga(),
       ),
     );
   }

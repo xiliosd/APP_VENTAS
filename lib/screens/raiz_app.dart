@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/inicio_marca_provider.dart';
 import '../providers/sesion_provider.dart';
 import '../respaldo/respaldo_provider.dart';
+import '../ui/error_carga.dart';
 import '../ui/movimiento.dart';
 import 'home/home_screen.dart';
 import 'inicio/inicio_marca_screen.dart';
@@ -70,8 +71,7 @@ class _RaizAppState extends ConsumerState<RaizApp> {
               loading: () => const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               ),
-              error: (e, st) =>
-                  Scaffold(body: Center(child: Text('Error: $e'))),
+              error: (_, _) => const Scaffold(body: ErrorCarga()),
             );
     }
     return AnimatedSwitcher(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/fiado_providers.dart';
 import '../../repositories/fiado_repository.dart';
+import '../../ui/error_carga.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/entrada_escalonada.dart';
@@ -215,7 +216,7 @@ class _ListaFiadoScreenState extends ConsumerState<ListaFiadoScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
+        error: (_, _) => const ErrorCarga(),
       ),
     );
   }

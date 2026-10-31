@@ -120,6 +120,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('toldo_marca')), findsNothing);
-    expect(find.textContaining('base dañada'), findsOneWidget);
+    expect(find.text('No se pudo cargar'), findsOneWidget);
+    expect(find.textContaining('base dañada'), findsNothing);
   });
 }

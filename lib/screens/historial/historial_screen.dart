@@ -5,6 +5,7 @@ import '../../data/database.dart';
 import '../../providers/historial_providers.dart';
 import '../../providers/usuarios_providers.dart';
 import '../../repositories/historial_repository.dart';
+import '../../ui/error_carga.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/entrada_escalonada.dart';
 import '../../ui/etiqueta_qr.dart';
@@ -221,7 +222,7 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, st) => Center(child: Text('Error: $e')),
+              error: (_, _) => const ErrorCarga(),
             ),
           ),
         ],

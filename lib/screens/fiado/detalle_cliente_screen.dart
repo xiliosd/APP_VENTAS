@@ -7,6 +7,7 @@ import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
 import '../../providers/usuarios_providers.dart';
 import '../../repositories/fiado_repository.dart';
+import '../../ui/error_carga.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
@@ -160,7 +161,7 @@ class DetalleClienteScreen extends ConsumerWidget {
               ),
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Text('Error: $e'),
+            error: (_, _) => const ErrorCarga(compacto: true),
           ),
         ],
       ),

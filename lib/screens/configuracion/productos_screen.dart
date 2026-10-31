@@ -5,6 +5,7 @@ import '../../data/database.dart';
 import '../../providers/orden_productos_provider.dart';
 import '../../providers/productos_providers.dart';
 import '../../providers/repository_providers.dart';
+import '../../ui/error_carga.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/avisos.dart';
 import '../../ui/colores_app.dart';
@@ -266,7 +267,7 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
+        error: (_, _) => const ErrorCarga(),
       ),
     );
   }
