@@ -61,7 +61,13 @@ Orden elegido por el usuario el 2026-10-30; la monetización queda para después
      precio de compra al agregar productos al pedido, número de la franja "por pedir" al día y
      vacío del pedido sugerido sin proveedor. Fuera de alcance: comparación de una entrada
      anulada con su pedido, `LineaInicial` y la venta en el mismo segundo de un conteo.
-   - Tanda B (venta, escáner y voz) — pendiente.
+   - Tanda B (venta, escáner y voz) — hecha: linterna oculta sin cámara, cámara en pausa al
+     escribir un código, código escrito con letras, aviso al dar Enter con un código que no
+     existe, filtro de tipo que no se atasca, consejos marcados al cerrarlos, foco en Nombre si
+     la consulta no lo trae, marcas vacías ignoradas, dictado que ignora "unos/unas", entiende
+     mejor los plurales y no arranca dos veces, "Cantidad: N" para el lector de pantalla,
+     "¿Quién compra?" una sola vez y fila quitada estable. Fuera de alcance: "1/2" en el dictado.
+     Por verificar en el celular: pausa de la cámara y linterna.
    - Tanda C (huella, clientes, mensajes de error claros en 10 pantallas y orden interno) —
      pendiente.
 3. Consultar precio por código de barras — función pequeña y local, sin dependencias externas.
