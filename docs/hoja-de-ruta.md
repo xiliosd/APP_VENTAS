@@ -84,6 +84,10 @@ Orden elegido por el usuario el 2026-10-30; la monetización queda para después
 
 ## Después
 
+- Huella para el vendedor — hoy el interruptor "Entrar con huella" solo está en Ajustes, que ve
+  el administrador; el vendedor no puede activar su propia huella (detectado el 2026-10-31).
+- Permisos de inventario — decidir si recibir mercancía, ajustar conteos y guardar pedidos deben
+  quedar solo para el administrador; hoy cualquier usuario puede hacerlo (detectado el 2026-10-31).
 - Consultar precio por código de barras — escanear el código de barras de un producto para ver
   su precio sin agregarlo a una venta; requiere especificación y plan antes de programarse.
 - Monetización sin cobrarle al tendero (ideas presentadas el 2026-10-13): pedido digital al
