@@ -45,6 +45,11 @@ Actualizada: 2026-10-30. Cada fase pasa por especificación (`docs/superpowers/s
   - Tanda 4 — hecha: escáner fácil (botón "Escanear código" con texto, consejos de primera
     vez, ayuda en el escáner) y escáner en el recorrido ("Crear escaneando" y "Vender
     escaneando").
+- Consultar precio y preguntas frecuentes (spec: `docs/superpowers/specs/2026-10-31-vecitienda-consultar-precio-y-preguntas-design.md`):
+  botón "Consultar precio" sobre la barra del Inicio (escanea y muestra el precio sin tocar la
+  venta; si el código no está, deja agregar el producto), globo nuevo en el recorrido, y
+  "Preguntas frecuentes" de toda la app (9 temas, 51 preguntas) desde Ajustes → AYUDA y desde el
+  menú de cuenta.
 
 ## Orden de lo que falta
 
@@ -75,7 +80,8 @@ Orden elegido por el usuario el 2026-10-30; la monetización queda para después
      espacios dobles, cambio de sesión sin fundido y orden interno (ciclo de imports y
      comparador único). Fuera de alcance: `_yaMostrada` en la pantalla raíz.
    - Paso 2 completo el 2026-10-31.
-3. Consultar precio por código de barras — función pequeña y local, sin dependencias externas.
+3. Consultar precio por código de barras — hecho el 2026-10-31, junto con las preguntas
+   frecuentes.
 4. Preparar para uso real — llave de firma propia, claves de Supabase (respaldo en la nube) y,
    si se publica, requisitos de Play Store.
 5. Tienda centralizada — necesita Supabase listo del paso 4.
@@ -88,8 +94,8 @@ Orden elegido por el usuario el 2026-10-30; la monetización queda para después
   el administrador; el vendedor no puede activar su propia huella (detectado el 2026-10-31).
 - Permisos de inventario — decidir si recibir mercancía, ajustar conteos y guardar pedidos deben
   quedar solo para el administrador; hoy cualquier usuario puede hacerlo (detectado el 2026-10-31).
-- Consultar precio por código de barras — escanear el código de barras de un producto para ver
-  su precio sin agregarlo a una venta; requiere especificación y plan antes de programarse.
+- Recorrido para el vendedor — el recorrido de primer uso solo lo ve el administrador, así que el
+  globo de "Consultar precio" no le llega al vendedor nuevo (detectado el 2026-10-31).
 - Monetización sin cobrarle al tendero (ideas presentadas el 2026-10-13): pedido digital al
   distribuidor (recomendado para empezar), promociones de marca, crédito y pagos con
   bancos/billeteras, recargas y pagos de servicios, datos agregados a escala; requiere
@@ -128,3 +134,5 @@ Orden elegido por el usuario el 2026-10-30; la monetización queda para después
   extracto de fiado).
 - Mejoras de tienda, tanda 4 (botón "Escanear código", consejos de primera vez, ayuda en el
   escáner y "Crear/Vender escaneando" en el recorrido).
+- Consultar precio (producto activo, inactivo y desconocido; agregar desde la consulta; globo del
+  recorrido) y preguntas frecuentes (desde Ajustes y desde el menú de cuenta, con letra grande).

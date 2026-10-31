@@ -150,6 +150,9 @@ Todavía no hay capturas en el repositorio. El logo y la marca están en
   compra y cada abono con el saldo.
 - **Inventario:** pestaña Inventario. Tiene "Recibir mercancía", "Ajustar conteo" y "Por
   pedir", que arma el pedido sugerido por proveedor.
+- **Consultar precio:** en el Inicio, "Consultar precio" abre el escáner y muestra el precio del
+  producto sin tocar la venta. Si el código no está, ofrece "Agregar producto".
+- **Preguntas frecuentes:** desde el menú de cuenta del Inicio (todos) o Ajustes → AYUDA.
 - **Escáner en el recorrido de primer uso:** en "Tus primeros productos", "Crear
   escaneando" lee un código y crea el producto con la hoja rápida. En la venta de
   práctica, "Vender escaneando" abre el escáner (con "Seguir sin cámara") y la guía sigue
