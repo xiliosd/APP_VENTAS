@@ -251,6 +251,28 @@ void main() {
     expect(find.text('Este pedido ya se recibió o se anuló'), findsOneWidget);
   });
 
+  testWidgets(
+    'si el pedido se cierra con la pantalla abierta, ya no se edita',
+    (tester) async {
+      final p = await preparar(tester);
+      await tester.tap(find.byKey(Key('pedido_por_llegar_${p.pedido}')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('boton_anular_pedido')), findsOneWidget);
+      await (db.update(db.pedidos)..where((x) => x.id.equals(p.pedido))).write(
+        const PedidosCompanion(estado: Value(EstadoPedido.anulado)),
+      );
+      await tester.tap(find.byKey(const Key('boton_guardar_cambios_pedido')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Este pedido ya se recibió o se anuló'), findsOneWidget);
+      expect(
+        find.byKey(const Key('boton_guardar_cambios_pedido')),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('boton_anular_pedido')), findsNothing);
+    },
+  );
+
   testWidgets('sin permiso, lo dice al anular', (tester) async {
     // La sesión es la autora; luego el pedido pasa a ser de otro usuario.
     final p = await preparar(tester, rol: 'vendedor');

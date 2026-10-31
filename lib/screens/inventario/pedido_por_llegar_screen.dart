@@ -159,6 +159,7 @@ class _PedidoPorLlegarScreenState extends ConsumerState<PedidoPorLlegarScreen> {
     final usuario = ref.watch(sesionProvider).usuarioActivo;
     final puedeEditar =
         usuario != null &&
+        pedido.estado == EstadoPedido.porLlegar &&
         (usuario.rol == 'admin' || usuario.id == pedido.usuarioId);
     final c = ColoresApp.of(context);
     final total = lineas.fold<int>(

@@ -429,6 +429,16 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(CircularProgressIndicator), findsNothing);
+    // El lector de pantalla debe anunciar el error sin que se toque nada.
+    expect(
+      find.ancestor(
+        of: find.text('No se pudo cargar el pedido, intenta de nuevo'),
+        matching: find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.liveRegion == true,
+        ),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('"No, es otra mercancía" sigue sin pedido', (tester) async {

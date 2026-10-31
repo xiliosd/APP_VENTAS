@@ -454,10 +454,13 @@ class _RecibirMercanciaScreenState
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  _error!,
-                  key: const Key('error_recibir'),
-                  style: TextStyle(color: ColoresApp.of(context).sale),
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    _error!,
+                    key: const Key('error_recibir'),
+                    style: TextStyle(color: ColoresApp.of(context).sale),
+                  ),
                 ),
               ),
             Text(
