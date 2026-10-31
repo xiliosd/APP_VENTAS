@@ -174,7 +174,7 @@ class _FilaQuienCompra extends StatelessWidget {
         ),
         if (cliente != null || desplegada)
           SelectorCliente(
-            etiqueta: '¿Quién compra?',
+            etiqueta: 'Cliente',
             elegido: cliente,
             onElegir: onElegir,
           ),
@@ -184,8 +184,14 @@ class _FilaQuienCompra extends StatelessWidget {
 }
 
 class _Opcion extends StatelessWidget {
-  const _Opcion({super.key, required this.icono, required this.texto,
-      required this.color, required this.onTap, this.seleccionada = false});
+  const _Opcion({
+    super.key,
+    required this.icono,
+    required this.texto,
+    required this.color,
+    required this.onTap,
+    this.seleccionada = false,
+  });
   final IconData icono;
   final String texto;
   final Color color;
@@ -208,19 +214,29 @@ class _Opcion extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Row(children: [
-              Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icono, color: color),
                 ),
-                child: Icon(icono, color: color),
-              ),
-              const SizedBox(width: 12),
-              Expanded(child: Text(texto,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
-            ]),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    texto,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

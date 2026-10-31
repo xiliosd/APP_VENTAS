@@ -44,24 +44,23 @@ class MovimientoEditable {
   factory MovimientoEditable.desdeHistorial(
     MovimientoHistorial m, {
     String? nombreCliente,
-  }) =>
-      MovimientoEditable(
-        tipo: m.tipo == TipoMovimientoHistorial.venta
-            ? TipoMovimiento.venta
-            : TipoMovimiento.gasto,
-        id: m.id,
-        monto: m.monto,
-        fecha: m.fecha,
-        usuarioId: m.usuarioId,
-        esFiado: m.esFiado,
-        clienteId: m.clienteId,
-        nombreCliente: nombreCliente,
-        medioPago: m.medioPago,
-        descripcion: m.descripcion,
-        anulado: m.anulado,
-        ultimaCorreccion: m.ultimaCorreccion,
-        entradaId: m.entradaId,
-      );
+  }) => MovimientoEditable(
+    tipo: m.tipo == TipoMovimientoHistorial.venta
+        ? TipoMovimiento.venta
+        : TipoMovimiento.gasto,
+    id: m.id,
+    monto: m.monto,
+    fecha: m.fecha,
+    usuarioId: m.usuarioId,
+    esFiado: m.esFiado,
+    clienteId: m.clienteId,
+    nombreCliente: nombreCliente,
+    medioPago: m.medioPago,
+    descripcion: m.descripcion,
+    anulado: m.anulado,
+    ultimaCorreccion: m.ultimaCorreccion,
+    entradaId: m.entradaId,
+  );
 
   factory MovimientoEditable.desdeFiado(
     MovimientoFiado m, {
@@ -104,22 +103,22 @@ class MovimientoEditable {
 }
 
 String _titulo(TipoMovimiento tipo) => switch (tipo) {
-      TipoMovimiento.venta => 'Venta',
-      TipoMovimiento.abono => 'Abono',
-      TipoMovimiento.gasto => 'Gasto',
-    };
+  TipoMovimiento.venta => 'Venta',
+  TipoMovimiento.abono => 'Abono',
+  TipoMovimiento.gasto => 'Gasto',
+};
 
 String _esteMovimiento(TipoMovimiento tipo) => switch (tipo) {
-      TipoMovimiento.venta => 'esta venta',
-      TipoMovimiento.abono => 'este abono',
-      TipoMovimiento.gasto => 'este gasto',
-    };
+  TipoMovimiento.venta => 'esta venta',
+  TipoMovimiento.abono => 'este abono',
+  TipoMovimiento.gasto => 'este gasto',
+};
 
 String _aviso(TipoMovimiento tipo, {required bool anulado}) => switch (tipo) {
-      TipoMovimiento.venta => anulado ? 'Venta anulada' : 'Venta corregida',
-      TipoMovimiento.abono => anulado ? 'Abono anulado' : 'Abono corregido',
-      TipoMovimiento.gasto => anulado ? 'Gasto anulado' : 'Gasto corregido',
-    };
+  TipoMovimiento.venta => anulado ? 'Venta anulada' : 'Venta corregida',
+  TipoMovimiento.abono => anulado ? 'Abono anulado' : 'Abono corregido',
+  TipoMovimiento.gasto => anulado ? 'Gasto anulado' : 'Gasto corregido',
+};
 
 String _nombreMedio(MedioPago medio) =>
     medio == MedioPago.efectivo ? 'Efectivo' : 'Transferencia';
@@ -156,10 +155,12 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
   late ClienteTicket? _cliente = widget.movimiento.clienteId != null
       ? ClienteTicket(
           id: widget.movimiento.clienteId,
-          nombre: widget.movimiento.nombreCliente ?? '')
+          nombre: widget.movimiento.nombreCliente ?? '',
+        )
       : null;
-  late final _descripcion =
-      TextEditingController(text: widget.movimiento.descripcion ?? '');
+  late final _descripcion = TextEditingController(
+    text: widget.movimiento.descripcion ?? '',
+  );
 
   /// True mientras se guarda; evita guardar dos veces con un doble toque.
   bool _guardando = false;
@@ -202,11 +203,12 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
     if (_total != _m.monto) return true;
     if (_lineas.any((l) => _cantidad(l) != l.cantidad)) return true;
     return switch (_m.tipo) {
-      TipoMovimiento.venta => _esFiado != _m.esFiado ||
-          _clienteElegido?.id != _m.clienteId ||
-          // Un cliente nuevo aún no tiene id: elegirlo también es un cambio.
-          (_clienteElegido != null && _clienteElegido!.id == null) ||
-          (!_esFiado && _medio != _m.medioPago),
+      TipoMovimiento.venta =>
+        _esFiado != _m.esFiado ||
+            _clienteElegido?.id != _m.clienteId ||
+            // Un cliente nuevo aún no tiene id: elegirlo también es un cambio.
+            (_clienteElegido != null && _clienteElegido!.id == null) ||
+            (!_esFiado && _medio != _m.medioPago),
       TipoMovimiento.abono => _medio != _m.medioPago,
       TipoMovimiento.gasto =>
         _descripcion.text.trim() != (_m.descripcion?.trim() ?? ''),
@@ -220,10 +222,10 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
 
   /// Texto para el usuario según por qué falló guardar o anular.
   String _motivo(Object error) => switch (error) {
-        PermisoDenegado() => 'Ya no puedes corregir este movimiento',
-        CorreccionInvalida(:final mensaje) => mensaje,
-        _ => 'No se pudo guardar, intenta de nuevo',
-      };
+    PermisoDenegado() => 'Ya no puedes corregir este movimiento',
+    CorreccionInvalida(:final mensaje) => mensaje,
+    _ => 'No se pudo guardar, intenta de nuevo',
+  };
 
   Future<void> _guardar() async {
     if (_guardando) return;
@@ -237,25 +239,33 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
       switch (_m.tipo) {
         case TipoMovimiento.venta:
           final cliente = _clienteElegido;
-          await repo.corregirVenta(_m.id,
-              monto: _total,
-              esFiado: _esFiado,
-              clienteId: cliente?.id,
-              clienteNuevo: cliente?.id == null ? cliente : null,
-              medioPago: _medio,
-              cantidades: _lineas.isEmpty
-                  ? null
-                  : {for (final l in _lineas) l.id: _cantidad(l)},
-              por: por);
+          await repo.corregirVenta(
+            _m.id,
+            monto: _total,
+            esFiado: _esFiado,
+            clienteId: cliente?.id,
+            clienteNuevo: cliente?.id == null ? cliente : null,
+            medioPago: _medio,
+            cantidades: _lineas.isEmpty
+                ? null
+                : {for (final l in _lineas) l.id: _cantidad(l)},
+            por: por,
+          );
         case TipoMovimiento.abono:
-          await repo.corregirPago(_m.id,
-              monto: _monto, medioPago: _medio, por: por);
+          await repo.corregirPago(
+            _m.id,
+            monto: _monto,
+            medioPago: _medio,
+            por: por,
+          );
         case TipoMovimiento.gasto:
           final descripcion = _descripcion.text.trim();
-          await repo.corregirGasto(_m.id,
-              monto: _monto,
-              descripcion: descripcion.isEmpty ? null : descripcion,
-              por: por);
+          await repo.corregirGasto(
+            _m.id,
+            monto: _monto,
+            descripcion: descripcion.isEmpty ? null : descripcion,
+            por: por,
+          );
       }
       if (mounted) {
         Navigator.of(context).pop(_aviso(_m.tipo, anulado: false));
@@ -271,8 +281,10 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (contexto) => AlertDialog(
-        title: Text('¿Anular ${_esteMovimiento(_m.tipo)} de '
-            '${formatoMoneda(_m.monto)}?'),
+        title: Text(
+          '¿Anular ${_esteMovimiento(_m.tipo)} de '
+          '${formatoMoneda(_m.monto)}?',
+        ),
         content: const Text('Ya no contará en los totales.'),
         actions: [
           TextButton(
@@ -281,7 +293,9 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
           ),
           TextButton(
             key: const Key('confirmar_anular'),
-            style: TextButton.styleFrom(foregroundColor: ColoresApp.of(context).sale),
+            style: TextButton.styleFrom(
+              foregroundColor: ColoresApp.of(context).sale,
+            ),
             onPressed: () => Navigator.pop(contexto, true),
             child: const Text('Anular'),
           ),
@@ -313,15 +327,17 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
   }
 
   String get _detalle => switch (_m.tipo) {
-        TipoMovimiento.venta => _m.esFiado
-            ? 'Fiado · ${_m.nombreCliente ?? ''}'
-            : 'Contado · ${_nombreMedio(_m.medioPago)}'
+    TipoMovimiento.venta =>
+      _m.esFiado
+          ? 'Fiado · ${_m.nombreCliente ?? ''}'
+          : 'Contado · ${_nombreMedio(_m.medioPago)}'
                 '${_m.nombreCliente == null ? '' : ' · ${_m.nombreCliente}'}',
-        TipoMovimiento.abono => 'Abono · ${_nombreMedio(_m.medioPago)}',
-        TipoMovimiento.gasto => (_m.descripcion?.trim().isNotEmpty ?? false)
-            ? _m.descripcion!.trim()
-            : 'Gasto',
-      };
+    TipoMovimiento.abono => 'Abono · ${_nombreMedio(_m.medioPago)}',
+    TipoMovimiento.gasto =>
+      (_m.descripcion?.trim().isNotEmpty ?? false)
+          ? _m.descripcion!.trim()
+          : 'Gasto',
+  };
 
   Widget? get _textoError => _error == null
       ? null
@@ -348,7 +364,8 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
     final nombres = {for (final u in usuarios) u.id: u.nombre};
     final usuario = ref.watch(sesionProvider).usuarioActivo;
     final deEntrada = _m.entradaId != null;
-    final puede = usuario != null &&
+    final puede =
+        usuario != null &&
         !_m.anulado &&
         !deEntrada &&
         puedeCorregir(
@@ -420,9 +437,9 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
     final cantidad = _cantidad(linea);
     final quitada = cantidad == 0;
     void cambiar(int nueva) => setState(() {
-          _cantidades[linea.id] = nueva;
-          _error = null;
-        });
+      _cantidades[linea.id] = nueva;
+      _error = null;
+    });
     return Row(
       children: [
         Expanded(
@@ -450,7 +467,10 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
           icon: const Icon(Icons.add_rounded),
           onPressed: () => cambiar(cantidad + 1),
         ),
-        if (!quitada)
+        // Quitada: un hueco del mismo tamaño mantiene quietos restar y sumar.
+        if (quitada)
+          const SizedBox(width: 48, height: 48)
+        else
           IconButton(
             key: Key('quitar_linea_${linea.id}'),
             tooltip: 'Quitar',
@@ -462,16 +482,15 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
     );
   }
 
-
   Widget _selectorMedio() => SelectorSegmentado<MedioPago>(
-        key: const Key('editar_medio_pago'),
-        opciones: const {
-          MedioPago.efectivo: 'Efectivo',
-          MedioPago.transferencia: 'Transferencia',
-        },
-        valor: _medio,
-        onCambio: (medio) => setState(() => _medio = medio),
-      );
+    key: const Key('editar_medio_pago'),
+    opciones: const {
+      MedioPago.efectivo: 'Efectivo',
+      MedioPago.transferencia: 'Transferencia',
+    },
+    valor: _medio,
+    onCambio: (medio) => setState(() => _medio = medio),
+  );
 
   Widget _formulario() {
     final error = _textoError;
@@ -493,16 +512,15 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
               onElegir: (cliente) => setState(() => _cliente = cliente),
               exigir: true,
             )
-          else
-            ...[
-              _selectorMedio(),
-              const SizedBox(height: 12),
-              SelectorCliente(
-                elegido: _cliente,
-                onElegir: (cliente) => setState(() => _cliente = cliente),
-                etiqueta: '¿Quién compra?',
-              ),
-            ],
+          else ...[
+            _selectorMedio(),
+            const SizedBox(height: 12),
+            SelectorCliente(
+              elegido: _cliente,
+              onElegir: (cliente) => setState(() => _cliente = cliente),
+              etiqueta: '¿Quién compra?',
+            ),
+          ],
         ],
         if (_m.tipo == TipoMovimiento.abono) _selectorMedio(),
         if (_m.tipo == TipoMovimiento.gasto)
@@ -524,8 +542,7 @@ class _HojaMovimientoState extends ConsumerState<HojaMovimiento> {
             }),
           ),
         ] else ...[
-          for (final linea in _lineas)
-            _filaLinea(linea),
+          for (final linea in _lineas) _filaLinea(linea),
           const SizedBox(height: 8),
           Center(
             child: KeyedSubtree(
@@ -567,11 +584,15 @@ class _CabeceraMovimiento extends StatelessWidget {
     final c = ColoresApp.of(context);
     final (color, icono, tono) = switch (movimiento.tipo) {
       TipoMovimiento.gasto => (c.sale, Icons.call_made_rounded, TonoMonto.sale),
-      TipoMovimiento.abono =>
-        (c.entra, Icons.payments_rounded, TonoMonto.entra),
-      TipoMovimiento.venta => movimiento.esFiado
-          ? (c.fiado, Icons.menu_book_rounded, TonoMonto.fiado)
-          : (c.entra, Icons.shopping_cart_rounded, TonoMonto.entra),
+      TipoMovimiento.abono => (
+        c.entra,
+        Icons.payments_rounded,
+        TonoMonto.entra,
+      ),
+      TipoMovimiento.venta =>
+        movimiento.esFiado
+            ? (c.fiado, Icons.menu_book_rounded, TonoMonto.fiado)
+            : (c.entra, Icons.shopping_cart_rounded, TonoMonto.entra),
     };
     final colorIcono = movimiento.anulado ? c.textoSecundario : color;
     return Row(
@@ -588,8 +609,12 @@ class _CabeceraMovimiento extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Monto(movimiento.monto,
-              tamano: 32, tono: tono, tachado: movimiento.anulado),
+          child: Monto(
+            movimiento.monto,
+            tamano: 32,
+            tono: tono,
+            tachado: movimiento.anulado,
+          ),
         ),
       ],
     );

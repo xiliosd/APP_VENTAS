@@ -82,6 +82,27 @@ void main() {
     expect(await db.select(db.clientes).get(), isEmpty);
   });
 
+  testWidgets('"¿Quién compra?" aparece una sola vez', (tester) async {
+    final id = await ClienteRepository(db)
+        .crearCliente(nombre: 'Pedro', apellido: 'Gómez');
+    await abrirVenta(tester);
+    await tester.tap(find.byKey(const Key('quien_compra')));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('¿Quién compra?', findRichText: true),
+      findsOneWidget,
+    );
+
+    await tester.enterText(find.byKey(const Key('campo_cliente')), 'Pedro');
+    await tester.pump();
+    await tester.tap(find.byKey(Key('cliente_sugerido_$id')));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('¿Quién compra?', findRichText: true),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('efectivo con cliente existente guarda su clienteId', (
     tester,
   ) async {

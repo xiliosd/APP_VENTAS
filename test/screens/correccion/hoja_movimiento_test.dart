@@ -36,19 +36,24 @@ void main() {
     return (container, container.read(sesionProvider).usuarioActivo!);
   }
 
-  Future<void> abrir(WidgetTester tester, ProviderContainer container,
-      MovimientoEditable movimiento) async {
-    await tester.pumpWidget(appDePrueba(
-      container,
-      inicio: Scaffold(
-        body: Builder(
-          builder: (context) => TextButton(
-            onPressed: () => abrirHojaMovimiento(context, movimiento),
-            child: const Text('abrir'),
+  Future<void> abrir(
+    WidgetTester tester,
+    ProviderContainer container,
+    MovimientoEditable movimiento,
+  ) async {
+    await tester.pumpWidget(
+      appDePrueba(
+        container,
+        inicio: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => abrirHojaMovimiento(context, movimiento),
+              child: const Text('abrir'),
+            ),
           ),
         ),
       ),
-    ));
+    );
     await tester.tap(find.text('abrir'));
     await tester.pumpAndSettle();
   }
@@ -68,12 +73,14 @@ void main() {
   bool guardarHabilitado(WidgetTester tester) =>
       tester
           .widget<BotonPrincipal>(
-              find.byKey(const Key('boton_guardar_correccion')))
+            find.byKey(const Key('boton_guardar_correccion')),
+          )
           .onPressed !=
       null;
 
-  testWidgets('el administrador ve el detalle con Corregir y Anular',
-      (tester) async {
+  testWidgets('el administrador ve el detalle con Corregir y Anular', (
+    tester,
+  ) async {
     final (container, ana) = await sesion();
     final id = await VentaRepository(db)
         .registrarVenta(monto: 5000, esFiado: false, usuarioId: ana.id);
@@ -85,12 +92,17 @@ void main() {
     expect(find.byKey(const Key('boton_anular')), findsOneWidget);
   });
 
-  testWidgets('el vendedor no ve botones en una venta suya de ayer',
-      (tester) async {
+  testWidgets('el vendedor no ve botones en una venta suya de ayer', (
+    tester,
+  ) async {
     final (container, beto) = await sesion(rol: 'vendedor');
     final ayer = DateTime.now().subtract(const Duration(days: 1));
     final id = await VentaRepository(db).registrarVenta(
-        monto: 5000, esFiado: false, usuarioId: beto.id, fecha: ayer);
+      monto: 5000,
+      esFiado: false,
+      usuarioId: beto.id,
+      fecha: ayer,
+    );
 
     await abrir(tester, container, deVenta(id, beto, fecha: ayer));
 
@@ -99,8 +111,9 @@ void main() {
     expect(find.byKey(const Key('boton_anular')), findsNothing);
   });
 
-  testWidgets('corregir el monto guarda, cierra la hoja y avisa',
-      (tester) async {
+  testWidgets('corregir el monto guarda, cierra la hoja y avisa', (
+    tester,
+  ) async {
     final (container, ana) = await sesion();
     final id = await VentaRepository(db)
         .registrarVenta(monto: 5000, esFiado: false, usuarioId: ana.id);
@@ -113,7 +126,9 @@ void main() {
     await tester.tap(find.byKey(const Key('tecla_monto_borrar')));
     await tester.pump();
     expect(guardarHabilitado(tester), isTrue);
-    await tester.ensureVisible(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.ensureVisible(
+      find.byKey(const Key('boton_guardar_correccion')),
+    );
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
     await tester.pumpAndSettle();
 
@@ -122,8 +137,9 @@ void main() {
     expect(find.text('Venta corregida'), findsOneWidget);
   });
 
-  testWidgets('un doble toque en Guardar guarda una sola corrección',
-      (tester) async {
+  testWidgets('un doble toque en Guardar guarda una sola corrección', (
+    tester,
+  ) async {
     final (container, ana) = await sesion();
     final id = await VentaRepository(db)
         .registrarVenta(monto: 5000, esFiado: false, usuarioId: ana.id);
@@ -133,20 +149,26 @@ void main() {
     await tester.tap(find.byKey(const Key('tecla_monto_borrar')));
     await tester.pump();
 
-    await tester.ensureVisible(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.ensureVisible(
+      find.byKey(const Key('boton_guardar_correccion')),
+    );
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
-    await tester.tap(find.byKey(const Key('boton_guardar_correccion')),
-        warnIfMissed: false);
+    await tester.tap(
+      find.byKey(const Key('boton_guardar_correccion')),
+      warnIfMissed: false,
+    );
     await tester.pumpAndSettle();
 
     expect(await db.select(db.correcciones).get(), hasLength(1));
   });
 
-  testWidgets(
-      'pasar a fiada exige elegir cliente y usa el existente', (tester) async {
+  testWidgets('pasar a fiada exige elegir cliente y usa el existente', (
+    tester,
+  ) async {
     final (container, ana) = await sesion();
-    final rosa =
-        await db.into(db.clientes).insert(ClientesCompanion.insert(nombre: 'Rosa'));
+    final rosa = await db
+        .into(db.clientes)
+        .insert(ClientesCompanion.insert(nombre: 'Rosa'));
     final id = await VentaRepository(db)
         .registrarVenta(monto: 5000, esFiado: false, usuarioId: ana.id);
     await abrir(tester, container, deVenta(id, ana));
@@ -164,7 +186,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(guardarHabilitado(tester), isTrue);
     // Las sugerencias de clientes alargan la hoja: se desplaza hasta Guardar.
-    await tester.ensureVisible(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.ensureVisible(
+      find.byKey(const Key('boton_guardar_correccion')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
     await tester.pumpAndSettle();
@@ -175,8 +199,9 @@ void main() {
     expect(await db.select(db.clientes).get(), hasLength(1));
   });
 
-  testWidgets('la hoja de corrección muestra ¿Quién compra? en contado',
-      (tester) async {
+  testWidgets('la hoja de corrección muestra ¿Quién compra? en contado', (
+    tester,
+  ) async {
     final (container, ana) = await sesion();
     final id = await VentaRepository(db)
         .registrarVenta(monto: 5000, esFiado: false, usuarioId: ana.id);
@@ -188,66 +213,86 @@ void main() {
     expect(find.byKey(const Key('editar_medio_pago')), findsOneWidget);
   });
 
-  testWidgets('en contado de paso un cliente nuevo habilita Guardar y se guarda',
-      (tester) async {
+  testWidgets(
+    'en contado de paso un cliente nuevo habilita Guardar y se guarda',
+    (tester) async {
+      final (container, ana) = await sesion();
+      final id = await VentaRepository(db)
+          .registrarVenta(monto: 5000, esFiado: false, usuarioId: ana.id);
+      await abrir(tester, container, deVenta(id, ana));
+      await tester.tap(find.byKey(const Key('boton_corregir')));
+      await tester.pumpAndSettle();
+      expect(guardarHabilitado(tester), isFalse);
+
+      await tester.enterText(find.byKey(const Key('campo_cliente')), 'Lucía');
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('boton_cliente_nuevo')));
+      await tester.tap(find.byKey(const Key('boton_cliente_nuevo')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('campo_apellido_cliente')),
+        'Gómez',
+      );
+      await tester.tap(find.byKey(const Key('boton_continuar_cliente')));
+      await tester.pumpAndSettle();
+
+      expect(guardarHabilitado(tester), isTrue);
+      await tester.ensureVisible(
+        find.byKey(const Key('boton_guardar_correccion')),
+      );
+      await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
+      await tester.pumpAndSettle();
+
+      final v = await venta(id);
+      expect(v.esFiado, isFalse);
+      final cliente = await db.select(db.clientes).getSingle();
+      expect(v.clienteId, cliente.id);
+      expect(cliente.nombre, 'Lucía');
+      expect(cliente.apellido, 'Gómez');
+    },
+  );
+
+  testWidgets('al pasar de fiado a contado el cliente se conserva', (
+    tester,
+  ) async {
     final (container, ana) = await sesion();
-    final id = await VentaRepository(db)
-        .registrarVenta(monto: 5000, esFiado: false, usuarioId: ana.id);
-    await abrir(tester, container, deVenta(id, ana));
-    await tester.tap(find.byKey(const Key('boton_corregir')));
-    await tester.pumpAndSettle();
-    expect(guardarHabilitado(tester), isFalse);
-
-    await tester.enterText(find.byKey(const Key('campo_cliente')), 'Lucía');
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('boton_cliente_nuevo')));
-    await tester.tap(find.byKey(const Key('boton_cliente_nuevo')));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-        find.byKey(const Key('campo_apellido_cliente')), 'Gómez');
-    await tester.tap(find.byKey(const Key('boton_continuar_cliente')));
-    await tester.pumpAndSettle();
-
-    expect(guardarHabilitado(tester), isTrue);
-    await tester.ensureVisible(find.byKey(const Key('boton_guardar_correccion')));
-    await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
-    await tester.pumpAndSettle();
-
-    final v = await venta(id);
-    expect(v.esFiado, isFalse);
-    final cliente = await db.select(db.clientes).getSingle();
-    expect(v.clienteId, cliente.id);
-    expect(cliente.nombre, 'Lucía');
-    expect(cliente.apellido, 'Gómez');
-  });
-
-  testWidgets('al pasar de fiado a contado el cliente se conserva',
-      (tester) async {
-    final (container, ana) = await sesion();
-    final rosa = await db.into(db.clientes).insert(
-        ClientesCompanion.insert(nombre: 'Rosa', apellido: const Value('Gómez')));
+    final rosa = await db
+        .into(db.clientes)
+        .insert(
+          ClientesCompanion.insert(
+            nombre: 'Rosa',
+            apellido: const Value('Gómez'),
+          ),
+        );
     final id = await VentaRepository(db).registrarVenta(
-        monto: 5000, esFiado: true, clienteId: rosa, usuarioId: ana.id);
+      monto: 5000,
+      esFiado: true,
+      clienteId: rosa,
+      usuarioId: ana.id,
+    );
     await abrir(
-        tester,
-        container,
-        MovimientoEditable(
-          tipo: TipoMovimiento.venta,
-          id: id,
-          monto: 5000,
-          fecha: DateTime.now(),
-          usuarioId: ana.id,
-          esFiado: true,
-          clienteId: rosa,
-          nombreCliente: 'Rosa Gómez',
-        ));
+      tester,
+      container,
+      MovimientoEditable(
+        tipo: TipoMovimiento.venta,
+        id: id,
+        monto: 5000,
+        fecha: DateTime.now(),
+        usuarioId: ana.id,
+        esFiado: true,
+        clienteId: rosa,
+        nombreCliente: 'Rosa Gómez',
+      ),
+    );
     await tester.tap(find.byKey(const Key('boton_corregir')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Contado'));
     await tester.pumpAndSettle();
     expect(guardarHabilitado(tester), isTrue);
-    await tester.ensureVisible(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.ensureVisible(
+      find.byKey(const Key('boton_guardar_correccion')),
+    );
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
     await tester.pumpAndSettle();
 
@@ -256,8 +301,9 @@ void main() {
     expect(v.clienteId, rosa);
   });
 
-  testWidgets('anular pide confirmación; cancelar no cambia nada',
-      (tester) async {
+  testWidgets('anular pide confirmación; cancelar no cambia nada', (
+    tester,
+  ) async {
     final (container, ana) = await sesion();
     final id = await VentaRepository(db)
         .registrarVenta(monto: 5000, esFiado: false, usuarioId: ana.id);
@@ -282,25 +328,30 @@ void main() {
     expect(find.text('Venta anulada'), findsOneWidget);
   });
 
-  testWidgets('un abono se corrige cambiando el medio de pago',
-      (tester) async {
+  testWidgets('un abono se corrige cambiando el medio de pago', (tester) async {
     final (container, ana) = await sesion();
     final pedro = await db
         .into(db.clientes)
         .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
     final fecha = DateTime.now();
     final id = await FiadoRepository(db).registrarPago(
-        clienteId: pedro, monto: 2000, usuarioId: ana.id, fecha: fecha);
+      clienteId: pedro,
+      monto: 2000,
+      usuarioId: ana.id,
+      fecha: fecha,
+    );
     await abrir(
-        tester,
-        container,
-        MovimientoEditable(
-            tipo: TipoMovimiento.abono,
-            id: id,
-            monto: 2000,
-            fecha: fecha,
-            usuarioId: ana.id,
-            clienteId: pedro));
+      tester,
+      container,
+      MovimientoEditable(
+        tipo: TipoMovimiento.abono,
+        id: id,
+        monto: 2000,
+        fecha: fecha,
+        usuarioId: ana.id,
+        clienteId: pedro,
+      ),
+    );
 
     await tester.tap(find.byKey(const Key('boton_corregir')));
     await tester.pumpAndSettle();
@@ -309,8 +360,9 @@ void main() {
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
     await tester.pumpAndSettle();
 
-    final pago = await (db.select(db.pagosFiado)..where((p) => p.id.equals(id)))
-        .getSingle();
+    final pago = await (db.select(
+      db.pagosFiado,
+    )..where((p) => p.id.equals(id))).getSingle();
     expect(pago.medioPago, MedioPago.transferencia);
     expect(find.text('Abono corregido'), findsOneWidget);
   });
@@ -319,64 +371,81 @@ void main() {
     final (container, ana) = await sesion();
     final fecha = DateTime.now();
     final id = await GastoRepository(db).registrarGasto(
-        monto: 1500, descripcion: 'Hielo', usuarioId: ana.id, fecha: fecha);
+      monto: 1500,
+      descripcion: 'Hielo',
+      usuarioId: ana.id,
+      fecha: fecha,
+    );
     await abrir(
-        tester,
-        container,
-        MovimientoEditable(
-            tipo: TipoMovimiento.gasto,
-            id: id,
-            monto: 1500,
-            fecha: fecha,
-            usuarioId: ana.id,
-            descripcion: 'Hielo'));
+      tester,
+      container,
+      MovimientoEditable(
+        tipo: TipoMovimiento.gasto,
+        id: id,
+        monto: 1500,
+        fecha: fecha,
+        usuarioId: ana.id,
+        descripcion: 'Hielo',
+      ),
+    );
 
     expect(find.text('Hielo'), findsOneWidget);
     await tester.tap(find.byKey(const Key('boton_corregir')));
     await tester.pumpAndSettle();
     await tester.enterText(
-        find.byKey(const Key('editar_descripcion')), 'Hielo y bolsas');
+      find.byKey(const Key('editar_descripcion')),
+      'Hielo y bolsas',
+    );
     await tester.pump();
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
     await tester.pumpAndSettle();
 
-    final gasto =
-        await (db.select(db.gastos)..where((g) => g.id.equals(id))).getSingle();
+    final gasto = await (db.select(
+      db.gastos,
+    )..where((g) => g.id.equals(id))).getSingle();
     expect(gasto.descripcion, 'Hielo y bolsas');
     expect(find.text('Gasto corregido'), findsOneWidget);
   });
 
-  testWidgets('un gasto de mercancía recibida no se corrige ni se anula suelto',
-      (tester) async {
-    final (container, ana) = await sesion();
-    final fecha = DateTime.now();
-    final id = await GastoRepository(db).registrarGasto(
+  testWidgets(
+    'un gasto de mercancía recibida no se corrige ni se anula suelto',
+    (tester) async {
+      final (container, ana) = await sesion();
+      final fecha = DateTime.now();
+      final id = await GastoRepository(db).registrarGasto(
         monto: 20000,
         descripcion: 'Mercancía · Postobón',
         usuarioId: ana.id,
-        fecha: fecha);
-    await abrir(
+        fecha: fecha,
+      );
+      await abrir(
         tester,
         container,
         MovimientoEditable(
-            tipo: TipoMovimiento.gasto,
-            id: id,
-            monto: 20000,
-            fecha: fecha,
-            usuarioId: ana.id,
-            descripcion: 'Mercancía · Postobón',
-            entradaId: 7));
+          tipo: TipoMovimiento.gasto,
+          id: id,
+          monto: 20000,
+          fecha: fecha,
+          usuarioId: ana.id,
+          descripcion: 'Mercancía · Postobón',
+          entradaId: 7,
+        ),
+      );
 
-    expect(find.byKey(const Key('boton_corregir')), findsNothing);
-    expect(find.byKey(const Key('boton_anular')), findsNothing);
-    expect(
+      expect(find.byKey(const Key('boton_corregir')), findsNothing);
+      expect(find.byKey(const Key('boton_anular')), findsNothing);
+      expect(
         find.text(
-            'Viene de la mercancía recibida; para cambiarlo anula la entrada'),
-        findsOneWidget);
-  });
+          'Viene de la mercancía recibida; para cambiarlo anula la entrada',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('un movimiento anulado dice quién lo anuló y no deja corregir',
-      (tester) async {
+  testWidgets('un movimiento anulado dice quién lo anuló y no deja corregir', (
+    tester,
+  ) async {
     final (container, ana) = await sesion();
     final id = await VentaRepository(db)
         .registrarVenta(monto: 5000, esFiado: false, usuarioId: ana.id);
@@ -384,20 +453,23 @@ void main() {
     final correccion = await db.select(db.correcciones).getSingle();
 
     await abrir(
-        tester,
-        container,
-        MovimientoEditable(
-          tipo: TipoMovimiento.venta,
-          id: id,
-          monto: 5000,
-          fecha: DateTime.now(),
-          usuarioId: ana.id,
-          anulado: true,
-          ultimaCorreccion: correccion,
-        ));
+      tester,
+      container,
+      MovimientoEditable(
+        tipo: TipoMovimiento.venta,
+        id: id,
+        monto: 5000,
+        fecha: DateTime.now(),
+        usuarioId: ana.id,
+        anulado: true,
+        ultimaCorreccion: correccion,
+      ),
+    );
 
-    expect(find.text('Anulada por Ana · ${formatoHora(correccion.fecha)}'),
-        findsOneWidget);
+    expect(
+      find.text('Anulada por Ana · ${formatoHora(correccion.fecha)}'),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('boton_corregir')), findsNothing);
     expect(find.byKey(const Key('boton_anular')), findsNothing);
   });
@@ -417,27 +489,29 @@ void main() {
       usuarioId: ana.id,
       lineas: [
         LineaNueva(
-            productoId: arepa,
-            descripcion: 'Arepa',
-            precioUnitario: 3500,
-            cantidad: 2),
+          productoId: arepa,
+          descripcion: 'Arepa',
+          precioUnitario: 3500,
+          cantidad: 2,
+        ),
         LineaNueva(
-            productoId: coca,
-            descripcion: 'Cocacola',
-            precioUnitario: 1200,
-            cantidad: 1),
+          productoId: coca,
+          descripcion: 'Cocacola',
+          precioUnitario: 1200,
+          cantidad: 1,
+        ),
       ],
     );
     return (id, await repo.lineasDeVenta(id));
   }
 
   MovimientoEditable ventaDe8200(int id, Usuario ana) => MovimientoEditable(
-        tipo: TipoMovimiento.venta,
-        id: id,
-        monto: 8200,
-        fecha: DateTime.now(),
-        usuarioId: ana.id,
-      );
+    tipo: TipoMovimiento.venta,
+    id: id,
+    monto: 8200,
+    fecha: DateTime.now(),
+    usuarioId: ana.id,
+  );
 
   testWidgets('el detalle muestra los productos de la venta', (tester) async {
     final (container, ana) = await sesion();
@@ -449,8 +523,9 @@ void main() {
     expect(find.text(r'1× Cocacola · $1.200'), findsOneWidget);
   });
 
-  testWidgets('corregir cantidades recalcula el total y lo guarda',
-      (tester) async {
+  testWidgets('corregir cantidades recalcula el total y lo guarda', (
+    tester,
+  ) async {
     final (container, ana) = await sesion();
     final (id, lineas) = await ventaConLineas(ana);
     await abrir(tester, container, ventaDe8200(id, ana));
@@ -463,12 +538,15 @@ void main() {
     await tester.pump();
 
     expect(
-        find.descendant(
-            of: find.byKey(const Key('total_correccion')),
-            matching: find.text(r'$10.500')),
-        findsOneWidget);
+      find.descendant(
+        of: find.byKey(const Key('total_correccion')),
+        matching: find.text(r'$10.500'),
+      ),
+      findsOneWidget,
+    );
     await tester.ensureVisible(
-        find.byKey(const Key('boton_guardar_correccion')));
+      find.byKey(const Key('boton_guardar_correccion')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
     await tester.pumpAndSettle();
@@ -494,8 +572,23 @@ void main() {
     expect(guardarHabilitado(tester), isFalse);
   });
 
-  testWidgets('restar hasta 0 deja la línea tachada y se puede recuperar',
-      (tester) async {
+  testWidgets('quitar una línea no mueve sus botones', (tester) async {
+    final (container, ana) = await sesion();
+    final (id, lineas) = await ventaConLineas(ana);
+    await abrir(tester, container, ventaDe8200(id, ana));
+    await tester.tap(find.byKey(const Key('boton_corregir')));
+    await tester.pumpAndSettle();
+
+    final coca = lineas[1].id;
+    final antes = tester.getCenter(find.byKey(Key('sumar_linea_$coca')));
+    await tester.tap(find.byKey(Key('quitar_linea_$coca')));
+    await tester.pump();
+    expect(tester.getCenter(find.byKey(Key('sumar_linea_$coca'))), antes);
+  });
+
+  testWidgets('restar hasta 0 deja la línea tachada y se puede recuperar', (
+    tester,
+  ) async {
     final (container, ana) = await sesion();
     final (id, lineas) = await ventaConLineas(ana);
     await abrir(tester, container, ventaDe8200(id, ana));
@@ -506,38 +599,50 @@ void main() {
     await tester.tap(find.byKey(Key('restar_linea_$coca')));
     await tester.pump();
 
-    expect(tester.widget<Text>(find.byKey(Key('cantidad_linea_$coca'))).data,
-        '0');
     expect(
-        tester
-            .widget<Text>(find.byKey(Key('nombre_linea_$coca')))
-            .style
-            ?.decoration,
-        TextDecoration.lineThrough);
+      tester.widget<Text>(find.byKey(Key('cantidad_linea_$coca'))).data,
+      '0',
+    );
     expect(
-        tester
-            .widget<IconButton>(find.byKey(Key('restar_linea_$coca')))
-            .onPressed,
-        isNull);
+      tester
+          .widget<Text>(find.byKey(Key('nombre_linea_$coca')))
+          .style
+          ?.decoration,
+      TextDecoration.lineThrough,
+    );
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(Key('restar_linea_$coca')))
+          .onPressed,
+      isNull,
+    );
     expect(find.byKey(Key('quitar_linea_$coca')), findsNothing);
     expect(
-        find.descendant(
-            of: find.byKey(const Key('total_correccion')),
-            matching: find.text(r'$7.000')),
-        findsOneWidget);
+      find.descendant(
+        of: find.byKey(const Key('total_correccion')),
+        matching: find.text(r'$7.000'),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(Key('sumar_linea_$coca')));
     await tester.pump();
-    expect(tester.widget<Text>(find.byKey(Key('cantidad_linea_$coca'))).data,
-        '1');
+    expect(
+      tester.widget<Text>(find.byKey(Key('cantidad_linea_$coca'))).data,
+      '1',
+    );
     expect(guardarHabilitado(tester), isFalse);
   });
 
   testWidgets('sin cargar las líneas no se ofrece Corregir', (tester) async {
-    final container = await containerConSesion(db, overrides: [
-      lineasVentaProvider
-          .overrideWith((ref, id) => Completer<List<LineaVenta>>().future),
-    ]);
+    final container = await containerConSesion(
+      db,
+      overrides: [
+        lineasVentaProvider.overrideWith(
+          (ref, id) => Completer<List<LineaVenta>>().future,
+        ),
+      ],
+    );
     addTearDown(container.dispose);
     final ana = container.read(sesionProvider).usuarioActivo!;
     final (id, _) = await ventaConLineas(ana);
@@ -555,23 +660,30 @@ void main() {
         .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
     final fecha = DateTime.now();
     await VentaRepository(db).registrarVenta(
-        monto: 5000,
-        esFiado: true,
-        clienteId: pedro,
-        usuarioId: ana.id,
-        fecha: fecha);
+      monto: 5000,
+      esFiado: true,
+      clienteId: pedro,
+      usuarioId: ana.id,
+      fecha: fecha,
+    );
     final id = await FiadoRepository(db).registrarPago(
-        clienteId: pedro, monto: 2000, usuarioId: ana.id, fecha: fecha);
+      clienteId: pedro,
+      monto: 2000,
+      usuarioId: ana.id,
+      fecha: fecha,
+    );
     await abrir(
-        tester,
-        container,
-        MovimientoEditable(
-            tipo: TipoMovimiento.abono,
-            id: id,
-            monto: 2000,
-            fecha: fecha,
-            usuarioId: ana.id,
-            clienteId: pedro));
+      tester,
+      container,
+      MovimientoEditable(
+        tipo: TipoMovimiento.abono,
+        id: id,
+        monto: 2000,
+        fecha: fecha,
+        usuarioId: ana.id,
+        clienteId: pedro,
+      ),
+    );
 
     await tester.tap(find.byKey(const Key('boton_corregir')));
     await tester.pumpAndSettle();
@@ -580,15 +692,20 @@ void main() {
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
     await tester.pumpAndSettle();
 
-    expect(find.text(r'El abono no puede ser mayor que la deuda ($5.000)'),
-        findsOneWidget);
+    expect(
+      find.text(r'El abono no puede ser mayor que la deuda ($5.000)'),
+      findsOneWidget,
+    );
     expect(find.byType(BottomSheet), findsOneWidget);
   });
 
   testWidgets('sin permiso al guardar lo dice claramente', (tester) async {
-    final container = await containerConSesion(db, overrides: [
-      correccionRepositoryProvider.overrideWithValue(_RepoSinPermiso(db)),
-    ]);
+    final container = await containerConSesion(
+      db,
+      overrides: [
+        correccionRepositoryProvider.overrideWithValue(_RepoSinPermiso(db)),
+      ],
+    );
     addTearDown(container.dispose);
     final ana = container.read(sesionProvider).usuarioActivo!;
     final id = await VentaRepository(db)
@@ -599,36 +716,43 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('tecla_monto_borrar')));
     await tester.pump();
-    await tester.ensureVisible(find.byKey(const Key('boton_guardar_correccion')));
+    await tester.ensureVisible(
+      find.byKey(const Key('boton_guardar_correccion')),
+    );
     await tester.tap(find.byKey(const Key('boton_guardar_correccion')));
     await tester.pumpAndSettle();
 
     expect(find.text('Ya no puedes corregir este movimiento'), findsOneWidget);
   });
 
-  testWidgets('la cabecera lleva el ícono y el color del tipo',
-      (tester) async {
+  testWidgets('la cabecera lleva el ícono y el color del tipo', (tester) async {
     final (container, ana) = await sesion();
     final id = await GastoRepository(db)
         .registrarGasto(monto: 300, descripcion: 'Hielo', usuarioId: ana.id);
     await abrir(
-        tester,
-        container,
-        MovimientoEditable(
-          tipo: TipoMovimiento.gasto,
-          id: id,
-          monto: 300,
-          fecha: DateTime.now(),
-          usuarioId: ana.id,
-        ));
-    final cabecera =
-        tester.widget<Container>(find.byKey(const Key('cabecera_movimiento')));
-    expect((cabecera.decoration! as BoxDecoration).color,
-        ColoresApp.claro.sale.withValues(alpha: 0.15));
+      tester,
+      container,
+      MovimientoEditable(
+        tipo: TipoMovimiento.gasto,
+        id: id,
+        monto: 300,
+        fecha: DateTime.now(),
+        usuarioId: ana.id,
+      ),
+    );
+    final cabecera = tester.widget<Container>(
+      find.byKey(const Key('cabecera_movimiento')),
+    );
     expect(
-        tester.widget<BotonPrincipal>(find.byKey(const Key('boton_anular')))
-            .variante,
-        VarianteBoton.peligro);
+      (cabecera.decoration! as BoxDecoration).color,
+      ColoresApp.claro.sale.withValues(alpha: 0.15),
+    );
+    expect(
+      tester
+          .widget<BotonPrincipal>(find.byKey(const Key('boton_anular')))
+          .variante,
+      VarianteBoton.peligro,
+    );
   });
 }
 
@@ -646,6 +770,5 @@ class _RepoSinPermiso extends CorreccionRepository {
     MedioPago medioPago = MedioPago.efectivo,
     Map<int, int>? cantidades,
     required Usuario por,
-  }) async =>
-      throw const PermisoDenegado();
+  }) async => throw const PermisoDenegado();
 }
