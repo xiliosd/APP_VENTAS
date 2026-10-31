@@ -112,10 +112,13 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
         if (!mounted) return;
         final vistos = ref.read(consejosVistosProvider);
         if (vistos.contains(Consejo.escanearProducto)) return;
-        ref
-            .read(consejosVistosProvider.notifier)
-            .marcarVisto(Consejo.escanearProducto);
-        _consejo = mostrarConsejo(context, consejoEscanearProducto);
+        _consejo = mostrarConsejo(
+          context,
+          consejoEscanearProducto,
+          alCerrar: () => ref
+              .read(consejosVistosProvider.notifier)
+              .marcarVisto(Consejo.escanearProducto),
+        );
       });
     }
     // La vista previa muestra "Marca · Tamaño" mientras se escribe.
@@ -129,7 +132,7 @@ class _ProductoScreenState extends ConsumerState<ProductoScreen> {
 
   Future<void> _escanear() async {
     // Tocar el botón con el consejo abierto lo da por entendido.
-    _consejo?.cerrar();
+    _consejo?.entender();
     final codigo = await ref
         .read(lectorCodigoProvider)
         .leer(context, uso: UsoEscaner.producto);

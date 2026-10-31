@@ -39,13 +39,20 @@ ControladorGlobos mostrarGlobos(
 
 /// Muestra un consejo de un solo paso: sin "Saltar recorrido", con
 /// "Entendido" para cerrarlo, y el toque en el hueco llega al elemento.
-ControladorGlobos mostrarConsejo(BuildContext context, PasoGlobo paso) {
+/// [alCerrar] se llama una sola vez cuando el usuario lo da por entendido
+/// ("Entendido" o [ControladorGlobos.entender]); no al desmontar la pantalla.
+ControladorGlobos mostrarConsejo(
+  BuildContext context,
+  PasoGlobo paso, {
+  VoidCallback? alCerrar,
+}) {
   final ctrl = ControladorGlobos._(
     Overlay.of(context, rootOverlay: true),
     [paso],
     null,
     null,
     esConsejo: true,
+    alCerrar: alCerrar,
   );
   ctrl._mostrar();
   return ctrl;
@@ -58,9 +65,11 @@ class ControladorGlobos {
     this._onTerminar,
     this._onSaltar, {
     this.esConsejo = false,
+    this.alCerrar,
   });
 
   final bool esConsejo;
+  final VoidCallback? alCerrar;
 
   final OverlayState _overlay;
   final List<PasoGlobo> _pasos;
@@ -122,7 +131,7 @@ class ControladorGlobos {
     if (_cerrado) return;
     _indice++;
     if (_indice >= _pasos.length) {
-      _terminar();
+      esConsejo ? entender() : _terminar();
     } else {
       _mostrar();
     }
@@ -138,6 +147,13 @@ class ControladorGlobos {
     if (_cerrado) return;
     cerrar();
     _onSaltar?.call();
+  }
+
+  /// El usuario da el consejo por entendido: lo cierra y avisa una sola vez.
+  void entender() {
+    if (_cerrado) return;
+    cerrar();
+    alCerrar?.call();
   }
 
   void _terminar() {

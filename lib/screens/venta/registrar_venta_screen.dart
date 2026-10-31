@@ -85,7 +85,7 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
 
   Future<void> _escanear() async {
     // Tocar el botón con el consejo abierto lo da por entendido.
-    _consejo?.cerrar();
+    _consejo?.entender();
     final codigo = await ref
         .read(lectorCodigoProvider)
         .leer(
@@ -328,10 +328,13 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
         if (!mounted) return;
         final vistos = ref.read(consejosVistosProvider);
         if (vistos.contains(Consejo.escanearVenta)) return;
-        ref
-            .read(consejosVistosProvider.notifier)
-            .marcarVisto(Consejo.escanearVenta);
-        _consejo = mostrarConsejo(context, consejoEscanearVenta);
+        _consejo = mostrarConsejo(
+          context,
+          consejoEscanearVenta,
+          alCerrar: () => ref
+              .read(consejosVistosProvider.notifier)
+              .marcarVisto(Consejo.escanearVenta),
+        );
       });
     }
     if (widget.practica && widget.conGlobos) {

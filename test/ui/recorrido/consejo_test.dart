@@ -46,4 +46,57 @@ void main() {
     expect(find.byKey(const Key('capa_globos')), findsNothing);
     expect(ctrl.activo, isFalse);
   });
+
+  Future<BuildContext> montarObjetivo(WidgetTester tester) async {
+    late BuildContext contexto;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: temaClaro(),
+        home: Scaffold(
+          body: Builder(
+            builder: (c) {
+              contexto = c;
+              return const ObjetivoRecorrido(
+                id: 'boton_escanear_venta',
+                child: Text('Esc'),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    return contexto;
+  }
+
+  testWidgets('alCerrar se llama una sola vez al tocar Entendido', (
+    tester,
+  ) async {
+    final contexto = await montarObjetivo(tester);
+    var cierres = 0;
+    final ctrl = mostrarConsejo(
+      contexto,
+      consejoEscanearVenta,
+      alCerrar: () => cierres++,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_entendido_consejo')));
+    await tester.pumpAndSettle();
+    ctrl.entender();
+    ctrl.cerrar();
+    expect(cierres, 1);
+  });
+
+  testWidgets('alCerrar no se llama si se cierra con cerrar()', (tester) async {
+    final contexto = await montarObjetivo(tester);
+    var cierres = 0;
+    final ctrl = mostrarConsejo(
+      contexto,
+      consejoEscanearVenta,
+      alCerrar: () => cierres++,
+    );
+    await tester.pumpAndSettle();
+    ctrl.cerrar();
+    await tester.pumpAndSettle();
+    expect(cierres, 0);
+  });
 }

@@ -85,7 +85,18 @@ void main() {
   ) async {
     await abrir(tester);
     expect(find.text(consejoEscanearProducto.texto), findsOneWidget);
+    expect(preferencias.getBool('consejo_visto_escanearProducto'), isNull);
+
+    await tester.tap(find.byKey(const Key('boton_entendido_consejo')));
+    await tester.pumpAndSettle();
     expect(preferencias.getBool('consejo_visto_escanearProducto'), isTrue);
+  });
+
+  testWidgets('salir sin cerrar el consejo lo deja pendiente', (tester) async {
+    await abrir(tester);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+    expect(preferencias.getBool('consejo_visto_escanearProducto'), isNull);
   });
 
   testWidgets('al editar no muestra el consejo', (tester) async {

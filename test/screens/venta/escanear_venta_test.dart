@@ -91,10 +91,11 @@ void main() {
   ) async {
     await abrir(tester);
     expect(find.text(consejoEscanearVenta.texto), findsOneWidget);
-    expect(preferencias.getBool('consejo_visto_escanearVenta'), isTrue);
+    expect(preferencias.getBool('consejo_visto_escanearVenta'), isNull);
 
     await tester.tap(find.byKey(const Key('boton_entendido_consejo')));
     await tester.pumpAndSettle();
+    expect(preferencias.getBool('consejo_visto_escanearVenta'), isTrue);
     expect(find.byKey(const Key('capa_globos')), findsNothing);
 
     navegador.currentState!.pop();
@@ -115,12 +116,15 @@ void main() {
     expect(lector.usos, [UsoEscaner.venta]);
   });
 
-  testWidgets('salir con el consejo abierto lo quita', (tester) async {
+  testWidgets('salir con el consejo abierto lo quita y lo deja pendiente', (
+    tester,
+  ) async {
     await abrir(tester);
     expect(find.byKey(const Key('capa_globos')), findsOneWidget);
     navegador.currentState!.pop();
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('capa_globos')), findsNothing);
+    expect(preferencias.getBool('consejo_visto_escanearVenta'), isNull);
   });
 
   testWidgets('en la práctica hay botón de escanear, sin consejo, y usa '
