@@ -55,7 +55,8 @@ const temasAyuda = <TemaAyuda>[
           '3. Revisa la hoja "¿Agrego esto?" y toca "Agregar al ticket".\n'
           'El dictado funciona sin internet: si la app te lo pide, descarga '
           'el español sin conexión en los ajustes de voz de Google del '
-          'celular.',
+          'celular. En algunos celulares no se puede dictar sin internet y la '
+          'app te avisa.',
     ),
     PreguntaFrecuente(
       '¿Cómo cobro por transferencia con mi QR?',
@@ -86,7 +87,8 @@ const temasAyuda = <TemaAyuda>[
       '1. Arma la venta como siempre y toca "Cobrar".\n'
           '2. Toca "Fiado".\n'
           '3. Escribe el nombre del cliente y tócalo en la lista. Si es '
-          'nuevo, toca "Nuevo", llena sus datos y toca "Continuar".\n'
+          'nuevo, toca "Nuevo: …" (con el nombre que escribiste), llena sus '
+          'datos y toca "Continuar".\n'
           '4. Toca "Fiar".',
     ),
     PreguntaFrecuente(
@@ -146,6 +148,7 @@ const temasAyuda = <TemaAyuda>[
       'Me equivoqué en un gasto, ¿cómo lo arreglo?',
       '1. Ve a "Historial" y toca el filtro "Gastos".\n'
           '2. Toca el gasto y elige "Corregir" o "Anular".\n'
+          'El vendedor solo corrige sus propios gastos del mismo día. '
           'Si el gasto salió de la mercancía recibida, se arregla anulando la '
           'entrada en "Inventario".',
     ),
@@ -340,7 +343,9 @@ const temasAyuda = <TemaAyuda>[
       '${_soloAdmin}en "Ajustes" → "Respaldo" toca "Activar respaldo". '
           'Escribe el celular de la tienda, toca "Enviarme el código" y '
           'escribe el código de 6 dígitos que llega por SMS; luego toca '
-          '"Verificar". Si sale '
+          '"Verificar". Si ya hay un respaldo de esta tienda, la app te '
+          'pregunta si quieres "Restaurarlo en este celular" o '
+          '"Reemplazarlo con los datos de este celular". Si sale '
           '"Respaldo no configurado", esta versión de la app no tiene '
           'conexión a la nube y no se puede activar.',
     ),
@@ -357,8 +362,7 @@ const temasAyuda = <TemaAyuda>[
           '2. Toca "Ya tengo una tienda: restaurar respaldo".\n'
           '3. Escribe el mismo celular de la tienda, toca "Enviarme el '
           'código", escribe el código que llega por SMS y toca "Verificar".\n'
-          '4. Confirma con "Restaurar".\n'
-          '5. Entra con tu PIN.\n'
+          '4. Cuando salga "Respaldo restaurado", entra con tu PIN.\n'
           'Solo funciona si antes activaste el respaldo. La huella hay que '
           'activarla otra vez.',
     ),
