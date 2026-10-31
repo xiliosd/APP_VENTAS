@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-import '../../servicios/lector_codigo.dart';
+import '../../servicios/uso_escaner.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/vibracion.dart';
@@ -42,7 +42,7 @@ class _DialogoCodigoState extends State<_DialogoCodigo> {
         key: const Key('campo_codigo_escrito'),
         controller: _controlador,
         autofocus: true,
-        keyboardType: TextInputType.number,
+        keyboardType: TextInputType.text,
         decoration: const InputDecoration(labelText: 'Código de barras'),
         onSubmitted: (t) => Navigator.pop(context, t),
       ),
@@ -60,6 +60,10 @@ class _DialogoCodigoState extends State<_DialogoCodigo> {
     );
   }
 }
+
+/// La linterna solo se ofrece con cámara disponible y flash en el equipo.
+bool linternaDisponible(MobileScannerState estado) =>
+    estado.error == null && estado.torchState != TorchState.unavailable;
 
 /// Cámara a pantalla completa que se cierra con el primer código leído.
 class EscanerScreen extends StatefulWidget {
@@ -82,6 +86,7 @@ class _EscanerScreenState extends State<EscanerScreen> {
     ],
   );
   bool _leido = false;
+  bool _escribiendo = false;
 
   @override
   void dispose() {
@@ -90,7 +95,7 @@ class _EscanerScreenState extends State<EscanerScreen> {
   }
 
   void _alDetectar(BarcodeCapture captura) {
-    if (_leido) return;
+    if (_leido || _escribiendo) return;
     final codigo = captura.barcodes
         .map((b) => b.rawValue?.trim())
         .whereType<String>()
@@ -103,8 +108,18 @@ class _EscanerScreenState extends State<EscanerScreen> {
   }
 
   Future<void> _escribir() async {
+    // Se pausa la cámara para que no lea una etiqueta mientras se escribe.
+    _escribiendo = true;
+    await _controlador.stop();
+    if (!mounted) return;
     final codigo = await pedirCodigoEscrito(context);
-    if (codigo != null && mounted) Navigator.of(context).pop(codigo);
+    if (!mounted) return;
+    if (codigo != null) {
+      Navigator.of(context).pop(codigo);
+      return;
+    }
+    _escribiendo = false;
+    await _controlador.start();
   }
 
   @override
@@ -115,10 +130,15 @@ class _EscanerScreenState extends State<EscanerScreen> {
       appBar: AppBar(
         title: const Text('Escanear'),
         actions: [
-          IconButton(
-            tooltip: 'Linterna',
-            icon: const Icon(Icons.flashlight_on_rounded),
-            onPressed: () => _controlador.toggleTorch(),
+          ValueListenableBuilder<MobileScannerState>(
+            valueListenable: _controlador,
+            builder: (context, estado, _) => linternaDisponible(estado)
+                ? IconButton(
+                    tooltip: 'Linterna',
+                    icon: const Icon(Icons.flashlight_on_rounded),
+                    onPressed: () => _controlador.toggleTorch(),
+                  )
+                : const SizedBox.shrink(),
           ),
         ],
       ),
