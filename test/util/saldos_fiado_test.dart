@@ -16,6 +16,18 @@ const venta = TipoMovimientoFiado.venta;
 const abono = TipoMovimientoFiado.abono;
 
 void main() {
+  test('compararMovimientosFiado: fecha y luego venta antes que abono', () {
+    final antiguo = mov(abono, 1, 100, 1);
+    final reciente = mov(venta, 2, 100, 2);
+    expect(compararMovimientosFiado(antiguo, reciente), isNegative);
+    expect(compararMovimientosFiado(reciente, antiguo), isPositive);
+    final ventaDelDia = mov(venta, 3, 100, 5);
+    final abonoDelDia = mov(abono, 4, 100, 5);
+    expect(compararMovimientosFiado(ventaDelDia, abonoDelDia), isNegative);
+    expect(compararMovimientosFiado(abonoDelDia, ventaDelDia), isPositive);
+    expect(compararMovimientosFiado(ventaDelDia, ventaDelDia), isZero);
+  });
+
   test('acumula del más antiguo al más reciente, sin importar el orden dado', () {
     final saldos = saldosAcumulados([
       mov(abono, 2, 3000, 3),

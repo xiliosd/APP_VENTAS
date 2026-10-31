@@ -5,6 +5,7 @@ import 'package:app_ventas/main.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/respaldo/respaldo_provider.dart';
+import 'package:app_ventas/screens/home/home_screen.dart';
 import 'package:app_ventas/screens/login/seleccionar_usuario_screen.dart';
 import 'package:app_ventas/screens/raiz_app.dart';
 import 'package:drift/native.dart';
@@ -122,5 +123,36 @@ void main() {
     expect(find.byKey(const Key('toldo_marca')), findsNothing);
     expect(find.text('No se pudo cargar'), findsOneWidget);
     expect(find.textContaining('base dañada'), findsNothing);
+  });
+
+  testWidgets('entrar a la sesión no funde las pantallas', (tester) async {
+    final id = await db
+        .into(db.usuarios)
+        .insert(
+          UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
+        );
+    await abrir(tester, valores: {'inicio_completo_visto': true});
+    await tester.pumpAndSettle();
+    expect(find.byType(SeleccionarUsuarioScreen), findsOneWidget);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(RaizApp)),
+    );
+
+    final usuario = await (db.select(
+      db.usuarios,
+    )..where((u) => u.id.equals(id))).getSingle();
+    container.read(sesionProvider.notifier).state = SesionState(
+      usuarioActivo: usuario,
+    );
+    await tester.pump(Duration.zero);
+    await tester.pump(const Duration(milliseconds: 1));
+
+    // Sin fundido: la pantalla anterior ya no está y el cambio dura cero.
+    final cambio = tester.widget<AnimatedSwitcher>(
+      find.byType(AnimatedSwitcher),
+    );
+    expect(cambio.duration, Duration.zero);
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.byType(SeleccionarUsuarioScreen), findsNothing);
   });
 }

@@ -62,15 +62,10 @@ ExtractoFiado armarExtracto(
   Map<int, List<LineaVenta>> lineasPorVenta,
 ) {
   final saldos = saldosAcumulados(movimientos);
-  final vigentes =
-      [
-        for (final m in movimientos)
-          if (!m.anulado) m,
-      ]..sort((a, b) {
-        final porFecha = a.fecha.compareTo(b.fecha);
-        if (porFecha != 0) return porFecha;
-        return a.tipo.index.compareTo(b.tipo.index);
-      });
+  final vigentes = [
+    for (final m in movimientos)
+      if (!m.anulado) m,
+  ]..sort(compararMovimientosFiado);
   final entradas = <EntradaExtracto>[
     for (final m in vigentes)
       if (m.tipo == TipoMovimientoFiado.venta)

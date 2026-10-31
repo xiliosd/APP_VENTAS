@@ -9,12 +9,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/database.dart';
 import '../providers/database_provider.dart';
 import '../providers/huella_provider.dart';
+import '../providers/preferencias_provider.dart';
 import '../providers/sesion_provider.dart';
 import 'config_respaldo.dart';
 import 'copia_base_datos.dart';
 import 'nube_respaldo.dart';
 import 'restaurador.dart';
 import 'supabase_nube_respaldo.dart';
+
+// Se reexporta para que quienes ya lo importaban desde aquí sigan compilando.
+export '../providers/preferencias_provider.dart';
 
 /// Espera tras el último cambio antes de respaldar (varios cambios seguidos
 /// producen un solo respaldo).
@@ -54,11 +58,6 @@ class EstadoRespaldo {
     );
   }
 }
-
-/// Preferencias del celular; se cargan en `main` antes de arrancar la app.
-final preferenciasProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('preferenciasProvider se sobrescribe en main()');
-});
 
 /// La nube real, o null si la app se compiló sin claves de Supabase.
 final nubeRespaldoProvider = Provider<NubeRespaldo?>((ref) {

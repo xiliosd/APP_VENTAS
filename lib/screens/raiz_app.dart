@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,6 +28,10 @@ class _RaizAppState extends ConsumerState<RaizApp> {
   /// restaurar un respaldo) no vuelve al inicio.
   bool _yaMostrada = false;
 
+  /// Se está mostrando el inicio de marca: solo su salida se funde; entrar a
+  /// la sesión u otros cambios son inmediatos.
+  bool _desdeInicio = false;
+
   @override
   void initState() {
     super.initState();
@@ -33,7 +39,10 @@ class _RaizAppState extends ConsumerState<RaizApp> {
     _inicioCompleto =
         !(preferencias.getBool(claveInicioCompletoVisto) ?? false);
     // Se marca al empezar: si la app se cierra a mitad, la próxima es breve.
-    if (_inicioCompleto) preferencias.setBool(claveInicioCompletoVisto, true);
+    if (_inicioCompleto) {
+      // El valor en memoria cambia ya; no hace falta esperar al disco.
+      unawaited(preferencias.setBool(claveInicioCompletoVisto, true));
+    }
   }
 
   @override
@@ -48,12 +57,14 @@ class _RaizAppState extends ConsumerState<RaizApp> {
 
     // El inicio sigue quieto en su final si la consulta aún no responde.
     final Widget pantalla;
+    var duracion = Duration.zero;
     // Un error no se espera: se muestra, para no dejar la app quieta.
     final esperando =
         !_yaMostrada &&
         !hayUsuariosAsync.hasValue &&
         !hayUsuariosAsync.hasError;
     if (pendiente || (esperando && !sesion.haySesion)) {
+      _desdeInicio = true;
       pantalla = InicioMarcaScreen(
         key: const ValueKey('inicio_marca'),
         completa: _inicioCompleto,
@@ -62,6 +73,10 @@ class _RaizAppState extends ConsumerState<RaizApp> {
       );
     } else {
       _yaMostrada = true;
+      if (_desdeInicio) {
+        duracion = Movimiento.duracion(context, Movimiento.media);
+        _desdeInicio = false;
+      }
       pantalla = sesion.haySesion
           ? const HomeScreen()
           : hayUsuariosAsync.when(
@@ -74,9 +89,6 @@ class _RaizAppState extends ConsumerState<RaizApp> {
               error: (_, _) => const Scaffold(body: ErrorCarga()),
             );
     }
-    return AnimatedSwitcher(
-      duration: Movimiento.duracion(context, Movimiento.media),
-      child: pantalla,
-    );
+    return AnimatedSwitcher(duration: duracion, child: pantalla);
   }
 }

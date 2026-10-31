@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../respaldo/respaldo_provider.dart';
+import 'preferencias_provider.dart';
 import '../servicios/autenticacion_huella.dart';
 
 /// Preferencia: ids de los usuarios que activaron la huella en este celular.

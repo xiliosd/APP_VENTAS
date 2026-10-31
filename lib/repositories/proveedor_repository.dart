@@ -9,7 +9,7 @@ String? _opcional(String? texto) {
 }
 
 String _nombreValido(String nombre) {
-  final limpio = nombre.trim();
+  final limpio = nombre.trim().replaceAll(RegExp(r'\s+'), ' ');
   if (limpio.isEmpty) throw ArgumentError('Escribe un nombre');
   return limpio;
 }

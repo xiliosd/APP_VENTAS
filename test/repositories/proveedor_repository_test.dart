@@ -26,6 +26,13 @@ void main() {
     expect(p.activo, isTrue);
   });
 
+  test('crear o renombrar un proveedor colapsa espacios dobles', () async {
+    final id = await repo.crear(nombre: '  Postobón   S.A. ');
+    expect((await proveedor(id)).nombre, 'Postobón S.A.');
+    await repo.actualizar(id, nombre: ' Coca   Cola  FEMSA ');
+    expect((await proveedor(id)).nombre, 'Coca Cola FEMSA');
+  });
+
   test('un nombre vacío se rechaza', () async {
     await expectLater(repo.crear(nombre: '  '), throwsArgumentError);
     expect(await db.select(db.proveedores).get(), isEmpty);
