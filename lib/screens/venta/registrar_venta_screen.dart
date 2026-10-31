@@ -117,17 +117,18 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       notifier.agregarProducto(producto);
       _avisarAgregado(producto);
     } else if (producto != null) {
-      avisar(
-        context,
-        'Ese código es de ${producto.nombre} (inactivo). Reactívalo en '
-        'Productos',
-        error: true,
-      );
+      _avisarInactivo(producto);
     } else {
       final nuevo = await mostrarHojaProductoRapido(context, codigo: limpio);
       if (nuevo != null && mounted) notifier.agregarProducto(nuevo);
     }
   }
+
+  void _avisarInactivo(Producto producto) => avisar(
+    context,
+    'Ese código es de ${producto.nombre} (inactivo). Reactívalo en Productos',
+    error: true,
+  );
 
   /// Aviso de producto agregado; el admin puede tocar "Editar" desde él.
   void _avisarAgregado(Producto producto) {
@@ -170,7 +171,23 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     final p = await ref
         .read(productoRepositoryProvider)
         .productoPorCodigo(texto);
-    if (p == null || !p.activo || !mounted) return;
+    if (!mounted) return;
+    if (p == null) {
+      final sinEspacios = texto.replaceAll(RegExp(r'\s'), '');
+      // Solo un texto que parece código avisa; "coca" es una búsqueda normal.
+      if (RegExp(r'^\d{8,}$').hasMatch(sinEspacios)) {
+        avisar(
+          context,
+          'No hay ningún producto con el código $sinEspacios',
+          error: true,
+        );
+      }
+      return;
+    }
+    if (!p.activo) {
+      _avisarInactivo(p);
+      return;
+    }
     ref.read(ticketProvider.notifier).agregarProducto(p);
     _busqueda.clear();
     setState(() => _filtro = '');
@@ -557,6 +574,17 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       });
     }
 
+    final conBuscador =
+        (productosAsync.valueOrNull?.length ?? 0) > _productosSinBuscador;
+    final tiposEnUso = [
+      for (final t in tiposProducto.keys)
+        if ((productosAsync.valueOrNull ?? const <Producto>[]).any(
+          (p) => p.tipo == t,
+        ))
+          t,
+    ];
+    // El tipo elegido solo filtra mientras sus chips se ven.
+    final tipoActivo = conBuscador && tiposEnUso.length >= 2 ? _tipo : null;
     final lista = ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -576,7 +604,7 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
             final visibles = [
               for (final p in ordenados)
                 if (coincideBusqueda(p, _busqueda.text) &&
-                    (_tipo == null || p.tipo == _tipo))
+                    (tipoActivo == null || p.tipo == tipoActivo))
                   p,
             ];
             return Column(
@@ -639,15 +667,6 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
       ],
     );
     final c = ColoresApp.of(context);
-    final conBuscador =
-        (productosAsync.valueOrNull?.length ?? 0) > _productosSinBuscador;
-    final tiposEnUso = [
-      for (final t in tiposProducto.keys)
-        if ((productosAsync.valueOrNull ?? const <Producto>[]).any(
-          (p) => p.tipo == t,
-        ))
-          t,
-    ];
 
     return Scaffold(
       appBar: AppBar(

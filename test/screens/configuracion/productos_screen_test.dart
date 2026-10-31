@@ -795,6 +795,33 @@ void main() {
     expect(find.byKey(Key('producto_item_$pan')), findsOneWidget);
   });
 
+  testWidgets('si los chips de tipo desaparecen, el filtro deja de aplicar',
+      (tester) async {
+    final repo = ProductoRepository(db);
+    final coca = await repo.guardarProducto(
+        nombre: 'Gaseosa',
+        precio: 4500,
+        detalles: const DetallesProducto(tipo: 'bebidas'));
+    final leche = await repo.guardarProducto(
+        nombre: 'Leche',
+        precio: 3000,
+        detalles: const DetallesProducto(tipo: 'lacteos'));
+    final pan = await repo.guardarProducto(nombre: 'Pan', precio: 500);
+    await montar(tester);
+    await tester.tap(find.byKey(const Key('filtro_tipo_producto_bebidas')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(Key('producto_item_$pan')), findsNothing);
+    await repo.guardarProducto(
+        id: leche,
+        nombre: 'Leche',
+        precio: 3000,
+        detalles: const DetallesProducto(tipo: 'bebidas'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('filtro_tipo_producto_todos')), findsNothing);
+    expect(find.byKey(Key('producto_item_$coca')), findsOneWidget);
+    expect(find.byKey(Key('producto_item_$pan')), findsOneWidget);
+  });
+
   testWidgets('con un solo tipo en uso no hay chips', (tester) async {
     await ProductoRepository(db).guardarProducto(
         nombre: 'Gaseosa',

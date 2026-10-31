@@ -802,6 +802,56 @@ void main() {
     expect(find.text('Pan'), findsNothing);
   });
 
+  Future<void> enviarBusqueda(WidgetTester tester, String texto) async {
+    await tester.enterText(find.byKey(const Key('buscador_productos')), texto);
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('Enter con un código que no existe avisa', (tester) async {
+    await crearProductos(siete);
+    await abrirVenta(tester);
+    await enviarBusqueda(tester, '7702004003508');
+    expect(
+      find.text('No hay ningún producto con el código 7702004003508'),
+      findsOneWidget,
+    );
+    expect(container.read(ticketProvider).lineas, isEmpty);
+  });
+
+  testWidgets('Enter con texto normal no avisa', (tester) async {
+    await crearProductos(siete);
+    await abrirVenta(tester);
+    await enviarBusqueda(tester, 'coca');
+    expect(find.textContaining('No hay ningún producto'), findsNothing);
+  });
+
+  testWidgets('si los chips de tipo desaparecen, el filtro deja de aplicar', (
+    tester,
+  ) async {
+    await crearProductos(siete);
+    final repo = ProductoRepository(db);
+    final coca = await repo.guardarProducto(
+      nombre: 'Gaseosa',
+      precio: 4500,
+      detalles: const DetallesProducto(tipo: 'bebidas'),
+    );
+    final yogur = await repo.guardarProducto(
+      nombre: 'Yogur',
+      precio: 2500,
+      detalles: const DetallesProducto(tipo: 'lacteos'),
+    );
+    await abrirVenta(tester);
+    await tester.tap(find.byKey(const Key('filtro_tipo_venta_bebidas')));
+    await tester.pumpAndSettle();
+    expect(find.text('Pan'), findsNothing);
+    await repo.desactivarProducto(yogur);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('filtro_tipo_venta_bebidas')), findsNothing);
+    expect(find.byKey(Key('producto_$coca')), findsOneWidget);
+    expect(find.text('Pan'), findsOneWidget);
+  });
+
   testWidgets('en la venta de práctica hay botón de escanear', (tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;

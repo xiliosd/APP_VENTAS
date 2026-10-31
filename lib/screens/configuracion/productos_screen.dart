@@ -39,8 +39,8 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
 
   String? _tipo;
 
-  bool _coincide(Producto p) =>
-      coincideBusqueda(p, _busqueda) && (_tipo == null || p.tipo == _tipo);
+  bool _coincide(Producto p, String? tipo) =>
+      coincideBusqueda(p, _busqueda) && (tipo == null || p.tipo == tipo);
 
   Future<void> _abrir({Producto? producto}) async {
     final guardado = await Navigator.of(context).push<bool>(
@@ -86,11 +86,15 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
             for (final t in tiposProducto.keys)
               if ([...productos, ...inactivos].any((p) => p.tipo == t)) t,
           ];
+          // El tipo elegido solo filtra mientras sus chips se ven.
+          final tipoActivo = tiposEnUso.length >= 2 ? _tipo : null;
           final visibles = ordenarProductos(
             productos,
             ref.watch(ordenProductosProvider(ListadoProductos.ajustes)),
-          ).where(_coincide).toList();
-          final inactivosVisibles = inactivos.where(_coincide).toList();
+          ).where((p) => _coincide(p, tipoActivo)).toList();
+          final inactivosVisibles = inactivos
+              .where((p) => _coincide(p, tipoActivo))
+              .toList();
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
@@ -164,11 +168,13 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                           indice: i,
                           child: ListTile(
                             key: Key('producto_item_${p.id}'),
-                            leading:
-                                AvatarInicial(id: p.id, nombre: p.nombre),
-                            title: Text(p.nombre,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600)),
+                            leading: AvatarInicial(id: p.id, nombre: p.nombre),
+                            title: Text(
+                              p.nombre,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                             subtitle: Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Wrap(
@@ -177,11 +183,14 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                                 crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   if (detalleProducto(p) case final d?)
-                                    Text(d,
-                                        key: Key('detalle_producto_${p.id}'),
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: c.textoSecundario)),
+                                    Text(
+                                      d,
+                                      key: Key('detalle_producto_${p.id}'),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: c.textoSecundario,
+                                      ),
+                                    ),
                                   Monto(p.precio, tamano: 15),
                                   _margen(c, p, costos[p.id]),
                                 ],
@@ -201,7 +210,8 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                                   key: Key('boton_desactivar_${p.id}'),
                                   tooltip: 'Desactivar',
                                   icon: const Icon(
-                                      Icons.visibility_off_outlined),
+                                    Icons.visibility_off_outlined,
+                                  ),
                                   onPressed: () => ref
                                       .read(productoRepositoryProvider)
                                       .desactivarProducto(p.id),
@@ -226,8 +236,10 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
                             opacity: 0.5,
                             child: AvatarInicial(id: p.id, nombre: p.nombre),
                           ),
-                          title: Text(p.nombre,
-                              style: TextStyle(color: c.textoSecundario)),
+                          title: Text(
+                            p.nombre,
+                            style: TextStyle(color: c.textoSecundario),
+                          ),
                           subtitle: Text(formatoMoneda(p.precio)),
                           trailing: TextButton(
                             key: Key('boton_reactivar_${p.id}'),
@@ -268,6 +280,9 @@ class _ProductosScreenState extends ConsumerState<ProductosScreen> {
     return m >= 0
         ? Pildora(key: key, texto: 'gana ${formatoMoneda(m)}', color: c.entra)
         : Pildora(
-            key: key, texto: 'pierde ${formatoMoneda(-m)}', color: c.sale);
+            key: key,
+            texto: 'pierde ${formatoMoneda(-m)}',
+            color: c.sale,
+          );
   }
 }
