@@ -30,8 +30,9 @@ Drift / SQLite (persistencia local, única fuente de verdad)
 ```
 
 - `lib/data/` — esquema Drift (`AppDatabase`), tablas y migraciones.
-  Cada fila que se sincronizará tiene, además de su `id` local, un `id_global` (UUID v4);
-  los `id` locales nunca salen del celular y la tienda compartida usa `id_global`.
+  Cada fila que se sincronizará tiene, además de su `id` local, un `id_global` (UUID v7:
+  empieza con la hora, así ordena igual en todos los celulares); los `id` locales nunca
+  salen del celular y la tienda compartida usa `id_global`.
 - `lib/repositories/` — una clase por entidad que envuelve las consultas Drift
   (patrón Repository).
 - `lib/providers/` — providers de Riverpod que conectan la base, los repositorios y la

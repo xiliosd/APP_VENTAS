@@ -153,7 +153,8 @@ class InventarioRepository {
               ..where((c) => c.productoId.isIn(controlados))
               ..orderBy([
                 (c) => OrderingTerm.asc(c.fecha),
-                (c) => OrderingTerm.asc(c.id),
+                // Desempate igual en todos los celulares: el id local cambia.
+                (c) => OrderingTerm.asc(c.idGlobal),
               ]))
             .get()) {
       ultimo[c.productoId] = c;
@@ -316,13 +317,11 @@ class InventarioRepository {
     if (pedirHasta != null && pedirHasta < minimo) {
       throw ArgumentError('Debe ser mayor o igual que el mínimo');
     }
-    await (_db.update(_db.productos)..where((p) => p.id.equals(productoId)))
-        .write(
-          ProductosCompanion(
-            minimo: Value(minimo),
-            pedirHasta: Value(pedirHasta),
-          ),
-        );
+    await (_db.update(
+      _db.productos,
+    )..where((p) => p.id.equals(productoId))).write(
+      ProductosCompanion(minimo: Value(minimo), pedirHasta: Value(pedirHasta)),
+    );
   }
 
   /// Registra que hay [cantidad] unidades; guarda lo que decía la app.
