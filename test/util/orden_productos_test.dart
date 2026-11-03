@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 Producto _p(int id, String nombre, {String? tamano}) => Producto(
   id: id,
+  idGlobal: 'producto-$id',
   nombre: nombre,
   precio: 1000,
   activo: true,
@@ -26,15 +27,22 @@ void main() {
   List<int> ids(List<Producto> lista) => [for (final p in lista) p.id];
 
   test('A–Z ignora tildes y mayúsculas y pone la ñ entre la n y la o', () {
-    expect(
-      ids(ordenarProductos(productos, OrdenProductos.alfabetico)),
-      [2, 3, 6, 7, 4, 1, 5],
-    );
+    expect(ids(ordenarProductos(productos, OrdenProductos.alfabetico)), [
+      2,
+      3,
+      6,
+      7,
+      4,
+      1,
+      5,
+    ]);
   });
 
   test('como los creé respeta el orden de creación', () {
     expect(
-      ids(ordenarProductos(productos.reversed.toList(), OrdenProductos.creacion)),
+      ids(
+        ordenarProductos(productos.reversed.toList(), OrdenProductos.creacion),
+      ),
       [1, 2, 3, 4, 5, 6, 7],
     );
   });

@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../util/id_global.dart';
 import 'correccion.dart';
 import 'inventario.dart';
 import 'medio_pago.dart';
@@ -15,8 +16,37 @@ export 'medio_pago.dart';
 
 part 'database.g.dart';
 
+/// Tablas (nombre SQL) cuyas filas se sincronizarán entre los celulares de una
+/// tienda compartida; todas llevan `id_global`. `configuracion_tienda` no:
+/// tiene una sola fila y en la nube se identifica por la tienda.
+const tablasConIdGlobal = <String>[
+  'usuarios',
+  'productos',
+  'proveedores',
+  'productos_proveedores',
+  'conteos_inventario',
+  'entradas_mercancia',
+  'lineas_entrada',
+  'pedidos',
+  'lineas_pedido',
+  'clientes',
+  'ventas',
+  'lineas_venta',
+  'pagos_fiado',
+  'gastos',
+  'correcciones',
+];
+
+/// El `id` entero sigue siendo local de cada celular (y el que usan las llaves
+/// foráneas); `idGlobal` es el que todos los celulares de una tienda
+/// compartida reconocen como el mismo registro. Se genera solo al insertar.
+mixin ConIdGlobal on Table {
+  TextColumn get idGlobal => text().clientDefault(generarIdGlobal)();
+}
+
 @DataClassName('Usuario')
-class Usuarios extends Table {
+@TableIndex(name: 'usuarios_id_global', columns: {#idGlobal}, unique: true)
+class Usuarios extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get nombre => text()();
   TextColumn get rol => text()(); // 'admin' | 'vendedor'
@@ -24,7 +54,8 @@ class Usuarios extends Table {
 }
 
 @DataClassName('Producto')
-class Productos extends Table {
+@TableIndex(name: 'productos_id_global', columns: {#idGlobal}, unique: true)
+class Productos extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get nombre => text()();
   IntColumn get precio => integer()(); // COP, entero
@@ -55,7 +86,8 @@ class Productos extends Table {
 
 /// A quién se le compran los productos.
 @DataClassName('Proveedor')
-class Proveedores extends Table {
+@TableIndex(name: 'proveedores_id_global', columns: {#idGlobal}, unique: true)
+class Proveedores extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get nombre => text()();
   TextColumn get telefono => text().nullable()();
@@ -66,7 +98,12 @@ class Proveedores extends Table {
 /// Un proveedor de un producto y su precio de compra. Un producto con
 /// proveedores tiene exactamente un preferido (lo garantiza el repositorio).
 @DataClassName('ProductoProveedor')
-class ProductosProveedores extends Table {
+@TableIndex(
+  name: 'productos_proveedores_id_global',
+  columns: {#idGlobal},
+  unique: true,
+)
+class ProductosProveedores extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get productoId => integer().references(Productos, #id)();
   IntColumn get proveedorId => integer().references(Proveedores, #id)();
@@ -75,13 +112,18 @@ class ProductosProveedores extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {productoId, proveedorId},
-      ];
+    {productoId, proveedorId},
+  ];
 }
 
 /// Cuántas unidades de un producto se contaron y cuándo.
 @DataClassName('ConteoInventario')
-class ConteosInventario extends Table {
+@TableIndex(
+  name: 'conteos_inventario_id_global',
+  columns: {#idGlobal},
+  unique: true,
+)
+class ConteosInventario extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get productoId => integer().references(Productos, #id)();
   IntColumn get cantidad => integer()();
@@ -96,7 +138,12 @@ class ConteosInventario extends Table {
 
 /// Mercancía recibida de un proveedor.
 @DataClassName('EntradaMercancia')
-class EntradasMercancia extends Table {
+@TableIndex(
+  name: 'entradas_mercancia_id_global',
+  columns: {#idGlobal},
+  unique: true,
+)
+class EntradasMercancia extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get proveedorId => integer().references(Proveedores, #id)();
   IntColumn get usuarioId => integer().references(Usuarios, #id)();
@@ -110,7 +157,12 @@ class EntradasMercancia extends Table {
 
 /// Un producto de una entrada de mercancía.
 @DataClassName('LineaEntrada')
-class LineasEntrada extends Table {
+@TableIndex(
+  name: 'lineas_entrada_id_global',
+  columns: {#idGlobal},
+  unique: true,
+)
+class LineasEntrada extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get entradaId => integer().references(EntradasMercancia, #id)();
   IntColumn get productoId => integer().references(Productos, #id)();
@@ -121,13 +173,15 @@ class LineasEntrada extends Table {
 /// Pedido hecho a un proveedor desde el pedido sugerido; la mercancía llega
 /// días después.
 @DataClassName('Pedido')
-class Pedidos extends Table {
+@TableIndex(name: 'pedidos_id_global', columns: {#idGlobal}, unique: true)
+class Pedidos extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get proveedorId => integer().references(Proveedores, #id)();
   IntColumn get usuarioId => integer().references(Usuarios, #id)();
   DateTimeColumn get fecha => dateTime()();
-  TextColumn get estado => textEnum<EstadoPedido>()
-      .withDefault(Constant(EstadoPedido.porLlegar.name))();
+  TextColumn get estado => textEnum<EstadoPedido>().withDefault(
+    Constant(EstadoPedido.porLlegar.name),
+  )();
 
   /// La entrada con la que se recibió; null mientras no llega.
   IntColumn get entradaId =>
@@ -136,7 +190,8 @@ class Pedidos extends Table {
 
 /// Un producto de un pedido, con el precio que se esperaba pagar.
 @DataClassName('LineaPedido')
-class LineasPedido extends Table {
+@TableIndex(name: 'lineas_pedido_id_global', columns: {#idGlobal}, unique: true)
+class LineasPedido extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get pedidoId => integer().references(Pedidos, #id)();
   IntColumn get productoId => integer().references(Productos, #id)();
@@ -145,7 +200,8 @@ class LineasPedido extends Table {
 }
 
 @DataClassName('Cliente')
-class Clientes extends Table {
+@TableIndex(name: 'clientes_id_global', columns: {#idGlobal}, unique: true)
+class Clientes extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get nombre => text()();
 
@@ -156,7 +212,8 @@ class Clientes extends Table {
 }
 
 @DataClassName('Venta')
-class Ventas extends Table {
+@TableIndex(name: 'ventas_id_global', columns: {#idGlobal}, unique: true)
+class Ventas extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get monto => integer()();
   IntColumn get productoId => integer().nullable().references(Productos, #id)();
@@ -164,20 +221,20 @@ class Ventas extends Table {
   BoolColumn get esFiado => boolean().withDefault(const Constant(false))();
   IntColumn get clienteId => integer().nullable().references(Clientes, #id)();
   IntColumn get usuarioId => integer().references(Usuarios, #id)();
-  TextColumn get medioPago => textEnum<MedioPago>()
-      .withDefault(const Constant('efectivo'))();
+  TextColumn get medioPago =>
+      textEnum<MedioPago>().withDefault(const Constant('efectivo'))();
   BoolColumn get anulado => boolean().withDefault(const Constant(false))();
 }
 
 /// Un producto (o monto suelto) de una venta, tal como estaba al vender.
 @DataClassName('LineaVenta')
-class LineasVenta extends Table {
+@TableIndex(name: 'lineas_venta_id_global', columns: {#idGlobal}, unique: true)
+class LineasVenta extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get ventaId => integer().references(Ventas, #id)();
 
   /// null = monto suelto ("+ Otro" o monto rápido).
-  IntColumn get productoId =>
-      integer().nullable().references(Productos, #id)();
+  IntColumn get productoId => integer().nullable().references(Productos, #id)();
   TextColumn get descripcion => text()();
   IntColumn get precioUnitario => integer()();
   IntColumn get cantidad => integer()();
@@ -188,19 +245,21 @@ class LineasVenta extends Table {
 }
 
 @DataClassName('PagoFiado')
-class PagosFiado extends Table {
+@TableIndex(name: 'pagos_fiado_id_global', columns: {#idGlobal}, unique: true)
+class PagosFiado extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get clienteId => integer().references(Clientes, #id)();
   IntColumn get monto => integer()();
   DateTimeColumn get fecha => dateTime()();
   IntColumn get usuarioId => integer().references(Usuarios, #id)();
-  TextColumn get medioPago => textEnum<MedioPago>()
-      .withDefault(const Constant('efectivo'))();
+  TextColumn get medioPago =>
+      textEnum<MedioPago>().withDefault(const Constant('efectivo'))();
   BoolColumn get anulado => boolean().withDefault(const Constant(false))();
 }
 
 @DataClassName('Gasto')
-class Gastos extends Table {
+@TableIndex(name: 'gastos_id_global', columns: {#idGlobal}, unique: true)
+class Gastos extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get monto => integer()();
   TextColumn get descripcion => text().nullable()();
@@ -229,7 +288,8 @@ class ConfiguracionTienda extends Table {
 
 /// Rastro de cada anulación o corrección de un movimiento.
 @DataClassName('Correccion')
-class Correcciones extends Table {
+@TableIndex(name: 'correcciones_id_global', columns: {#idGlobal}, unique: true)
+class Correcciones extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get tipoMovimiento => textEnum<TipoMovimiento>()();
 
@@ -271,68 +331,104 @@ class AppDatabase extends _$AppDatabase {
   // (`_openConnection()`) is left untouched, since only `flutter_test`'s
   // FakeAsync zone has the debounce-Timer problem that fix addresses.
   AppDatabase([QueryExecutor? executor])
-      : super(executor != null ? _wrapConnection(executor) : _openConnection());
+    : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
-        onUpgrade: (m, desde, hasta) async {
-          if (desde < 2) {
-            await m.addColumn(ventas, ventas.medioPago);
-            await m.addColumn(pagosFiado, pagosFiado.medioPago);
-            await m.createTable(configuracionTienda);
-          }
-          if (desde < 3) {
-            await m.addColumn(ventas, ventas.anulado);
-            await m.addColumn(pagosFiado, pagosFiado.anulado);
-            await m.addColumn(gastos, gastos.anulado);
-            await m.createTable(correcciones);
-          }
-          if (desde < 4) {
-            await m.createTable(lineasVenta);
-          }
-          if (desde < 5) {
-            await m.createTable(proveedores);
-            await m.createTable(productosProveedores);
-            // Si la tabla se creó en esta misma migración ya trae la columna.
-            if (desde >= 4) {
-              await m.addColumn(lineasVenta, lineasVenta.costoUnitario);
-            }
-            if (desde >= 2) {
-              await m.addColumn(
-                  configuracionTienda, configuracionTienda.nombreTienda);
-            }
-          }
-          if (desde < 6) {
-            await m.addColumn(productos, productos.controlaExistencias);
-            await m.addColumn(productos, productos.minimo);
-            await m.createTable(conteosInventario);
-            await m.createTable(entradasMercancia);
-            await m.createTable(lineasEntrada);
-          }
-          if (desde < 7) {
-            await m.addColumn(productos, productos.pedirHasta);
-          }
-          if (desde < 8) {
-            await m.addColumn(productos, productos.codigoBarras);
-            await m.addColumn(productos, productos.marca);
-            await m.addColumn(productos, productos.tamano);
-            await m.addColumn(productos, productos.envase);
-            await m.addColumn(productos, productos.tipo);
-          }
-          if (desde < 9) {
-            await m.createTable(pedidos);
-            await m.createTable(lineasPedido);
-            await m.addColumn(gastos, gastos.entradaId);
-          }
-          if (desde < 10) {
-            await m.addColumn(clientes, clientes.apellido);
-          }
-        },
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, desde, hasta) async {
+      if (desde < 2) {
+        await m.addColumn(ventas, ventas.medioPago);
+        await m.addColumn(pagosFiado, pagosFiado.medioPago);
+        await m.createTable(configuracionTienda);
+      }
+      if (desde < 3) {
+        await m.addColumn(ventas, ventas.anulado);
+        await m.addColumn(pagosFiado, pagosFiado.anulado);
+        await m.addColumn(gastos, gastos.anulado);
+        await m.createTable(correcciones);
+      }
+      if (desde < 4) {
+        await m.createTable(lineasVenta);
+      }
+      if (desde < 5) {
+        await m.createTable(proveedores);
+        await m.createTable(productosProveedores);
+        // Si la tabla se creó en esta misma migración ya trae la columna.
+        if (desde >= 4) {
+          await m.addColumn(lineasVenta, lineasVenta.costoUnitario);
+        }
+        if (desde >= 2) {
+          await m.addColumn(
+            configuracionTienda,
+            configuracionTienda.nombreTienda,
+          );
+        }
+      }
+      if (desde < 6) {
+        await m.addColumn(productos, productos.controlaExistencias);
+        await m.addColumn(productos, productos.minimo);
+        await m.createTable(conteosInventario);
+        await m.createTable(entradasMercancia);
+        await m.createTable(lineasEntrada);
+      }
+      if (desde < 7) {
+        await m.addColumn(productos, productos.pedirHasta);
+      }
+      if (desde < 8) {
+        await m.addColumn(productos, productos.codigoBarras);
+        await m.addColumn(productos, productos.marca);
+        await m.addColumn(productos, productos.tamano);
+        await m.addColumn(productos, productos.envase);
+        await m.addColumn(productos, productos.tipo);
+      }
+      if (desde < 9) {
+        await m.createTable(pedidos);
+        await m.createTable(lineasPedido);
+        await m.addColumn(gastos, gastos.entradaId);
+      }
+      if (desde < 10) {
+        await m.addColumn(clientes, clientes.apellido);
+      }
+      if (desde < 11) {
+        await _llenarIdsGlobales(m);
+      }
+    },
+  );
+
+  /// Agrega `id_global` a las tablas de una base anterior a la v11 y le da a
+  /// cada fila uno propio. Corre dentro de la transacción de la migración: si
+  /// el celular se apaga a mitad, la base sigue en su versión anterior y lo
+  /// reintenta al abrir.
+  Future<void> _llenarIdsGlobales(Migrator m) async {
+    for (final tabla in tablasConIdGlobal) {
+      final columnas = await customSelect("PRAGMA table_info('$tabla')").get();
+      // Las tablas creadas en esta misma migración ya traen la columna.
+      if (!columnas.any((c) => c.read<String>('name') == 'id_global')) {
+        // SQLite no deja agregar una columna NOT NULL sin valor por defecto;
+        // el '' solo dura hasta llenar cada fila abajo.
+        await customStatement(
+          "ALTER TABLE $tabla ADD COLUMN id_global TEXT NOT NULL DEFAULT ''",
+        );
+      }
+      final filas = await customSelect(
+        "SELECT id FROM $tabla WHERE id_global = ''",
+      ).get();
+      for (final fila in filas) {
+        await customStatement('UPDATE $tabla SET id_global = ? WHERE id = ?', [
+          generarIdGlobal(),
+          fila.read<int>('id'),
+        ]);
+      }
+      await customStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS ${tabla}_id_global '
+        'ON $tabla (id_global)',
       );
+    }
+  }
 
   static QueryExecutor _openConnection() {
     return LazyDatabase(() async {

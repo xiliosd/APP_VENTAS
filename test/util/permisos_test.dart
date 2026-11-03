@@ -3,12 +3,28 @@ import 'package:app_ventas/util/permisos.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  const ana = Usuario(id: 1, nombre: 'Ana', rol: 'admin', pinHash: 'x');
-  const beto = Usuario(id: 2, nombre: 'Beto', rol: 'vendedor', pinHash: 'y');
+  const ana = Usuario(
+    id: 1,
+    idGlobal: 'usuario-1',
+    nombre: 'Ana',
+    rol: 'admin',
+    pinHash: 'x',
+  );
+  const beto = Usuario(
+    id: 2,
+    idGlobal: 'usuario-2',
+    nombre: 'Beto',
+    rol: 'vendedor',
+    pinHash: 'y',
+  );
   final ahora = DateTime(2026, 10, 6, 15);
 
   bool puede(Usuario usuario, int duenoId, DateTime fecha) => puedeCorregir(
-      usuario: usuario, duenoId: duenoId, fechaMovimiento: fecha, ahora: ahora);
+    usuario: usuario,
+    duenoId: duenoId,
+    fechaMovimiento: fecha,
+    ahora: ahora,
+  );
 
   test('el administrador puede con cualquier movimiento de cualquier día', () {
     expect(puede(ana, 2, DateTime(2026, 9, 1)), isTrue);

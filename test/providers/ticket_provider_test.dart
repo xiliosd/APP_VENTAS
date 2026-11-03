@@ -8,19 +8,23 @@ void main() {
   late ProviderSubscription<Ticket> suscripcion;
 
   const arepa = Producto(
-      id: 1,
-      nombre: 'Arepa',
-      precio: 3500,
-      activo: true,
-      controlaExistencias: false,
-      minimo: 0);
+    id: 1,
+    idGlobal: 'producto-1',
+    nombre: 'Arepa',
+    precio: 3500,
+    activo: true,
+    controlaExistencias: false,
+    minimo: 0,
+  );
   const pan = Producto(
-      id: 2,
-      nombre: 'Pan',
-      precio: 500,
-      activo: true,
-      controlaExistencias: false,
-      minimo: 0);
+    id: 2,
+    idGlobal: 'producto-2',
+    nombre: 'Pan',
+    precio: 500,
+    activo: true,
+    controlaExistencias: false,
+    minimo: 0,
+  );
 
   TicketNotifier notifier() => container.read(ticketProvider.notifier);
   Ticket ticket() => container.read(ticketProvider);
@@ -49,21 +53,23 @@ void main() {
     expect(ticket().total, 8000);
   });
 
-  test('restar a cero y quitar sacan la línea; vaciar deja el ticket vacío',
-      () {
-    notifier().agregarProducto(arepa);
-    notifier().agregarProducto(pan);
-    notifier().agregarMonto(2000);
+  test(
+    'restar a cero y quitar sacan la línea; vaciar deja el ticket vacío',
+    () {
+      notifier().agregarProducto(arepa);
+      notifier().agregarProducto(pan);
+      notifier().agregarMonto(2000);
 
-    notifier().restar('p1');
-    expect(ticket().cantidadDe('p1'), 0);
-    notifier().quitar('m2000');
-    expect(ticket().total, 500);
-    notifier().sumar('p2');
-    expect(ticket().total, 1000);
-    notifier().vaciar();
-    expect(ticket().estaVacio, isTrue);
-  });
+      notifier().restar('p1');
+      expect(ticket().cantidadDe('p1'), 0);
+      notifier().quitar('m2000');
+      expect(ticket().total, 500);
+      notifier().sumar('p2');
+      expect(ticket().total, 1000);
+      notifier().vaciar();
+      expect(ticket().estaVacio, isTrue);
+    },
+  );
 
   test('agregarMonto ignora montos no positivos', () {
     notifier().agregarMonto(0);
@@ -119,7 +125,9 @@ void main() {
     notifier().cambiarFiado(true);
     expect(ticket().puedeCobrar, isFalse);
 
-    notifier().elegirCliente(const ClienteTicket(nombre: 'Pedro', apellido: 'Gómez'));
+    notifier().elegirCliente(
+      const ClienteTicket(nombre: 'Pedro', apellido: 'Gómez'),
+    );
     expect(ticket().puedeCobrar, isTrue);
     expect(ticket().clienteParaCobrar!.nombreCompleto, 'Pedro Gómez');
   });

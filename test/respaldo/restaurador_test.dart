@@ -9,6 +9,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/esquema_v1.dart';
+import '../support/esquema_v10.dart';
 import '../support/respaldo_prueba.dart';
 
 void main() {
@@ -30,10 +31,15 @@ void main() {
   /// Nube con un respaldo que contiene un usuario "Ana".
   Future<NubeRespaldoFalsa> nubeConRespaldo() async {
     final origen = AppDatabase(NativeDatabase.memory());
-    await origen.into(origen.usuarios).insert(
-        UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'));
+    await origen
+        .into(origen.usuarios)
+        .insert(
+          UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
+        );
     final copia = await CopiaBaseDatos.crearCopia(
-        origen, await carpeta.createTemp('origen'));
+      origen,
+      await carpeta.createTemp('origen'),
+    );
     await origen.close();
     final nube = NubeRespaldoFalsa(conSesion: true);
     await nube.subir(copia);
@@ -43,8 +49,11 @@ void main() {
   test('restaura el respaldo sobre la base local', () async {
     final nube = await nubeConRespaldo();
     final local = AppDatabase(NativeDatabase(archivoLocal));
-    await local.into(local.usuarios).insert(
-        UsuariosCompanion.insert(nombre: 'Viejo', rol: 'admin', pinHash: 'y'));
+    await local
+        .into(local.usuarios)
+        .insert(
+          UsuariosCompanion.insert(nombre: 'Viejo', rol: 'admin', pinHash: 'y'),
+        );
 
     final resultado = await restaurador.restaurar(nube, local);
 
@@ -57,11 +66,16 @@ void main() {
 
   test('sin respaldo en la nube no toca la base local', () async {
     final local = AppDatabase(NativeDatabase(archivoLocal));
-    await local.into(local.usuarios).insert(
-        UsuariosCompanion.insert(nombre: 'Viejo', rol: 'admin', pinHash: 'y'));
+    await local
+        .into(local.usuarios)
+        .insert(
+          UsuariosCompanion.insert(nombre: 'Viejo', rol: 'admin', pinHash: 'y'),
+        );
 
-    final resultado =
-        await restaurador.restaurar(NubeRespaldoFalsa(conSesion: true), local);
+    final resultado = await restaurador.restaurar(
+      NubeRespaldoFalsa(conSesion: true),
+      local,
+    );
 
     expect(resultado, ResultadoRestauracion.sinRespaldo);
     expect((await local.select(local.usuarios).get()).single.nombre, 'Viejo');
@@ -70,11 +84,15 @@ void main() {
 
   test('un respaldo dañado no toca la base local', () async {
     final nube = NubeRespaldoFalsa(conSesion: true);
-    await nube.subir(File('${carpeta.path}/basura.sqlite')
-      ..writeAsStringSync('no es sqlite'));
+    await nube.subir(
+      File('${carpeta.path}/basura.sqlite')..writeAsStringSync('no es sqlite'),
+    );
     final local = AppDatabase(NativeDatabase(archivoLocal));
-    await local.into(local.usuarios).insert(
-        UsuariosCompanion.insert(nombre: 'Viejo', rol: 'admin', pinHash: 'y'));
+    await local
+        .into(local.usuarios)
+        .insert(
+          UsuariosCompanion.insert(nombre: 'Viejo', rol: 'admin', pinHash: 'y'),
+        );
 
     final resultado = await restaurador.restaurar(nube, local);
 
@@ -99,12 +117,39 @@ void main() {
     await reabierta.close();
   });
 
+  test(
+    'restaura un respaldo de la versión 10 y le da id global a cada fila',
+    () async {
+      final copiaV10 = File(
+        '${(await carpeta.createTemp('v10')).path}/r.sqlite',
+      );
+      crearBaseV10(copiaV10.path);
+      expect(CopiaBaseDatos.esCopiaValida(copiaV10, versionMaxima: 11), isTrue);
+      final nube = NubeRespaldoFalsa(conSesion: true);
+      await nube.subir(copiaV10);
+      final local = AppDatabase(NativeDatabase(archivoLocal));
+
+      final resultado = await restaurador.restaurar(nube, local);
+
+      expect(resultado, ResultadoRestauracion.restaurado);
+      final reabierta = AppDatabase(NativeDatabase(archivoLocal));
+      addTearDown(reabierta.close);
+      final ventas = await reabierta.select(reabierta.ventas).get();
+      expect(ventas, isNotEmpty);
+      expect(ventas.every((v) => v.idGlobal.length == 36), isTrue);
+      final usuarios = await reabierta.select(reabierta.usuarios).get();
+      expect(usuarios.single.idGlobal, isNot(ventas.single.idGlobal));
+    },
+  );
+
   test('el respaldo restaurado conserva la imagen del QR', () async {
     final origen = AppDatabase(NativeDatabase.memory());
     await ConfiguracionRepository(origen)
         .guardarImagenQr(Uint8List.fromList([4, 5, 6]));
     final copia = await CopiaBaseDatos.crearCopia(
-        origen, await carpeta.createTemp('origenqr'));
+      origen,
+      await carpeta.createTemp('origenqr'),
+    );
     await origen.close();
     final nube = NubeRespaldoFalsa(conSesion: true);
     await nube.subir(copia);

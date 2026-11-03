@@ -6,6 +6,7 @@ void main() {
   Correccion correccion(TipoMovimiento tipo, AccionCorreccion accion) =>
       Correccion(
         id: 1,
+        idGlobal: 'correccion-1',
         tipoMovimiento: tipo,
         movimientoId: 1,
         accion: accion,
@@ -16,22 +17,31 @@ void main() {
 
   test('una venta anulada va en femenino con la hora', () {
     expect(
-        textoCorreccion(
-            correccion(TipoMovimiento.venta, AccionCorreccion.anulado), 'Ana'),
-        'Anulada por Ana · 15:40');
+      textoCorreccion(
+        correccion(TipoMovimiento.venta, AccionCorreccion.anulado),
+        'Ana',
+      ),
+      'Anulada por Ana · 15:40',
+    );
   });
 
   test('un gasto corregido va en masculino con el valor anterior', () {
     expect(
-        textoCorreccion(
-            correccion(TipoMovimiento.gasto, AccionCorreccion.corregido), 'Ana'),
-        r'Corregido por Ana · antes: $5.000 · Contado · Efectivo');
+      textoCorreccion(
+        correccion(TipoMovimiento.gasto, AccionCorreccion.corregido),
+        'Ana',
+      ),
+      r'Corregido por Ana · antes: $5.000 · Contado · Efectivo',
+    );
   });
 
   test('un abono anulado va en masculino', () {
     expect(
-        textoCorreccion(
-            correccion(TipoMovimiento.abono, AccionCorreccion.anulado), 'Beto'),
-        'Anulado por Beto · 15:40');
+      textoCorreccion(
+        correccion(TipoMovimiento.abono, AccionCorreccion.anulado),
+        'Beto',
+      ),
+      'Anulado por Beto · 15:40',
+    );
   });
 }

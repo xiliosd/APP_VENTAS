@@ -4,17 +4,31 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('nombreCompleto une nombre y apellido', () {
-    const cliente = Cliente(id: 1, nombre: 'Juan', apellido: 'Pérez');
+    const cliente = Cliente(
+      id: 1,
+      idGlobal: 'cliente-1',
+      nombre: 'Juan',
+      apellido: 'Pérez',
+    );
     expect(cliente.nombreCompleto, 'Juan Pérez');
   });
 
   test('nombreCompleto sin apellido es el nombre', () {
     expect(
-      const Cliente(id: 1, nombre: 'Don Pedro').nombreCompleto,
+      const Cliente(
+        id: 1,
+        idGlobal: 'cliente-1',
+        nombre: 'Don Pedro',
+      ).nombreCompleto,
       'Don Pedro',
     );
     expect(
-      const Cliente(id: 1, nombre: 'Don Pedro', apellido: '').nombreCompleto,
+      const Cliente(
+        id: 1,
+        idGlobal: 'cliente-1',
+        nombre: 'Don Pedro',
+        apellido: '',
+      ).nombreCompleto,
       'Don Pedro',
     );
   });

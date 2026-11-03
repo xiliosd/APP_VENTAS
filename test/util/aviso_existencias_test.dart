@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 Producto producto(int id, String nombre) => Producto(
   id: id,
+  idGlobal: 'producto-$id',
   nombre: nombre,
   precio: 1000,
   activo: true,

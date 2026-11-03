@@ -33,6 +33,7 @@ MovimientoFiado _abono(
 
 LineaVenta _linea(int id, int ventaId) => LineaVenta(
   id: id,
+  idGlobal: 'linea-$id',
   ventaId: ventaId,
   productoId: null,
   descripcion: 'Arepa',

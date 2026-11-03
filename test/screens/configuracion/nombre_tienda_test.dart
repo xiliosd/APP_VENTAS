@@ -19,8 +19,11 @@ void main() {
   Future<void> conNombre() =>
       ConfiguracionRepository(db).guardarNombreTienda('La Esquina');
 
-  Future<void> montar(WidgetTester tester, Widget inicio,
-      {String rol = 'admin'}) async {
+  Future<void> montar(
+    WidgetTester tester,
+    Widget inicio, {
+    String rol = 'admin',
+  }) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
@@ -38,7 +41,13 @@ void main() {
 
   testWidgets('el nombre se ve al ingresar el PIN', (tester) async {
     await conNombre();
-    const usuario = Usuario(id: 99, nombre: 'Beto', rol: 'vendedor', pinHash: 'x');
+    const usuario = Usuario(
+      id: 99,
+      idGlobal: 'usuario-99',
+      nombre: 'Beto',
+      rol: 'vendedor',
+      pinHash: 'x',
+    );
     await montar(tester, const IngresarPinScreen(usuario: usuario));
     expect(find.text('La Esquina'), findsOneWidget);
   });
@@ -47,9 +56,12 @@ void main() {
     await conNombre();
     await montar(tester, const HomeScreen());
     expect(
-        find.descendant(
-            of: find.byType(AppBar), matching: find.text('La Esquina')),
-        findsOneWidget);
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('La Esquina'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('en Ajustes el administrador cambia el nombre', (tester) async {
@@ -59,7 +71,9 @@ void main() {
     await tester.tap(find.byKey(const Key('menu_nombre_tienda')));
     await tester.pumpAndSettle();
     await tester.enterText(
-        find.byKey(const Key('campo_nombre_tienda_hoja')), 'Donde Rosa');
+      find.byKey(const Key('campo_nombre_tienda_hoja')),
+      'Donde Rosa',
+    );
     await tester.tap(find.byKey(const Key('boton_guardar_nombre_tienda')));
     await tester.pumpAndSettle();
 
@@ -75,7 +89,9 @@ void main() {
     await tester.tap(find.byKey(const Key('menu_nombre_tienda')));
     await tester.pumpAndSettle();
     await tester.enterText(
-        find.byKey(const Key('campo_nombre_tienda_hoja')), '  ');
+      find.byKey(const Key('campo_nombre_tienda_hoja')),
+      '  ',
+    );
     await tester.tap(find.byKey(const Key('boton_guardar_nombre_tienda')));
     await tester.pumpAndSettle();
 
@@ -84,26 +100,29 @@ void main() {
   });
 
   testWidgets(
-      'al administrador sin nombre se le pide y no puede cerrar la hoja',
-      (tester) async {
-    await montar(tester, const HomeScreen());
+    'al administrador sin nombre se le pide y no puede cerrar la hoja',
+    (tester) async {
+      await montar(tester, const HomeScreen());
 
-    expect(find.text('¿Cómo se llama tu tienda?'), findsOneWidget);
-    await tester.tapAt(const Offset(20, 20));
-    await tester.pumpAndSettle();
-    expect(find.text('¿Cómo se llama tu tienda?'), findsOneWidget);
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(find.text('¿Cómo se llama tu tienda?'), findsOneWidget);
+      expect(find.text('¿Cómo se llama tu tienda?'), findsOneWidget);
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Cómo se llama tu tienda?'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('¿Cómo se llama tu tienda?'), findsOneWidget);
 
-    await tester.enterText(
-        find.byKey(const Key('campo_nombre_tienda_hoja')), 'La Esquina');
-    await tester.tap(find.byKey(const Key('boton_guardar_nombre_tienda')));
-    await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('campo_nombre_tienda_hoja')),
+        'La Esquina',
+      );
+      await tester.tap(find.byKey(const Key('boton_guardar_nombre_tienda')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('¿Cómo se llama tu tienda?'), findsNothing);
-    expect(await ConfiguracionRepository(db).nombreTienda(), 'La Esquina');
-  });
+      expect(find.text('¿Cómo se llama tu tienda?'), findsNothing);
+      expect(await ConfiguracionRepository(db).nombreTienda(), 'La Esquina');
+    },
+  );
 
   testWidgets('al vendedor sin nombre no se le pide', (tester) async {
     await montar(tester, const HomeScreen(), rol: 'vendedor');
