@@ -94,18 +94,19 @@ la monetización y la subida a Play Store quedan para después).
      "Magic Link" y "Confirm signup" deben llevar `{{ .Token }}`, porque un correo ya
      confirmado recibe la de "Magic Link". Gmail tiene un tope diario de envíos: para muchos
      tenderos conviene un proveedor de correo (p. ej. Resend o Brevo).
-5. El vendedor — reordenado al plan por el usuario el 2026-11-03:
-   - Huella para el vendedor — hoy el interruptor "Entrar con huella" solo está en Ajustes, que
-     ve el administrador; el vendedor no puede activar su propia huella (detectado el 2026-10-31).
-   - Permisos de inventario — decidir si recibir mercancía, ajustar conteos y guardar pedidos
-     deben quedar solo para el administrador; hoy cualquier usuario puede hacerlo (detectado el
-     2026-10-31).
-   - Recorrido para el vendedor — el recorrido de primer uso solo lo ve el administrador, así que
-     el globo de "Consultar precio" no le llega al vendedor nuevo (detectado el 2026-10-31).
+5. El vendedor — decidido por el usuario el 2026-11-03; lo que queda pasa al paso 6:
+   - Permisos de inventario — cerrado sin cambios: el vendedor es de confianza y maneja las
+     finanzas, así que recibir mercancía, ajustar conteos y guardar pedidos siguen abiertos.
+   - Huella y recorrido para el vendedor — pasan al paso 6, porque el vendedor usará su propio
+     celular.
 6. Tienda centralizada — necesita Supabase listo del paso 4: varios celulares en la misma tienda
    con un código único de tienda, alerta al admin cuando entra un celular nuevo, información
    actualizada al ingresar y avisos de "por pedir" en todos los celulares; requiere
-   sincronización y cumplir la Ley 1581 de 2012.
+   sincronización y cumplir la Ley 1581 de 2012. Incluye lo que viene del paso 5:
+   - Huella del vendedor — que la active él mismo desde su cuenta en su celular (hoy el
+     interruptor solo está en Ajustes, que ve el administrador).
+   - Recorrido del vendedor — al abrir la app por primera vez en su celular (hoy el recorrido de
+     primer uso solo lo ve el administrador, así que el globo de "Consultar precio" no le llega).
 7. Prueba en celular de lo que falta — compilar un APK y probar R3a, R3b, R4, las tandas 1 a 4
    de mejoras de tienda y lo nuevo de los pasos 2 a 6 (ver "Pendiente de verificar").
 
