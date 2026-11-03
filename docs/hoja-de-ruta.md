@@ -83,15 +83,17 @@ la monetización y la subida a Play Store quedan para después).
    - Paso 2 completo el 2026-10-31.
 3. Consultar precio por código de barras — hecho el 2026-10-31, junto con las preguntas
    frecuentes.
-4. Preparar para uso real — llave de firma propia y claves de Supabase (respaldo en la nube).
+4. Preparar para uso real — hecho el 2026-11-03: llave de firma propia y claves de Supabase
+   (respaldo en la nube).
    - Llave de firma — hecha el 2026-11-03: identificador `com.vecitienda.app` y APK release
      firmado con `android/vecitienda.jks` (fuera de git). Al pasar del APK viejo al nuevo en el
      celular, sacar respaldo antes, porque se instala como otra app.
    - Claves de Supabase — hechas el 2026-11-03: proyecto creado por el usuario, claves en
      `dart_defines.json` (fuera de git) y el ingreso al respaldo pasa de SMS a correo con código
-     (gratis, sin proveedor de SMS). Por probar en el celular con el proyecto real. Para uso con
-     otros tenderos falta un SMTP propio (p. ej. Resend o Brevo): el correo por defecto de
-     Supabase envía pocos mensajes por hora y solo al equipo del proyecto.
+     (gratis, sin proveedor de SMS). Correo enviado con SMTP propio (Gmail); las plantillas
+     "Magic Link" y "Confirm signup" deben llevar `{{ .Token }}`, porque un correo ya
+     confirmado recibe la de "Magic Link". Gmail tiene un tope diario de envíos: para muchos
+     tenderos conviene un proveedor de correo (p. ej. Resend o Brevo).
 5. El vendedor — reordenado al plan por el usuario el 2026-11-03:
    - Huella para el vendedor — hoy el interruptor "Entrar con huella" solo está en Ajustes, que
      ve el administrador; el vendedor no puede activar su propia huella (detectado el 2026-10-31).
@@ -118,6 +120,8 @@ la monetización y la subida a Play Store quedan para después).
 
 ## Verificado en celular real
 
+- 2026-11-03, por el usuario: respaldo en la nube con el proyecto real de Supabase (ingreso con
+  código por correo, subir copia, borrar datos de la app y restaurar, entrar con el PIN).
 - 2026-10-30, por el usuario: ingreso con huella, cobro por QR (2D), corregir y anular (3A),
   reportes (3B), detalle de tickets (3C), catálogo (4A), inventario (4B), pedido sugerido (4C),
   modo oscuro (R1), recorrido de primer uso (R2b), inicio de marca, venta por voz y orden de
