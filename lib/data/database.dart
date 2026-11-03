@@ -339,70 +339,77 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
-    onUpgrade: (m, desde, hasta) async {
-      if (desde < 2) {
-        await m.addColumn(ventas, ventas.medioPago);
-        await m.addColumn(pagosFiado, pagosFiado.medioPago);
-        await m.createTable(configuracionTienda);
-      }
-      if (desde < 3) {
-        await m.addColumn(ventas, ventas.anulado);
-        await m.addColumn(pagosFiado, pagosFiado.anulado);
-        await m.addColumn(gastos, gastos.anulado);
-        await m.createTable(correcciones);
-      }
-      if (desde < 4) {
-        await m.createTable(lineasVenta);
-      }
-      if (desde < 5) {
-        await m.createTable(proveedores);
-        await m.createTable(productosProveedores);
-        // Si la tabla se creó en esta misma migración ya trae la columna.
-        if (desde >= 4) {
-          await m.addColumn(lineasVenta, lineasVenta.costoUnitario);
-        }
-        if (desde >= 2) {
-          await m.addColumn(
-            configuracionTienda,
-            configuracionTienda.nombreTienda,
-          );
-        }
-      }
-      if (desde < 6) {
-        await m.addColumn(productos, productos.controlaExistencias);
-        await m.addColumn(productos, productos.minimo);
-        await m.createTable(conteosInventario);
-        await m.createTable(entradasMercancia);
-        await m.createTable(lineasEntrada);
-      }
-      if (desde < 7) {
-        await m.addColumn(productos, productos.pedirHasta);
-      }
-      if (desde < 8) {
-        await m.addColumn(productos, productos.codigoBarras);
-        await m.addColumn(productos, productos.marca);
-        await m.addColumn(productos, productos.tamano);
-        await m.addColumn(productos, productos.envase);
-        await m.addColumn(productos, productos.tipo);
-      }
-      if (desde < 9) {
-        await m.createTable(pedidos);
-        await m.createTable(lineasPedido);
-        await m.addColumn(gastos, gastos.entradaId);
-      }
-      if (desde < 10) {
-        await m.addColumn(clientes, clientes.apellido);
-      }
-      if (desde < 11) {
-        await _llenarIdsGlobales(m);
-      }
-    },
+    // Drift no envuelve la migración en una transacción: sin esto, un celular
+    // que se apaga a mitad deja pasos aplicados con la versión vieja, y al
+    // reabrir el mismo paso falla ("columna repetida") y la tienda no abre.
+    // La versión se fija dentro de la transacción para que todo quede junto.
+    onUpgrade: (m, desde, hasta) => transaction(() async {
+      await _migrar(m, desde);
+      await customStatement('PRAGMA user_version = $hasta');
+    }),
   );
 
+  Future<void> _migrar(Migrator m, int desde) async {
+    if (desde < 2) {
+      await m.addColumn(ventas, ventas.medioPago);
+      await m.addColumn(pagosFiado, pagosFiado.medioPago);
+      await m.createTable(configuracionTienda);
+    }
+    if (desde < 3) {
+      await m.addColumn(ventas, ventas.anulado);
+      await m.addColumn(pagosFiado, pagosFiado.anulado);
+      await m.addColumn(gastos, gastos.anulado);
+      await m.createTable(correcciones);
+    }
+    if (desde < 4) {
+      await m.createTable(lineasVenta);
+    }
+    if (desde < 5) {
+      await m.createTable(proveedores);
+      await m.createTable(productosProveedores);
+      // Si la tabla se creó en esta misma migración ya trae la columna.
+      if (desde >= 4) {
+        await m.addColumn(lineasVenta, lineasVenta.costoUnitario);
+      }
+      if (desde >= 2) {
+        await m.addColumn(
+          configuracionTienda,
+          configuracionTienda.nombreTienda,
+        );
+      }
+    }
+    if (desde < 6) {
+      await m.addColumn(productos, productos.controlaExistencias);
+      await m.addColumn(productos, productos.minimo);
+      await m.createTable(conteosInventario);
+      await m.createTable(entradasMercancia);
+      await m.createTable(lineasEntrada);
+    }
+    if (desde < 7) {
+      await m.addColumn(productos, productos.pedirHasta);
+    }
+    if (desde < 8) {
+      await m.addColumn(productos, productos.codigoBarras);
+      await m.addColumn(productos, productos.marca);
+      await m.addColumn(productos, productos.tamano);
+      await m.addColumn(productos, productos.envase);
+      await m.addColumn(productos, productos.tipo);
+    }
+    if (desde < 9) {
+      await m.createTable(pedidos);
+      await m.createTable(lineasPedido);
+      await m.addColumn(gastos, gastos.entradaId);
+    }
+    if (desde < 10) {
+      await m.addColumn(clientes, clientes.apellido);
+    }
+    if (desde < 11) {
+      await _llenarIdsGlobales(m);
+    }
+  }
+
   /// Agrega `id_global` a las tablas de una base anterior a la v11 y le da a
-  /// cada fila uno propio. Corre dentro de la transacción de la migración: si
-  /// el celular se apaga a mitad, la base sigue en su versión anterior y lo
-  /// reintenta al abrir.
+  /// cada fila uno propio. Corre dentro de la transacción de la migración.
   Future<void> _llenarIdsGlobales(Migrator m) async {
     for (final tabla in tablasConIdGlobal) {
       final columnas = await customSelect("PRAGMA table_info('$tabla')").get();

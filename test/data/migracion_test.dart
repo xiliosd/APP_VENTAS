@@ -621,6 +621,46 @@ void main() {
   );
 
   test(
+    'una migración interrumpida no deja la base a medias y se reintenta',
+    () async {
+      final archivo = File('${carpeta.path}/v9f.sqlite');
+      crearBaseV9(archivo.path);
+      // Simula que el celular falla a mitad del llenado de ids (gastos va
+      // después de clientes, que ya recibió su apellido y sus ids).
+      sqlite3.open(archivo.path)
+        ..execute(
+          'CREATE TRIGGER falla BEFORE UPDATE ON gastos '
+          "BEGIN SELECT RAISE(ABORT, 'falla'); END;",
+        )
+        ..close();
+
+      final fallida = AppDatabase(NativeDatabase(archivo));
+      await expectLater(
+        fallida.select(fallida.clientes).get(),
+        throwsA(anything),
+      );
+      await fallida.close();
+
+      final revisada = sqlite3.open(archivo.path);
+      expect(revisada.userVersion, 9);
+      final columnasClientes = revisada
+          .select("PRAGMA table_info('clientes')")
+          .map((c) => c['name'])
+          .toList();
+      expect(columnasClientes, isNot(contains('apellido')));
+      revisada
+        ..execute('DROP TRIGGER falla')
+        ..close();
+
+      final db = AppDatabase(NativeDatabase(archivo));
+      addTearDown(db.close);
+      expect((await db.select(db.clientes).getSingle()).nombre, 'Don Pedro');
+      final ids = await idsGlobales(db, 'gastos');
+      expect(ids.every((id) => id.length == 36), isTrue);
+    },
+  );
+
+  test(
     'una base v9 migrada tiene las mismas columnas que una base nueva',
     () async {
       final archivo = File('${carpeta.path}/v9c.sqlite');
