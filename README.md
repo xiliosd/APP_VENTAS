@@ -42,6 +42,11 @@ Drift / SQLite (persistencia local, única fuente de verdad)
 - `lib/ui/` — componentes visuales reutilizables (tema, colores, mosaicos, avisos,
   recorrido de primer uso, vibración).
 - `lib/respaldo/` — respaldo y restauración con Supabase.
+- `lib/sincronizacion/` — tienda compartida entre varios celulares. Disparadores de SQLite
+  anotan cada cambio en `cambios_pendientes`; el `Sincronizador` los sube a la tabla
+  genérica `filas` de Supabase (referencias como `id_global`), baja lo nuevo desde un cursor
+  de versión y lo aplica en una transacción. Corre al abrir la app, unos segundos después de
+  cada cambio y cada minuto; si dos celulares cambian lo mismo, gana el último que sube.
 - `lib/util/` — moneda (COP entero), hash de PIN y fechas.
 
 ### Excepciones a los lineamientos
@@ -70,6 +75,10 @@ No aplica: la app no expone ninguna API. Usa estos servicios externos, ambos opc
   bucket `respaldos` privado y las políticas de la Task 9 de
   `docs/superpowers/plans/2026-10-05-app-ventas-fase2bc-respaldo.md`. Para uso real hace falta un
   SMTP propio: el correo por defecto de Supabase envía pocos mensajes por hora.
+  La tienda compartida usa las tablas `tiendas`, `miembros`, `filas` y `configuracion_app`
+  con RLS por tienda: migración en `supabase/migrations/20261103000000_tienda_compartida.sql`
+  y comprobaciones (corren en una transacción que se deshace) en
+  `supabase/tests/tienda_compartida_prueba.sql`.
 - **Open Food Facts** (consulta pública, sin clave): al escanear un código desconocido,
   autocompleta el nombre, la marca y el tamaño del producto.
 

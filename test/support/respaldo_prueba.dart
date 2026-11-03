@@ -5,6 +5,7 @@ import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/respaldo/nube_respaldo.dart';
 import 'package:app_ventas/respaldo/restaurador.dart';
 import 'package:app_ventas/respaldo/respaldo_provider.dart';
+import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -103,6 +104,7 @@ Future<ProviderContainer> containerRespaldo(
   NubeRespaldo? nube, {
   Restaurador? restaurador,
   bool? habilitado,
+  SincronizacionNotifier Function()? sincronizacion,
 }) async {
   SharedPreferences.setMockInitialValues({
     if (habilitado ?? (nube?.haySesion ?? false)) claveRespaldoHabilitado: true,
@@ -119,6 +121,8 @@ Future<ProviderContainer> containerRespaldo(
       restauradorProvider.overrideWithValue(
         restaurador ?? RestauradorFalso(ResultadoRestauracion.restaurado),
       ),
+      if (sincronizacion != null)
+        sincronizacionProvider.overrideWith(sincronizacion),
     ],
   );
 }

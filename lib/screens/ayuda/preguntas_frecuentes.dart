@@ -368,9 +368,14 @@ const temasAyuda = <TemaAyuda>[
           'activarla otra vez.',
     ),
     PreguntaFrecuente(
-      '¿Puedo usar la tienda en dos celulares?',
-      'Todavía no: cada tienda funciona en un solo celular. Restaurar el '
-          'respaldo en otro celular reemplaza los datos de ese celular.',
+      '¿Cómo uso la tienda en varios celulares?',
+      '${_soloAdmin}con el respaldo activo, en "Ajustes" → "Respaldo" toca '
+          '"Usar la tienda en varios celulares" y luego "Continuar". Los '
+          'datos quedan en la nube y se mantienen al día solos: al abrir la '
+          'app, unos segundos después de cada cambio y cada minuto. Sin '
+          'internet se sigue vendiendo y los cambios suben cuando vuelva la '
+          'conexión. En otro celular tuyo, instala la app, toca "Ya tengo una '
+          'tienda: restaurar respaldo" y entra con el mismo correo.',
     ),
   ]),
   TemaAyuda('Apariencia', [

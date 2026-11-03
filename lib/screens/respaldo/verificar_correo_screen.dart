@@ -7,6 +7,7 @@ import '../../respaldo/correo.dart';
 import '../../respaldo/nube_respaldo.dart';
 import '../../respaldo/respaldo_provider.dart';
 import '../../respaldo/restaurador.dart';
+import '../../sincronizacion/sincronizacion_provider.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
@@ -43,6 +44,9 @@ class _VerificarCorreoScreenState extends ConsumerState<VerificarCorreoScreen> {
   Timer? _cuentaRegresiva;
 
   RespaldoNotifier get _respaldo => ref.read(respaldoProvider.notifier);
+
+  SincronizacionNotifier get _tienda =>
+      ref.read(sincronizacionProvider.notifier);
 
   @override
   void dispose() {
@@ -132,12 +136,106 @@ class _VerificarCorreoScreenState extends ConsumerState<VerificarCorreoScreen> {
     if (!verificado || !mounted) return;
     // La pantalla deja de estar "ocupada" mientras el usuario decide en los
     // diálogos; solo las operaciones de red muestran el indicador.
+    // Una tienda compartida en la nube manda sobre el respaldo por archivo.
+    String? tiendaCompartida;
+    var consultada = false;
+    await _ejecutar(() async {
+      tiendaCompartida = await _tienda.tiendaDelCorreo();
+      consultada = true;
+    }, errorGeneral: sinConexion);
+    if (!consultada || !mounted) return;
     if (widget.modo == ModoVerificacion.restaurar) {
-      await _ejecutar(_restaurar, errorGeneral: sinConexion);
+      if (tiendaCompartida == null) {
+        await _ejecutar(_restaurar, errorGeneral: sinConexion);
+      } else if (await _confirmarDescarga(
+        'Se descargará la tienda compartida en este celular.',
+      )) {
+        await _descargar(tiendaCompartida!, reemplazarDatos: false);
+      } else {
+        await _ejecutar(_cancelarActivacion, errorGeneral: sinConexion);
+      }
+    } else if (tiendaCompartida != null && !await _tienda.esCompartida()) {
+      await _usarTiendaCompartida(tiendaCompartida!, sinConexion);
     } else {
       await _activar(fechaExistente, errorGeneral: sinConexion);
     }
   }
+
+  /// Este celular tiene su propia tienda y el correo ya tiene una compartida:
+  /// se usa la compartida (reemplazando los datos de aquí) o se cancela.
+  Future<void> _usarTiendaCompartida(String tienda, String sinConexion) async {
+    final usar = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (contexto) => AlertDialog(
+        title: const Text('Este correo ya tiene una tienda compartida'),
+        content: const Text(
+          'Puedes usar esa tienda en este celular. Los datos que hay aquí se '
+          'reemplazan por los de la tienda compartida.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(contexto).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(contexto).pop(true),
+            child: const Text('Usar la tienda compartida en este celular'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (usar == true &&
+        await _confirmarDescarga(
+          'Se reemplazarán los datos de este celular por los de la tienda '
+          'compartida.',
+        )) {
+      await _descargar(tienda, reemplazarDatos: true);
+    } else {
+      await _ejecutar(_cancelarActivacion, errorGeneral: sinConexion);
+    }
+  }
+
+  Future<bool> _confirmarDescarga(String mensaje) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (contexto) => AlertDialog(
+        title: const Text('¿Descargar la tienda?'),
+        content: Text(mensaje),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(contexto).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const Key('confirmar_descargar_tienda'),
+            onPressed: () => Navigator.of(contexto).pop(true),
+            child: const Text('Descargar'),
+          ),
+        ],
+      ),
+    );
+    return confirmado == true;
+  }
+
+  Future<void> _descargar(String tienda, {required bool reemplazarDatos}) =>
+      _ejecutar(() async {
+        try {
+          await _tienda.descargarTienda(
+            tienda,
+            reemplazarDatos: reemplazarDatos,
+          );
+        } catch (error) {
+          if (mounted) setState(() => _error = mensajeErrorTienda(error));
+          return;
+        }
+        // Deja la sesión del correo habilitada para seguir sincronizando.
+        await _respaldo.activar();
+        if (!mounted) return;
+        avisar(context, 'Tienda recuperada. Entra con tu PIN.');
+        Navigator.of(context).popUntil((ruta) => ruta.isFirst);
+      }, errorGeneral: 'No se pudo descargar la tienda. Inténtalo de nuevo.');
 
   Future<void> _restaurar() async {
     final resultado = await _respaldo.restaurar();
@@ -214,6 +312,8 @@ class _VerificarCorreoScreenState extends ConsumerState<VerificarCorreoScreen> {
 
   Future<void> _terminarActivacion() async {
     await _respaldo.activar();
+    // Al reconectar una tienda compartida, se ponen al día los cambios.
+    unawaited(_tienda.sincronizarAhora());
     if (!mounted) return;
     avisar(context, 'Respaldo activado');
     Navigator.of(context).pop();

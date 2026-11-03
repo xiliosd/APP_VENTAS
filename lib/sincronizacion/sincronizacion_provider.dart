@@ -177,8 +177,15 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
     await sincronizarAhora();
   }
 
+  /// Si esta versión de la app puede compartir la tienda (tiene nube).
+  bool get disponible => _sincronizador != null;
+
+  Future<bool> esCompartida() async =>
+      await _sincronizador?.esCompartida() ?? false;
+
   /// La tienda compartida del correo con sesión, o null si no tiene.
-  Future<String?> tiendaDelCorreo() => ref.read(nubeTiendaProvider)!.miTienda();
+  Future<String?> tiendaDelCorreo() async =>
+      ref.read(nubeTiendaProvider)?.miTienda();
 
   /// Baja la tienda compartida [tiendaId] a este celular. Con
   /// [reemplazarDatos] primero borra los datos que tenga.

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../respaldo/correo.dart';
 import '../../respaldo/respaldo_provider.dart';
+import '../../sincronizacion/sincronizacion_provider.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
@@ -73,6 +74,11 @@ class _Activo extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tienda = ref.watch(sincronizacionProvider);
+    if (tienda.fase != FaseSincronizacion.noCompartida) {
+      return _TiendaCompartida(estado: tienda);
+    }
+    final puedeCompartir = ref.read(sincronizacionProvider.notifier).disponible;
     final notifier = ref.read(respaldoProvider.notifier);
     final ultimo = estado.ultimoRespaldo;
     final textoEstado = estado.respaldando
@@ -152,6 +158,15 @@ class _Activo extends ConsumerWidget {
                   }
                 },
         ),
+        if (puedeCompartir) ...[
+          const SizedBox(height: 12),
+          BotonPrincipal(
+            key: const Key('boton_compartir_tienda'),
+            texto: 'Usar la tienda en varios celulares',
+            variante: VarianteBoton.contorno,
+            onPressed: () => _compartir(context, ref),
+          ),
+        ],
         const SizedBox(height: 12),
         BotonPrincipal(
           key: const Key('boton_desconectar'),
@@ -186,6 +201,148 @@ class _Activo extends ConsumerWidget {
             if (confirmado == true) await notifier.desconectar();
           },
         ),
+      ],
+    );
+  }
+}
+
+Future<void> _compartir(BuildContext context, WidgetRef ref) async {
+  final confirmado = await showDialog<bool>(
+    context: context,
+    builder: (contexto) => AlertDialog(
+      title: const Text('¿Usar la tienda en varios celulares?'),
+      content: const Text(
+        'Los datos de la tienda se guardarán en la nube y se mantendrán al '
+        'día en cada celular de la tienda. El respaldo por archivo se '
+        'reemplaza por esto.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(contexto, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          key: const Key('confirmar_compartir'),
+          onPressed: () => Navigator.pop(contexto, true),
+          child: const Text('Continuar'),
+        ),
+      ],
+    ),
+  );
+  if (confirmado != true) return;
+  try {
+    await ref.read(sincronizacionProvider.notifier).compartirTienda();
+    if (context.mounted) avisar(context, 'La tienda ya está en la nube');
+  } catch (error) {
+    if (context.mounted) {
+      avisar(context, mensajeErrorTienda(error), error: true);
+    }
+  }
+}
+
+/// Estado de la tienda compartida: reemplaza al respaldo por archivo.
+class _TiendaCompartida extends ConsumerWidget {
+  const _TiendaCompartida({required this.estado});
+
+  final EstadoTiendaCompartida estado;
+
+  String _textoFase() {
+    final ultima = estado.ultimaSincronizacion;
+    return switch (estado.fase) {
+      FaseSincronizacion.alDia =>
+        ultima == null
+            ? 'Al día'
+            : 'Al día · última vez '
+                  '${textoUltimoRespaldo(ultima, DateTime.now())}',
+      FaseSincronizacion.sincronizando => 'Sincronizando…',
+      FaseSincronizacion.sinConexion =>
+        'Sin internet: se sube cuando vuelva la conexión',
+      FaseSincronizacion.actualizarApp =>
+        'Actualiza la app para seguir sincronizando',
+      FaseSincronizacion.requiereReconexion =>
+        'La sesión venció: vuelve a entrar con el código del correo',
+      FaseSincronizacion.noCompartida => '',
+    };
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colores = ColoresApp.of(context);
+    final textoFase = _textoFase();
+    final pendientes = estado.pendientes;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Semantics(
+          container: true,
+          label: 'Tienda compartida. $textoFase',
+          child: Card(
+            key: const Key('tarjeta_sincronizacion'),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: colores.entra.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.devices_rounded,
+                      size: 28,
+                      color: colores.entra,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Tienda compartida',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(textoFase),
+                        if (pendientes > 0) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            pendientes == 1
+                                ? '1 cambio por subir'
+                                : '$pendientes cambios por subir',
+                            style: TextStyle(color: colores.textoSecundario),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (estado.fase == FaseSincronizacion.requiereReconexion)
+          BotonPrincipal(
+            key: const Key('boton_reconectar'),
+            texto: 'Reconectar',
+            onPressed: () => _abrirVerificacion(context),
+          )
+        else
+          BotonPrincipal(
+            key: const Key('boton_sincronizar_ahora'),
+            texto: 'Sincronizar ahora',
+            onPressed: estado.fase == FaseSincronizacion.sincronizando
+                ? null
+                : () => ref
+                      .read(sincronizacionProvider.notifier)
+                      .sincronizarAhora(),
+          ),
       ],
     );
   }

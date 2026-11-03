@@ -102,11 +102,15 @@ la monetización y la subida a Play Store quedan para después).
 6. Tienda centralizada — necesita Supabase listo del paso 4: varios celulares en la misma tienda
    con un código único de tienda, alerta al admin cuando entra un celular nuevo, información
    actualizada al ingresar y avisos de "por pedir" en todos los celulares; requiere
+   sincronización y cumplir la Ley 1581 de 2012.
    Diseño: `docs/superpowers/specs/2026-11-03-vecitienda-tienda-compartida-design.md`,
    en 4 entregas (E1 identificadores globales, E2 nube y sincronización del admin, E3 entrada
    y salida del vendedor, E4 huella, recorrido y avisos).
    - E1 — identificadores globales: hecho el 2026-11-03 (base v11, `id_global` en 15 tablas).
-   sincronización y cumplir la Ley 1581 de 2012. Incluye lo que viene del paso 5:
+   - E2 — nube y sincronización del admin: hecho el 2026-11-03 (base v12, disparadores que
+     anotan los cambios, tabla `filas` en Supabase, botón "Usar la tienda en varios
+     celulares" en Ajustes → Respaldo y descarga de la tienda en un celular nuevo).
+   Incluye lo que viene del paso 5:
    - Huella del vendedor — que la active él mismo desde su cuenta en su celular (hoy el
      interruptor solo está en Ajustes, que ve el administrador).
    - Recorrido del vendedor — al abrir la app por primera vez en su celular (hoy el recorrido de
@@ -144,6 +148,8 @@ la monetización y la subida a Play Store quedan para después).
 
 ## Pendiente de verificar
 
+- E2 (tienda compartida): compartir la tienda en el celular, ver que una venta llega a la
+  nube en menos de un minuto y recuperar la tienda tras borrar los datos de la app.
 - Renovación R3a (fiado y gastos), R3b (reportes, historial con filtros, corrección y cobro QR
   renovados) y R4 (administración).
 - Mejoras de tienda, tanda 1 (clientes con apellido, pantalla Clientes, cliente habitual y
