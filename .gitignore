@@ -38,3 +38,6 @@ test/support/sqlite3.def
 
 # Visual brainstorming and plan workspaces (local scratch)
 .superpowers/
+
+# Claves de compilación (flutter build --dart-define-from-file=dart_defines.json)
+dart_defines.json

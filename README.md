@@ -117,6 +117,15 @@ la app funciona 100 % local y el respaldo queda deshabilitado.
 | `SUPABASE_URL` | URL del proyecto Supabase para el respaldo. |
 | `SUPABASE_ANON_KEY` | Llave pública (publishable o anon) del proyecto Supabase. |
 
+Lo más cómodo es copiar `dart_defines.example.json` como `dart_defines.json` (ignorado por git),
+llenar los valores y compilar con:
+
+```bash
+flutter build apk --release --dart-define-from-file=dart_defines.json
+```
+
+También se pueden pasar sueltas:
+
 ```bash
 flutter run --dart-define=SUPABASE_URL=https://xxxx.supabase.co --dart-define=SUPABASE_ANON_KEY=<llave>
 ```
