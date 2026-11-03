@@ -93,8 +93,8 @@ void main() {
       );
     });
 
-    test('la base está en la versión 11', () {
-      expect(db.schemaVersion, 11);
+    test('la base está en la versión 12', () {
+      expect(db.schemaVersion, 12);
     });
   });
 

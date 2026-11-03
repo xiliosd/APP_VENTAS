@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/esquema_v1.dart';
 import '../support/esquema_v10.dart';
+import '../support/esquema_v11.dart';
 import '../support/esquema_v2.dart';
 import '../support/esquema_v3.dart';
 import '../support/esquema_v4.dart';
@@ -75,7 +76,7 @@ void main() {
       1,
       2,
     ]);
-    expect(db.schemaVersion, 11);
+    expect(db.schemaVersion, 12);
   });
 
   test('una base v2 abre en v3 sin nada anulado y sin correcciones', () async {
@@ -581,6 +582,20 @@ void main() {
     },
   );
 
+  test(
+    'una base v11 migrada tiene las mismas columnas que una base nueva',
+    () async {
+      final archivo = File('${carpeta.path}/v11c.sqlite');
+      crearBaseV11(archivo.path);
+      final migrada = AppDatabase(NativeDatabase(archivo));
+      addTearDown(migrada.close);
+      final nueva = AppDatabase(NativeDatabase.memory());
+      addTearDown(nueva.close);
+
+      expect(await columnasPorTabla(migrada), await columnasPorTabla(nueva));
+    },
+  );
+
   test('una base v10 migrada tiene los índices únicos de id global', () async {
     final archivo = File('${carpeta.path}/v10i.sqlite');
     crearBaseV10(archivo.path);
@@ -600,7 +615,7 @@ void main() {
   });
 
   test(
-    'la migración deja la versión 11 solo con todas las filas llenas',
+    'la migración deja la versión actual solo con todas las filas llenas',
     () async {
       final archivo = File('${carpeta.path}/v10v.sqlite');
       crearBaseV10(archivo.path);
@@ -608,7 +623,7 @@ void main() {
       addTearDown(db.close);
 
       final version = await db.customSelect('PRAGMA user_version').getSingle();
-      expect(version.read<int>('user_version'), 11);
+      expect(version.read<int>('user_version'), db.schemaVersion);
       for (final tabla in tablasConIdGlobal) {
         final vacios = await db
             .customSelect(

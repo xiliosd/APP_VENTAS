@@ -7,10 +7,12 @@ import 'package:path_provider/path_provider.dart';
 
 import '../util/id_global.dart';
 import 'correccion.dart';
+import 'disparadores_sincronizacion.dart';
 import 'inventario.dart';
 import 'medio_pago.dart';
 
 export 'correccion.dart';
+export 'disparadores_sincronizacion.dart';
 export 'inventario.dart';
 export 'medio_pago.dart';
 
@@ -286,6 +288,43 @@ class ConfiguracionTienda extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Un registro que cambió en este celular y aún no se sube a la tienda
+/// compartida. Lo llenan los disparadores de `disparadores_sincronizacion.dart`.
+@DataClassName('CambioPendiente')
+class CambiosPendientes extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get tabla => text()();
+  TextColumn get idGlobal => text()();
+  BoolColumn get borrado => boolean()();
+
+  /// Sube con cada nuevo cambio del mismo registro: al confirmar una subida
+  /// solo se borra la anotación si nadie la cambió mientras tanto.
+  IntColumn get cambio => integer().withDefault(const Constant(1))();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {tabla, idGlobal},
+  ];
+}
+
+/// Estado de la tienda compartida en este celular: una sola fila (id 1) que
+/// solo existe cuando la tienda es compartida.
+@DataClassName('EstadoSincronizacionFila')
+class EstadoSincronizacion extends Table {
+  IntColumn get id => integer()();
+  TextColumn get tiendaId => text()();
+
+  /// Última versión de la nube ya aplicada en este celular.
+  IntColumn get cursor => integer().withDefault(const Constant(0))();
+
+  /// Mientras se aplican cambios bajados, los disparadores no anotan nada.
+  BoolColumn get aplicando => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get ultimaSincronizacion => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Rastro de cada anulación o corrección de un movimiento.
 @DataClassName('Correccion')
 @TableIndex(name: 'correcciones_id_global', columns: {#idGlobal}, unique: true)
@@ -322,6 +361,8 @@ class Correcciones extends Table with ConIdGlobal {
     Gastos,
     ConfiguracionTienda,
     Correcciones,
+    CambiosPendientes,
+    EstadoSincronizacion,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -334,11 +375,14 @@ class AppDatabase extends _$AppDatabase {
     : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (m) => m.createAll(),
+    onCreate: (m) async {
+      await m.createAll();
+      await _crearDisparadores();
+    },
     // Drift no envuelve la migración en una transacción: sin esto, un celular
     // que se apaga a mitad deja pasos aplicados con la versión vieja, y al
     // reabrir el mismo paso falla ("columna repetida") y la tienda no abre.
@@ -405,6 +449,17 @@ class AppDatabase extends _$AppDatabase {
     }
     if (desde < 11) {
       await _llenarIdsGlobales(m);
+    }
+    if (desde < 12) {
+      await m.createTable(cambiosPendientes);
+      await m.createTable(estadoSincronizacion);
+      await _crearDisparadores();
+    }
+  }
+
+  Future<void> _crearDisparadores() async {
+    for (final sentencia in sentenciasDisparadores(tablasConIdGlobal)) {
+      await customStatement(sentencia);
     }
   }
 
