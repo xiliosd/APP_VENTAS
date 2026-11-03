@@ -9,6 +9,9 @@ class NubeTiendaFalsa implements NubeTienda {
 
   bool sinConexion = false;
   bool sesionVencida = false;
+
+  /// Un error que no es de red ni de sesión (p. ej. del servidor).
+  bool errorInesperado = false;
   int versionMinima = 1;
 
   /// Si no es null, la subida número n (desde 1) falla sin guardar nada.
@@ -32,6 +35,7 @@ class NubeTiendaFalsa implements NubeTienda {
   void _revisar() {
     if (sinConexion) throw const ErrorSinConexion();
     if (sesionVencida) throw const ErrorSesionTienda();
+    if (errorInesperado) throw StateError('error del servidor');
   }
 
   @override

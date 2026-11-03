@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/repositories/inventario_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
+import 'package:app_ventas/sincronizacion/nube_tienda.dart';
 import 'package:app_ventas/sincronizacion/sincronizador.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -128,6 +129,142 @@ void main() {
       'configuracion_tienda': 1,
     });
   });
+
+  test(
+    'compartir en otro celular cuando el correo ya tiene tienda no la mezcla',
+    () async {
+      await sembrarTienda(a);
+      await sincronizadorA.convertirEnCompartida('La Esquina');
+      final antes = nube.filas.length;
+      await sembrarTienda(b);
+
+      await expectLater(
+        sincronizadorB.convertirEnCompartida('Otra'),
+        throwsA(
+          isA<TiendaCompartidaExistente>().having(
+            (e) => e.tiendaId,
+            'tiendaId',
+            'tienda-1',
+          ),
+        ),
+      );
+      expect(nube.filas.length, antes);
+      expect(await sincronizadorB.esCompartida(), isFalse);
+      expect(await sincronizadorB.cuantosPendientes(), 0);
+    },
+  );
+
+  test('si la tienda del correo quedó vacía (conversión interrumpida) se '
+      'completa', () async {
+    await nube.crearTienda('La Esquina');
+    await sembrarTienda(a);
+
+    await sincronizadorA.convertirEnCompartida('La Esquina');
+
+    expect(await sincronizadorA.esCompartida(), isTrue);
+    expect(nube.filas, isNotEmpty);
+  });
+
+  test(
+    'una fila de la nube que no se puede aplicar no frena las demás',
+    () async {
+      await sembrarTienda(a);
+      await compartirEnAmbos();
+      // Una corrección de una venta que ya no existe (se deshizo en otro
+      // celular) y un cliente nuevo llegan en la misma bajada.
+      await nube.subir('tienda-1', const [
+        CambioSubida(
+          tabla: 'correcciones',
+          idGlobal: 'correccion-huerfana',
+          datos: {
+            'tipo_movimiento': 'venta',
+            'movimiento_id': 'venta-que-no-existe',
+            'accion': 'anulado',
+            'usuario_id': 'usuario-que-no-existe',
+            'fecha': 0,
+            'antes': 'x',
+          },
+          borrado: false,
+        ),
+      ]);
+      await a
+          .into(a.clientes)
+          .insert(ClientesCompanion.insert(nombre: 'Nuevo'));
+      await sincronizadorA.sincronizar();
+
+      expect(await sincronizadorB.sincronizar(), ResultadoSincronizacion.alDia);
+      expect(await b.select(b.clientes).get(), hasLength(2));
+      expect(await b.select(b.correcciones).get(), isEmpty);
+      // El cursor avanzó: la siguiente bajada no trae nada nuevo.
+      expect(await sincronizadorB.sincronizar(), ResultadoSincronizacion.alDia);
+    },
+  );
+
+  test('el mismo proveedor de un producto agregado en dos celulares queda '
+      'igual en ambos', () async {
+    final ids = await sembrarTienda(a);
+    final proveedor = await a
+        .into(a.proveedores)
+        .insert(ProveedoresCompanion.insert(nombre: 'Postobón'));
+    await compartirEnAmbos();
+    final productoB = await b.select(b.productos).getSingle();
+    final proveedorB = await b.select(b.proveedores).getSingle();
+    await a
+        .into(a.productosProveedores)
+        .insert(
+          ProductosProveedoresCompanion.insert(
+            productoId: ids.producto,
+            proveedorId: proveedor,
+            precioCompra: 2000,
+          ),
+        );
+    await b
+        .into(b.productosProveedores)
+        .insert(
+          ProductosProveedoresCompanion.insert(
+            productoId: productoB.id,
+            proveedorId: proveedorB.id,
+            precioCompra: 2100,
+          ),
+        );
+
+    expect(await sincronizadorA.sincronizar(), ResultadoSincronizacion.alDia);
+    expect(await sincronizadorB.sincronizar(), ResultadoSincronizacion.alDia);
+    expect(await sincronizadorA.sincronizar(), ResultadoSincronizacion.alDia);
+
+    final enA = await a.select(a.productosProveedores).getSingle();
+    final enB = await b.select(b.productosProveedores).getSingle();
+    expect(enA.idGlobal, enB.idGlobal);
+    expect(enA.precioCompra, enB.precioCompra);
+  });
+
+  test(
+    'una línea cuya venta ya no está no se sube con la referencia vacía',
+    () async {
+      final ids = await sembrarTienda(a);
+      await sincronizadorA.convertirEnCompartida('La Esquina');
+      // Simula leer la línea justo cuando otro proceso borró su venta.
+      await a
+          .into(a.lineasVenta)
+          .insert(
+            LineasVentaCompanion.insert(
+              ventaId: ids.venta,
+              descripcion: 'Suelto',
+              precioUnitario: 500,
+              cantidad: 1,
+            ),
+          );
+      await a.customStatement('DELETE FROM ventas WHERE id = ?', [ids.venta]);
+
+      await sincronizadorA.sincronizar();
+
+      final lineasEnNube = nube.filas.where(
+        (f) => f.tabla == 'lineas_venta' && !f.borrado,
+      );
+      expect(lineasEnNube.where((f) => f.datos!['venta_id'] == null), isEmpty);
+      expect(await sincronizadorA.cuantosPendientes(), 1);
+    },
+  );
 
   test('B nuevo descarga la tienda completa', () async {
     await sembrarTienda(a);

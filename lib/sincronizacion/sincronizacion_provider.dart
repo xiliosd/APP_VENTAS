@@ -29,6 +29,10 @@ enum FaseSincronizacion {
   sinConexion,
   actualizarApp,
   requiereReconexion,
+
+  /// Falla que no es de internet ni de sesión: se reintenta en el siguiente
+  /// ciclo.
+  error,
 }
 
 class EstadoTiendaCompartida {
@@ -141,10 +145,10 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
             FaseSincronizacion.noCompartida,
         };
       } catch (_) {
-        // Error inesperado (p. ej. datos de la nube incompletos): se reintenta
-        // en el siguiente ciclo sin molestar mientras se vende.
+        // Error inesperado (p. ej. del servidor): se reintenta en el
+        // siguiente ciclo sin molestar mientras se vende.
         state = EstadoTiendaCompartida(
-          fase: FaseSincronizacion.sinConexion,
+          fase: FaseSincronizacion.error,
           ultimaSincronizacion: state.ultimaSincronizacion,
           pendientes: await sincronizador.cuantosPendientes(),
         );

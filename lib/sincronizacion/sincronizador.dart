@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:sqlite3/common.dart' show SqliteException;
 
 import '../data/database.dart';
 import 'filas_sincronizables.dart';
@@ -17,6 +18,14 @@ enum ResultadoSincronizacion {
   actualizarApp,
   sesionVencida,
   noCompartida,
+}
+
+/// El correo ya tiene una tienda compartida con datos: compartir desde este
+/// celular la mezclaría con la suya. Hay que usar esa tienda aquí.
+class TiendaCompartidaExistente implements Exception {
+  const TiendaCompartidaExistente(this.tiendaId);
+
+  final String tiendaId;
 }
 
 /// Mantiene la base de este celular al día con la tienda compartida.
@@ -46,6 +55,14 @@ class Sincronizador {
 
   /// Sube la tienda de este celular a la nube y la deja compartida.
   Future<void> convertirEnCompartida(String nombreTienda) async {
+    // Si el correo ya compartió su tienda desde otro celular, subir esta la
+    // mezclaría con aquella (o pisaría lo más nuevo con copias viejas). Una
+    // tienda vacía es una conversión anterior que no terminó: se completa.
+    final existente = await nube.miTienda();
+    if (existente != null &&
+        (await nube.bajar(existente, desde: 0, limite: 1)).isNotEmpty) {
+      throw TiendaCompartidaExistente(existente);
+    }
     final tiendaId = await nube.crearTienda(nombreTienda);
     await db.transaction(() async {
       await db
@@ -143,23 +160,35 @@ class Sincronizador {
               .get();
       if (lote.isEmpty) return;
       final cambios = <CambioSubida>[];
-      for (final pendiente in lote) {
-        final datos = pendiente.borrado
-            ? null
-            : await leerFila(db, pendiente.tabla, pendiente.idGlobal);
-        cambios.add(
-          CambioSubida(
-            tabla: pendiente.tabla,
-            idGlobal: pendiente.idGlobal,
-            datos: datos,
-            borrado: datos == null,
-          ),
-        );
-      }
-      await nube.subir(tiendaId, cambios);
-      // Solo se borra lo que nadie cambió mientras se subía.
+      final subidos = <CambioPendiente>[];
+      // Una sola lectura consistente: si en medio se deshace una venta, sus
+      // líneas no salen apuntando a nada.
       await db.transaction(() async {
         for (final pendiente in lote) {
+          final Map<String, Object?>? datos;
+          try {
+            datos = pendiente.borrado
+                ? null
+                : await leerFila(db, pendiente.tabla, pendiente.idGlobal);
+          } on ReferenciaFaltante {
+            // Su padre ya no está (llegará su borrado): queda pendiente.
+            continue;
+          }
+          subidos.add(pendiente);
+          cambios.add(
+            CambioSubida(
+              tabla: pendiente.tabla,
+              idGlobal: pendiente.idGlobal,
+              datos: datos,
+              borrado: datos == null,
+            ),
+          );
+        }
+      });
+      if (cambios.isNotEmpty) await nube.subir(tiendaId, cambios);
+      // Solo se borra lo que nadie cambió mientras se subía.
+      await db.transaction(() async {
+        for (final pendiente in subidos) {
           await (db.delete(db.cambiosPendientes)..where(
                 (p) =>
                     p.id.equals(pendiente.id) &
@@ -204,7 +233,9 @@ class Sincronizador {
       for (final tabla in tablasConIdGlobal.reversed) {
         for (final fila in porAplicar) {
           if (fila.tabla == tabla && fila.borrado) {
-            await aplicarBorrado(db, tabla, fila.idGlobal);
+            await _aplicarSinFrenar(
+              () => aplicarBorrado(db, tabla, fila.idGlobal),
+            );
           }
         }
       }
@@ -213,7 +244,7 @@ class Sincronizador {
       for (final tabla in orden) {
         for (final fila in porAplicar) {
           if (fila.tabla == tabla && !fila.borrado && fila.datos != null) {
-            await aplicarFila(db, tabla, fila.datos!);
+            await _aplicarSinFrenar(() => aplicarFila(db, tabla, fila.datos!));
           }
         }
       }
@@ -227,6 +258,19 @@ class Sincronizador {
         ),
       );
     });
+  }
+
+  /// Aplica una fila en su propio punto de guardado. Si no se puede (p. ej.
+  /// la corrección de una venta que otro celular deshizo), se omite y el
+  /// resto sigue: una sola fila no debe frenar para siempre la tienda.
+  Future<void> _aplicarSinFrenar(Future<void> Function() aplicar) async {
+    try {
+      await db.transaction(aplicar);
+    } on FilaHuerfana {
+      // Apunta a algo que ya no existe en la tienda.
+    } on SqliteException {
+      // Choca con una regla de la base (dato inconsistente en la nube).
+    }
   }
 
   Future<void> _marcarAplicando(bool aplicando) =>

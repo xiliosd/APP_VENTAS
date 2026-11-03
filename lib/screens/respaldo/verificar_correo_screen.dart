@@ -12,6 +12,7 @@ import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import 'dialogo_respaldo_existente.dart';
+import 'dialogos_tienda_compartida.dart';
 
 enum ModoVerificacion { activar, restaurar }
 
@@ -147,7 +148,8 @@ class _VerificarCorreoScreenState extends ConsumerState<VerificarCorreoScreen> {
     if (widget.modo == ModoVerificacion.restaurar) {
       if (tiendaCompartida == null) {
         await _ejecutar(_restaurar, errorGeneral: sinConexion);
-      } else if (await _confirmarDescarga(
+      } else if (await confirmarDescargaTienda(
+        context,
         'Se descargará la tienda compartida en este celular.',
       )) {
         await _descargar(tiendaCompartida!, reemplazarDatos: false);
@@ -164,59 +166,17 @@ class _VerificarCorreoScreenState extends ConsumerState<VerificarCorreoScreen> {
   /// Este celular tiene su propia tienda y el correo ya tiene una compartida:
   /// se usa la compartida (reemplazando los datos de aquí) o se cancela.
   Future<void> _usarTiendaCompartida(String tienda, String sinConexion) async {
-    final usar = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (contexto) => AlertDialog(
-        title: const Text('Este correo ya tiene una tienda compartida'),
-        content: const Text(
-          'Puedes usar esa tienda en este celular. Los datos que hay aquí se '
-          'reemplazan por los de la tienda compartida.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(contexto).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(contexto).pop(true),
-            child: const Text('Usar la tienda compartida en este celular'),
-          ),
-        ],
-      ),
-    );
+    final usar = await preguntarUsarTiendaCompartida(context);
     if (!mounted) return;
-    if (usar == true &&
-        await _confirmarDescarga(
-          'Se reemplazarán los datos de este celular por los de la tienda '
-          'compartida.',
+    if (usar &&
+        await confirmarDescargaTienda(
+          context,
+          mensajeReemplazarPorTiendaCompartida,
         )) {
       await _descargar(tienda, reemplazarDatos: true);
     } else {
       await _ejecutar(_cancelarActivacion, errorGeneral: sinConexion);
     }
-  }
-
-  Future<bool> _confirmarDescarga(String mensaje) async {
-    final confirmado = await showDialog<bool>(
-      context: context,
-      builder: (contexto) => AlertDialog(
-        title: const Text('¿Descargar la tienda?'),
-        content: Text(mensaje),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(contexto).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            key: const Key('confirmar_descargar_tienda'),
-            onPressed: () => Navigator.of(contexto).pop(true),
-            child: const Text('Descargar'),
-          ),
-        ],
-      ),
-    );
-    return confirmado == true;
   }
 
   Future<void> _descargar(String tienda, {required bool reemplazarDatos}) =>

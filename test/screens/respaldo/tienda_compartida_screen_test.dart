@@ -3,6 +3,7 @@ import 'package:app_ventas/screens/respaldo/respaldo_screen.dart';
 import 'package:app_ventas/screens/respaldo/verificar_correo_screen.dart';
 import 'package:app_ventas/sincronizacion/nube_tienda.dart';
 import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
+import 'package:app_ventas/sincronizacion/sincronizador.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -96,6 +97,35 @@ void main() {
     expect(find.byKey(const Key('boton_compartir_tienda')), findsNothing);
   });
 
+  testWidgets('si el correo ya tiene tienda compartida ofrece usarla aquí', (
+    tester,
+  ) async {
+    final sincronizacion = SincronizacionFalsa(
+      errorAlCompartir: const TiendaCompartidaExistente('t1'),
+    );
+    await abrirRespaldo(tester, sincronizacion);
+
+    await tester.ensureVisible(find.byKey(const Key('boton_compartir_tienda')));
+    await tester.tap(find.byKey(const Key('boton_compartir_tienda')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmar_compartir')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Este correo ya tiene una tienda compartida'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Usar la tienda compartida en este celular'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmar_descargar_tienda')));
+    await tester.pumpAndSettle();
+
+    expect(sincronizacion.compartidas, 0);
+    expect(sincronizacion.descargas.single.tienda, 't1');
+    expect(sincronizacion.descargas.single.reemplazarDatos, isTrue);
+    expect(find.text('Tienda recuperada. Entra con tu PIN.'), findsOneWidget);
+  });
+
   testWidgets('cancelar no comparte la tienda', (tester) async {
     final sincronizacion = SincronizacionFalsa();
     await abrirRespaldo(tester, sincronizacion);
@@ -116,6 +146,8 @@ void main() {
         'Sin internet: se sube cuando vuelva la conexión',
     FaseSincronizacion.actualizarApp:
         'Actualiza la app para seguir sincronizando',
+    FaseSincronizacion.error:
+        'No se pudo sincronizar; se reintenta en un minuto',
   };
   for (final MapEntry(key: fase, value: texto) in textos.entries) {
     testWidgets('la tarjeta de la tienda compartida dice "$texto"', (

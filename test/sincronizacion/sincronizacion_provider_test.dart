@@ -152,6 +152,23 @@ void main() {
     },
   );
 
+  test(
+    'un error inesperado se muestra como error, no como sin conexión',
+    () async {
+      await compartir();
+      nube.errorInesperado = true;
+      final container = await contenedor();
+      container.listen(sincronizacionProvider, (_, _) {});
+
+      await esperar(retardo);
+
+      expect(
+        container.read(sincronizacionProvider).fase,
+        FaseSincronizacion.error,
+      );
+    },
+  );
+
   test('sesión vencida pasa a requiereReconexion', () async {
     await compartir();
     nube.sesionVencida = true;

@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../respaldo/correo.dart';
 import '../../respaldo/respaldo_provider.dart';
 import '../../sincronizacion/sincronizacion_provider.dart';
+import '../../sincronizacion/sincronizador.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/estado_vacio.dart';
 import '../../util/fecha_util.dart';
+import 'dialogos_tienda_compartida.dart';
 import 'verificar_correo_screen.dart';
 
 class RespaldoScreen extends ConsumerWidget {
@@ -230,9 +232,31 @@ Future<void> _compartir(BuildContext context, WidgetRef ref) async {
     ),
   );
   if (confirmado != true) return;
+  final tienda = ref.read(sincronizacionProvider.notifier);
   try {
-    await ref.read(sincronizacionProvider.notifier).compartirTienda();
+    await tienda.compartirTienda();
     if (context.mounted) avisar(context, 'La tienda ya está en la nube');
+  } on TiendaCompartidaExistente catch (existente) {
+    // El correo ya compartió su tienda desde otro celular: se usa esa.
+    if (!context.mounted ||
+        !await preguntarUsarTiendaCompartida(context) ||
+        !context.mounted ||
+        !await confirmarDescargaTienda(
+          context,
+          mensajeReemplazarPorTiendaCompartida,
+        )) {
+      return;
+    }
+    try {
+      await tienda.descargarTienda(existente.tiendaId, reemplazarDatos: true);
+      if (!context.mounted) return;
+      avisar(context, 'Tienda recuperada. Entra con tu PIN.');
+      Navigator.of(context).popUntil((ruta) => ruta.isFirst);
+    } catch (error) {
+      if (context.mounted) {
+        avisar(context, mensajeErrorTienda(error), error: true);
+      }
+    }
   } catch (error) {
     if (context.mounted) {
       avisar(context, mensajeErrorTienda(error), error: true);
@@ -261,6 +285,8 @@ class _TiendaCompartida extends ConsumerWidget {
         'Actualiza la app para seguir sincronizando',
       FaseSincronizacion.requiereReconexion =>
         'La sesión venció: vuelve a entrar con el código del correo',
+      FaseSincronizacion.error =>
+        'No se pudo sincronizar; se reintenta en un minuto',
       FaseSincronizacion.noCompartida => '',
     };
   }

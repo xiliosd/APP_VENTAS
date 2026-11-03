@@ -9,6 +9,7 @@ class SincronizacionFalsa extends SincronizacionNotifier {
     ),
     this.tienda,
     this.errorAlDescargar,
+    this.errorAlCompartir,
   });
 
   final EstadoTiendaCompartida inicial;
@@ -16,6 +17,7 @@ class SincronizacionFalsa extends SincronizacionNotifier {
   /// Tienda compartida del correo verificado (null = no tiene).
   final String? tienda;
   final Object? errorAlDescargar;
+  final Object? errorAlCompartir;
 
   int compartidas = 0;
   int sincronizaciones = 0;
@@ -33,6 +35,7 @@ class SincronizacionFalsa extends SincronizacionNotifier {
 
   @override
   Future<void> compartirTienda() async {
+    if (errorAlCompartir != null) throw errorAlCompartir!;
     compartidas++;
     state = EstadoTiendaCompartida(
       fase: FaseSincronizacion.alDia,

@@ -48,6 +48,15 @@ const tablaDeMovimiento = <String, String>{
   'gasto': 'gastos',
 };
 
+/// Al leer una fila para subirla, la fila a la que apunta ya no existe en
+/// este celular (se borró justo después).
+class ReferenciaFaltante implements Exception {
+  const ReferenciaFaltante(this.tabla, this.columna);
+
+  final String tabla;
+  final String columna;
+}
+
 /// Una fila llegó de la nube antes que la fila a la que apunta.
 class FilaHuerfana implements Exception {
   const FilaHuerfana(this.tabla, this.columna, this.idGlobal);
@@ -95,7 +104,8 @@ Future<Map<String, Object?>?> leerFila(
           variables: [Variable.withInt(id as int)],
         )
         .getSingleOrNull();
-    datos[columna] = destino?.read<String>('id_global');
+    if (destino == null) throw ReferenciaFaltante(tabla, columna);
+    datos[columna] = destino.read<String>('id_global');
   }
   return datos;
 }
@@ -154,6 +164,10 @@ Future<void> aplicarFila(
     if (destino == null) throw FilaHuerfana(tabla, columna, idGlobal);
     valores[columna] = destino.read<int>('id');
   }
+  if (tabla == 'productos_proveedores' &&
+      !await _ganaProveedorRepetido(db, valores)) {
+    return;
+  }
   final nombres = valores.keys.toList();
   final actualizar = [
     for (final nombre in nombres)
@@ -165,6 +179,34 @@ Future<void> aplicarFila(
     'ON CONFLICT (id_global) DO UPDATE SET ${actualizar.join(', ')}',
     [for (final nombre in nombres) valores[nombre]],
   );
+}
+
+/// Producto y proveedor no se repiten: si dos celulares agregaron el mismo
+/// proveedor a un producto, cada uno con su `id_global`, todos se quedan con
+/// el mayor. Devuelve false si la fila que llega pierde (no se aplica).
+Future<bool> _ganaProveedorRepetido(
+  AppDatabase db,
+  Map<String, Object?> valores,
+) async {
+  final otra = await db
+      .customSelect(
+        'SELECT id_global FROM productos_proveedores '
+        'WHERE producto_id = ? AND proveedor_id = ? AND id_global <> ?',
+        variables: [
+          Variable.withInt(valores['producto_id']! as int),
+          Variable.withInt(valores['proveedor_id']! as int),
+          Variable.withString(valores['id_global']! as String),
+        ],
+      )
+      .getSingleOrNull();
+  if (otra == null) return true;
+  final idOtra = otra.read<String>('id_global');
+  if (idOtra.compareTo(valores['id_global']! as String) > 0) return false;
+  await db.customStatement(
+    'DELETE FROM productos_proveedores WHERE id_global = ?',
+    [idOtra],
+  );
+  return true;
 }
 
 Future<void> _aplicarConfiguracion(
