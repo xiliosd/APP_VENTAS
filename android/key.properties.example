@@ -1,0 +1,6 @@
+# Copia este archivo como android/key.properties (ignorado por git) y pon tus valores.
+# storeFile es relativo a android/app.
+storePassword=CAMBIAR
+keyPassword=CAMBIAR
+keyAlias=vecitienda
+storeFile=../vecitienda.jks

@@ -22,6 +22,8 @@ coverage/
 **/android/local.properties
 **/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
+*.jks
+*.keystore
 
 # IDE
 .idea/
