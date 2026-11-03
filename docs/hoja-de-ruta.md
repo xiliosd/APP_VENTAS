@@ -84,6 +84,11 @@ la monetización y la subida a Play Store quedan para después).
 3. Consultar precio por código de barras — hecho el 2026-10-31, junto con las preguntas
    frecuentes.
 4. Preparar para uso real — llave de firma propia y claves de Supabase (respaldo en la nube).
+   - Llave de firma — hecha el 2026-11-03: identificador `com.vecitienda.app` y APK release
+     firmado con `android/vecitienda.jks` (fuera de git). Al pasar del APK viejo al nuevo en el
+     celular, sacar respaldo antes, porque se instala como otra app.
+   - Claves de Supabase — pendiente: el usuario crea el proyecto y decide si el ingreso al
+     respaldo es por SMS (requiere proveedor pago, p. ej. Twilio) o por correo con código.
 5. El vendedor — reordenado al plan por el usuario el 2026-11-03:
    - Huella para el vendedor — hoy el interruptor "Entrar con huella" solo está en Ajustes, que
      ve el administrador; el vendedor no puede activar su propia huella (detectado el 2026-10-31).

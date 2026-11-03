@@ -98,8 +98,14 @@ adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 
 El APK queda en `build/app/outputs/flutter-apk/`. No se guarda en git porque es un
-artefacto de compilación. Todavía no se publica en Play Store y no tiene llave de firma
-propia; ese trabajo está pendiente en la hoja de ruta.
+artefacto de compilación. Todavía no se publica en Play Store.
+
+El identificador de la app es `com.vecitienda.app`. El APK release se firma con la llave propia
+`android/vecitienda.jks`, configurada en `android/key.properties` (plantilla en
+`android/key.properties.example`); los dos archivos están fuera de git y hay que guardar una
+copia aparte, porque sin ellos no se puede actualizar la app instalada. Si `key.properties` no
+existe, la compilación usa la llave de depuración y lo avisa. Para revisar la firma:
+`apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk`.
 
 ## Environment variables
 
