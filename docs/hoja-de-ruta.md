@@ -125,6 +125,8 @@ la monetización y la subida a Play Store quedan para después).
 
 ## Verificado en celular real
 
+- 2026-11-03, por el usuario: E1 (identificadores globales) instalada sobre la app anterior;
+  datos iguales y respaldo subido con la base v11.
 - 2026-11-03, por el usuario: respaldo en la nube con el proyecto real de Supabase (ingreso con
   código por correo, subir copia, borrar datos de la app y restaurar, entrar con el PIN).
 - 2026-10-30, por el usuario: ingreso con huella, cobro por QR (2D), corregir y anular (3A),
@@ -142,8 +144,6 @@ la monetización y la subida a Play Store quedan para después).
 
 ## Pendiente de verificar
 
-- E1 (identificadores globales): instalar el APK sobre la app actual y confirmar que ventas,
-  fiado, inventario y reportes se ven igual y que el respaldo sigue subiendo.
 - Renovación R3a (fiado y gastos), R3b (reportes, historial con filtros, corrección y cobro QR
   renovados) y R4 (administración).
 - Mejoras de tienda, tanda 1 (clientes con apellido, pantalla Clientes, cliente habitual y
