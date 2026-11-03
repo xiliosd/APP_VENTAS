@@ -18,6 +18,10 @@ class NubeTiendaFalsa implements NubeTienda {
   /// hechos en el celular mientras se sube).
   Future<void> Function()? alSubir;
 
+  /// Se llama al empezar cada bajada (para simular cambios hechos en el
+  /// celular entre la subida y la bajada).
+  Future<void> Function()? alBajar;
+
   /// Cantidad de filas de cada subida.
   final subidas = <int>[];
 
@@ -71,6 +75,7 @@ class NubeTiendaFalsa implements NubeTienda {
     int limite = 500,
   }) async {
     _revisar();
+    await alBajar?.call();
     return (_filas.values.where((f) => f.version > desde).toList()
           ..sort((a, b) => a.version.compareTo(b.version)))
         .take(limite)
