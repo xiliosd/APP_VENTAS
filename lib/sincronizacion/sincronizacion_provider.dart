@@ -203,6 +203,9 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
     if (reemplazarDatos) await sincronizador.vaciarBase();
     await sincronizador.descargarTienda(tiendaId);
     ref.read(sesionProvider.notifier).cerrarSesion();
+    // La raíz decide entre "Bienvenida" y "¿Quién eres?" con esta consulta,
+    // que se hace una sola vez: sin repetirla seguiría en la bienvenida.
+    ref.invalidate(haySesionUsuariosProvider);
     await sincronizarAhora();
   }
 }

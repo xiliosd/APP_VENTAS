@@ -129,6 +129,9 @@ la monetización y la subida a Play Store quedan para después).
 
 ## Verificado en celular real
 
+- 2026-11-03, por el usuario: E2 (tienda compartida): compartir la tienda, una venta llega a la
+  nube sola en segundos y la tienda se recupera tras borrar los datos de la app (la pantalla
+  del PIN no aparecía hasta reabrir la app; corregido el mismo día).
 - 2026-11-03, por el usuario: E1 (identificadores globales) instalada sobre la app anterior;
   datos iguales y respaldo subido con la base v11.
 - 2026-11-03, por el usuario: respaldo en la nube con el proyecto real de Supabase (ingreso con
@@ -148,8 +151,6 @@ la monetización y la subida a Play Store quedan para después).
 
 ## Pendiente de verificar
 
-- E2 (tienda compartida): compartir la tienda en el celular, ver que una venta llega a la
-  nube en menos de un minuto y recuperar la tienda tras borrar los datos de la app.
 - Renovación R3a (fiado y gastos), R3b (reportes, historial con filtros, corrección y cobro QR
   renovados) y R4 (administración).
 - Mejoras de tienda, tanda 1 (clientes con apellido, pantalla Clientes, cliente habitual y

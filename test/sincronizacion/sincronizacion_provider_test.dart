@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
 import 'package:app_ventas/sincronizacion/sincronizador.dart';
@@ -211,6 +212,28 @@ void main() {
     );
     expect(nube.filas.where((f) => f.tabla == 'clientes'), hasLength(1));
   });
+
+  test(
+    'al descargar la tienda la app ve que ya hay usuarios (pasa al PIN)',
+    () async {
+      final otro = AppDatabase(NativeDatabase.memory());
+      addTearDown(otro.close);
+      await otro
+          .into(otro.usuarios)
+          .insert(
+            UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'h'),
+          );
+      await Sincronizador(otro, nube).convertirEnCompartida('T');
+      final container = await contenedor();
+      expect(await container.read(haySesionUsuariosProvider.future), isFalse);
+
+      await container
+          .read(sincronizacionProvider.notifier)
+          .descargarTienda('tienda-1');
+
+      expect(await container.read(haySesionUsuariosProvider.future), isTrue);
+    },
+  );
 
   test('con tienda compartida el respaldo por archivo no sube nada', () async {
     await compartir();
