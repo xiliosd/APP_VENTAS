@@ -34,25 +34,25 @@ enum FaseRespaldo { noConfigurado, desactivado, activo, requiereReconexion }
 class EstadoRespaldo {
   const EstadoRespaldo({
     required this.fase,
-    this.telefono,
+    this.correo,
     this.ultimoRespaldo,
     this.respaldando = false,
   });
 
   final FaseRespaldo fase;
-  final String? telefono;
+  final String? correo;
   final DateTime? ultimoRespaldo;
   final bool respaldando;
 
   EstadoRespaldo copiar({
     FaseRespaldo? fase,
-    String? telefono,
+    String? correo,
     DateTime? ultimoRespaldo,
     bool? respaldando,
   }) {
     return EstadoRespaldo(
       fase: fase ?? this.fase,
-      telefono: telefono ?? this.telefono,
+      correo: correo ?? this.correo,
       ultimoRespaldo: ultimoRespaldo ?? this.ultimoRespaldo,
       respaldando: respaldando ?? this.respaldando,
     );
@@ -123,7 +123,7 @@ class RespaldoNotifier extends Notifier<EstadoRespaldo> {
     Future.microtask(_alAbrir);
     return EstadoRespaldo(
       fase: FaseRespaldo.activo,
-      telefono: nube.telefonoConectado,
+      correo: nube.correoConectado,
     );
   }
 
@@ -168,7 +168,7 @@ class RespaldoNotifier extends Notifier<EstadoRespaldo> {
       await nube.subir(copia);
       state = state.copiar(
         fase: FaseRespaldo.activo,
-        telefono: nube.telefonoConectado,
+        correo: nube.correoConectado,
         ultimoRespaldo: DateTime.now(),
         respaldando: false,
       );
@@ -193,16 +193,15 @@ class RespaldoNotifier extends Notifier<EstadoRespaldo> {
     }
   }
 
-  Future<void> enviarCodigo(String telefonoE164) =>
-      _nube!.enviarCodigo(telefonoE164);
+  Future<void> enviarCodigo(String correo) => _nube!.enviarCodigo(correo);
 
   /// Verifica el código. Devuelve la fecha del respaldo que ya existía para
-  /// ese número, o null si no hay. **No habilita el respaldo**: eso lo hace
+  /// ese correo, o null si no hay. **No habilita el respaldo**: eso lo hace
   /// [activar] (o [restaurar]) cuando el usuario resuelve qué hacer. Si algo
   /// falla después de verificar, cierra la sesión para no dejarla colgando.
-  Future<DateTime?> verificar(String telefonoE164, String codigo) async {
+  Future<DateTime?> verificar(String correo, String codigo) async {
     final nube = _nube!;
-    await nube.verificarCodigo(telefonoE164, codigo);
+    await nube.verificarCodigo(correo, codigo);
     final DateTime? fecha;
     try {
       fecha = await nube.fechaUltimoRespaldo();
@@ -212,7 +211,7 @@ class RespaldoNotifier extends Notifier<EstadoRespaldo> {
     }
     state = EstadoRespaldo(
       fase: _habilitado ? FaseRespaldo.activo : FaseRespaldo.desactivado,
-      telefono: nube.telefonoConectado ?? telefonoE164,
+      correo: nube.correoConectado ?? correo,
       ultimoRespaldo: fecha,
     );
     return fecha;

@@ -14,9 +14,4 @@ void main() {
     expect(telefonoE164('300123456a'), isNull);
     expect(telefonoE164(''), isNull);
   });
-
-  test('telefonoEnmascarado oculta el centro del número', () {
-    expect(telefonoEnmascarado('+573001234567'), '+57 300 *** 4567');
-    expect(telefonoEnmascarado('573001234567'), '+57 300 *** 4567');
-  });
 }

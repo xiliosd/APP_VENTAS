@@ -87,8 +87,11 @@ la monetización y la subida a Play Store quedan para después).
    - Llave de firma — hecha el 2026-11-03: identificador `com.vecitienda.app` y APK release
      firmado con `android/vecitienda.jks` (fuera de git). Al pasar del APK viejo al nuevo en el
      celular, sacar respaldo antes, porque se instala como otra app.
-   - Claves de Supabase — pendiente: el usuario crea el proyecto y decide si el ingreso al
-     respaldo es por SMS (requiere proveedor pago, p. ej. Twilio) o por correo con código.
+   - Claves de Supabase — hechas el 2026-11-03: proyecto creado por el usuario, claves en
+     `dart_defines.json` (fuera de git) y el ingreso al respaldo pasa de SMS a correo con código
+     (gratis, sin proveedor de SMS). Por probar en el celular con el proyecto real. Para uso con
+     otros tenderos falta un SMTP propio (p. ej. Resend o Brevo): el correo por defecto de
+     Supabase envía pocos mensajes por hora y solo al equipo del proyecto.
 5. El vendedor — reordenado al plan por el usuario el 2026-11-03:
    - Huella para el vendedor — hoy el interruptor "Entrar con huella" solo está en Ajustes, que
      ve el administrador; el vendedor no puede activar su propia huella (detectado el 2026-10-31).

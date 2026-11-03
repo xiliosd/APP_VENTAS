@@ -13,13 +13,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 class NubeRespaldoFalsa implements NubeRespaldo {
   NubeRespaldoFalsa({
     bool conSesion = false,
-    this.telefono,
+    this.correo,
     this.fecha,
     this.codigoValido = '123456',
   }) : _sesion = conSesion;
 
   bool _sesion;
-  String? telefono;
+  String? correo;
   DateTime? fecha;
   final String codigoValido;
   final enviados = <String>[];
@@ -36,19 +36,18 @@ class NubeRespaldoFalsa implements NubeRespaldo {
   bool get haySesion => _sesion;
 
   @override
-  String? get telefonoConectado => _sesion ? telefono : null;
+  String? get correoConectado => _sesion ? correo : null;
 
   @override
-  Future<void> enviarCodigo(String telefonoE164) async =>
-      enviados.add(telefonoE164);
+  Future<void> enviarCodigo(String correo) async => enviados.add(correo);
 
   @override
-  Future<void> verificarCodigo(String telefonoE164, String codigo) async {
+  Future<void> verificarCodigo(String correo, String codigo) async {
     if (codigo != codigoValido) {
       throw const ErrorCodigoRespaldo('Código incorrecto');
     }
     _sesion = true;
-    telefono = telefonoE164;
+    this.correo = correo;
   }
 
   @override

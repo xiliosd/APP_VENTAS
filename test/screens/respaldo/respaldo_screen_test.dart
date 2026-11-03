@@ -1,7 +1,7 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/respaldo/nube_respaldo.dart';
 import 'package:app_ventas/screens/respaldo/respaldo_screen.dart';
-import 'package:app_ventas/screens/respaldo/verificar_telefono_screen.dart';
+import 'package:app_ventas/screens/respaldo/verificar_correo_screen.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -39,15 +39,15 @@ void main() {
     await tester.tap(find.byKey(const Key('boton_activar_respaldo')));
     await tester.pumpAndSettle();
 
-    expect(find.byType(VerificarTelefonoScreen), findsOneWidget);
+    expect(find.byType(VerificarCorreoScreen), findsOneWidget);
   });
 
-  testWidgets('activo muestra el número, el último respaldo y permite '
+  testWidgets('activo muestra el correo, el último respaldo y permite '
       'respaldar y desconectar', (tester) async {
-    final nube = NubeRespaldoFalsa(conSesion: true, telefono: '+573001234567');
+    final nube = NubeRespaldoFalsa(conSesion: true, correo: 'oscar@gmail.com');
     await abrir(tester, nube);
 
-    expect(find.text('Celular: +57 300 *** 4567'), findsOneWidget);
+    expect(find.text('Correo: os***@gmail.com'), findsOneWidget);
     expect(find.textContaining('Último respaldo: hoy'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('boton_respaldar_ahora')));
@@ -64,7 +64,7 @@ void main() {
   });
 
   testWidgets('cancelar Desconectar deja el respaldo activo', (tester) async {
-    final nube = NubeRespaldoFalsa(conSesion: true, telefono: '+573001234567');
+    final nube = NubeRespaldoFalsa(conSesion: true, correo: 'oscar@gmail.com');
     await abrir(tester, nube);
     await tester.tap(find.byKey(const Key('boton_desconectar')));
     await tester.pumpAndSettle();
@@ -81,6 +81,7 @@ void main() {
     await abrir(tester, nube);
 
     expect(find.text('Reconecta el respaldo'), findsOneWidget);
+    expect(find.textContaining('Verifica de nuevo tu correo'), findsOneWidget);
     expect(find.byKey(const Key('boton_reconectar')), findsOneWidget);
   });
 }

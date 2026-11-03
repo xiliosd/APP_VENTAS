@@ -1,6 +1,6 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/screens/login/bienvenida_screen.dart';
-import 'package:app_ventas/screens/respaldo/verificar_telefono_screen.dart';
+import 'package:app_ventas/screens/respaldo/verificar_correo_screen.dart';
 import 'package:app_ventas/ui/tema_app.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -35,8 +35,10 @@ void main() {
     expect(find.byKey(const Key('boton_crear_tienda')), findsOneWidget);
     expect(find.byKey(const Key('boton_restaurar_tienda')), findsNothing);
     expect(find.text('VeciTienda'), findsOneWidget);
-    expect(find.text('La tranquilidad de tu tienda, en tu bolsillo.'),
-        findsOneWidget);
+    expect(
+      find.text('La tranquilidad de tu tienda, en tu bolsillo.'),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('isotipo_marca')), findsOneWidget);
   });
 
@@ -46,8 +48,8 @@ void main() {
     await tester.tap(find.byKey(const Key('boton_restaurar_tienda')));
     await tester.pumpAndSettle();
 
-    final pantalla = tester.widget<VerificarTelefonoScreen>(
-      find.byType(VerificarTelefonoScreen),
+    final pantalla = tester.widget<VerificarCorreoScreen>(
+      find.byType(VerificarCorreoScreen),
     );
     expect(pantalla.modo, ModoVerificacion.restaurar);
   });

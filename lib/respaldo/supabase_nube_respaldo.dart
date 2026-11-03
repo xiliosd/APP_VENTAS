@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'nube_respaldo.dart';
 
-/// [NubeRespaldo] sobre Supabase: Auth por teléfono (OTP) y Storage.
+/// [NubeRespaldo] sobre Supabase: Auth por correo con código (OTP) y Storage.
 class SupabaseNubeRespaldo implements NubeRespaldo {
   SupabaseNubeRespaldo(this._cliente);
 
@@ -27,24 +27,22 @@ class SupabaseNubeRespaldo implements NubeRespaldo {
   bool get haySesion => _auth.currentSession != null;
 
   @override
-  String? get telefonoConectado {
-    final telefono = _auth.currentUser?.phone;
-    if (telefono == null || telefono.isEmpty) return null;
-    return telefono.startsWith('+') ? telefono : '+$telefono';
+  String? get correoConectado {
+    final correo = _auth.currentUser?.email;
+    if (correo == null || correo.isEmpty) return null;
+    return correo;
   }
 
+  // Sin cuenta previa se crea una: la tienda entra con su correo la primera
+  // vez sin registrarse aparte.
   @override
-  Future<void> enviarCodigo(String telefonoE164) =>
-      _auth.signInWithOtp(phone: telefonoE164);
+  Future<void> enviarCodigo(String correo) =>
+      _auth.signInWithOtp(email: correo, shouldCreateUser: true);
 
   @override
-  Future<void> verificarCodigo(String telefonoE164, String codigo) async {
+  Future<void> verificarCodigo(String correo, String codigo) async {
     try {
-      await _auth.verifyOTP(
-        phone: telefonoE164,
-        token: codigo,
-        type: OtpType.sms,
-      );
+      await _auth.verifyOTP(email: correo, token: codigo, type: OtpType.email);
     } on AuthRetryableFetchException {
       rethrow; // sin internet: no es un código incorrecto
     } on AuthException catch (e) {

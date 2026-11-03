@@ -64,7 +64,7 @@ void main() {
   });
 
   testWidgets('con sesión respalda al abrir', (tester) async {
-    final nube = NubeRespaldoFalsa(conSesion: true, telefono: '+573001234567');
+    final nube = NubeRespaldoFalsa(conSesion: true, correo: 'tienda@gmail.com');
     final container = await containerRespaldo(db, nube);
     container.listen(respaldoProvider, (_, _) {});
     await tester.pump();
@@ -72,7 +72,7 @@ void main() {
     final estado = container.read(respaldoProvider);
     expect(nube.subidas, 1);
     expect(estado.fase, FaseRespaldo.activo);
-    expect(estado.telefono, '+573001234567');
+    expect(estado.correo, 'tienda@gmail.com');
     expect(estado.ultimoRespaldo, isNotNull);
     container.dispose();
   });
@@ -155,7 +155,7 @@ void main() {
     final container = await containerRespaldo(db, nube);
     final notifier = container.read(respaldoProvider.notifier);
 
-    final fecha = await notifier.verificar('+573001234567', '123456');
+    final fecha = await notifier.verificar('tienda@gmail.com', '123456');
 
     expect(fecha, existente);
     expect(container.read(respaldoProvider).fase, FaseRespaldo.desactivado);
@@ -270,7 +270,7 @@ void main() {
     container.listen(respaldoProvider, (_, _) {});
     final notifier = container.read(respaldoProvider.notifier);
 
-    await notifier.verificar('+573001234567', '123456');
+    await notifier.verificar('tienda@gmail.com', '123456');
     await vender();
     await tester.pump(const Duration(seconds: 31));
     expect(nube.subidas, 0);
@@ -293,7 +293,7 @@ void main() {
     final notifier = container.read(respaldoProvider.notifier);
 
     await expectLater(
-      notifier.verificar('+573001234567', '123456'),
+      notifier.verificar('tienda@gmail.com', '123456'),
       throwsException,
     );
     expect(nube.haySesion, isFalse);
@@ -342,7 +342,7 @@ void main() {
       restaurador: RestauradorFalso(ResultadoRestauracion.sinRespaldo),
     );
     final notifier = container.read(respaldoProvider.notifier);
-    await notifier.verificar('+573001234567', '123456');
+    await notifier.verificar('tienda@gmail.com', '123456');
 
     await notifier.restaurar();
 
@@ -363,7 +363,7 @@ void main() {
       restaurador: RestauradorFalso(ResultadoRestauracion.invalido),
     );
     final notifier = container.read(respaldoProvider.notifier);
-    await notifier.verificar('+573001234567', '123456');
+    await notifier.verificar('tienda@gmail.com', '123456');
 
     await notifier.restaurar();
 

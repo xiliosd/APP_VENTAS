@@ -5,13 +5,14 @@ import 'dart:io';
 abstract class NubeRespaldo {
   bool get haySesion;
 
-  /// Celular conectado en formato E.164, o null sin sesión.
-  String? get telefonoConectado;
+  /// Correo conectado, o null sin sesión.
+  String? get correoConectado;
 
-  Future<void> enviarCodigo(String telefonoE164);
+  /// Envía al [correo] un código de un solo uso para entrar.
+  Future<void> enviarCodigo(String correo);
 
   /// Lanza [ErrorCodigoRespaldo] si el código es incorrecto o venció.
-  Future<void> verificarCodigo(String telefonoE164, String codigo);
+  Future<void> verificarCodigo(String correo, String codigo);
 
   Future<void> cerrarSesion();
 

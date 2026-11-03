@@ -341,9 +341,9 @@ const temasAyuda = <TemaAyuda>[
     PreguntaFrecuente(
       '¿Cómo activo el respaldo en la nube?',
       '${_soloAdmin}en "Ajustes" → "Respaldo" toca "Activar respaldo". '
-          'Escribe el celular de la tienda, toca "Enviarme el código" y '
-          'escribe el código de 6 dígitos que llega por SMS; luego toca '
-          '"Verificar". Si ya hay un respaldo de esta tienda, la app te '
+          'Escribe el correo de la tienda, toca "Enviarme el código" y '
+          'escribe el código que llega al correo (si no lo ves, busca en la '
+          'carpeta de spam); luego toca "Verificar". Si ya hay un respaldo de esta tienda, la app te '
           'pregunta si quieres "Restaurarlo en este celular" o '
           '"Reemplazarlo con los datos de este celular". Si sale '
           '"Respaldo no configurado", esta versión de la app no tiene '
@@ -360,8 +360,9 @@ const temasAyuda = <TemaAyuda>[
       'Cambié de celular, ¿cómo recupero mis datos?',
       '1. Instala la app en el celular nuevo.\n'
           '2. Toca "Ya tengo una tienda: restaurar respaldo".\n'
-          '3. Escribe el mismo celular de la tienda, toca "Enviarme el '
-          'código", escribe el código que llega por SMS y toca "Verificar".\n'
+          '3. Escribe el mismo correo de la tienda, toca "Enviarme el '
+          'código", escribe el código que llega al correo y toca '
+          '"Verificar".\n'
           '4. Cuando salga "Respaldo restaurado", entra con tu PIN.\n'
           'Solo funciona si antes activaste el respaldo. La huella hay que '
           'activarla otra vez.',

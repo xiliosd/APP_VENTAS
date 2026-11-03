@@ -21,32 +21,38 @@ void main() {
     addTearDown(tester.view.reset);
     final container = await containerConSesion(db);
     addTearDown(container.dispose);
-    await tester.pumpWidget(appDePrueba(container,
-        inicio: const Scaffold(body: AjustesScreen())));
+    await tester.pumpWidget(
+      appDePrueba(container, inicio: const Scaffold(body: AjustesScreen())),
+    );
     await tester.pumpAndSettle();
   }
 
-  testWidgets('la cabecera muestra la tienda y quién usa la app',
-      (tester) async {
+  testWidgets('la cabecera muestra la tienda y quién usa la app', (
+    tester,
+  ) async {
     await ConfiguracionRepository(db).guardarNombreTienda('La Esquina');
     await montar(tester);
     final cabecera = find.byKey(const Key('cabecera_ajustes'));
     expect(cabecera, findsOneWidget);
-    expect(find.descendant(of: cabecera, matching: find.text('La Esquina')),
-        findsOneWidget);
     expect(
-        find.descendant(
-            of: cabecera, matching: find.text('Ana · Administrador')),
-        findsOneWidget);
+      find.descendant(of: cabecera, matching: find.text('La Esquina')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: cabecera, matching: find.text('Ana · Administrador')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('sin nombre guardado dice "Sin nombre"', (tester) async {
     await montar(tester);
     expect(
-        find.descendant(
-            of: find.byKey(const Key('cabecera_ajustes')),
-            matching: find.text('Sin nombre')),
-        findsOneWidget);
+      find.descendant(
+        of: find.byKey(const Key('cabecera_ajustes')),
+        matching: find.text('Sin nombre'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('el menú va en grupos con su ícono', (tester) async {
@@ -77,19 +83,28 @@ void main() {
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
     final container = await containerRespaldo(
-        db, NubeRespaldoFalsa(conSesion: true, telefono: '+573001234567'));
+      db,
+      NubeRespaldoFalsa(conSesion: true, correo: 'tienda@gmail.com'),
+    );
     addTearDown(container.dispose);
-    final ana = await db.into(db.usuarios).insert(
-        UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'));
+    final ana = await db
+        .into(db.usuarios)
+        .insert(
+          UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
+        );
     container.read(sesionProvider.notifier).state = SesionState(
-        usuarioActivo: await (db.select(db.usuarios)
-              ..where((u) => u.id.equals(ana)))
-            .getSingle());
-    await tester.pumpWidget(appDePrueba(container,
-        inicio: const Scaffold(body: AjustesScreen())));
+      usuarioActivo: await (db.select(
+        db.usuarios,
+      )..where((u) => u.id.equals(ana))).getSingle(),
+    );
+    await tester.pumpWidget(
+      appDePrueba(container, inicio: const Scaffold(body: AjustesScreen())),
+    );
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-        find.byKey(const Key('menu_respaldo')), 100);
+      find.byKey(const Key('menu_respaldo')),
+      100,
+    );
     expect(find.byKey(const Key('estado_respaldo_menu')), findsOneWidget);
     expect(find.text('Activo'), findsOneWidget);
   });

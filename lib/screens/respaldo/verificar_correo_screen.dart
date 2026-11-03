@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../respaldo/correo.dart';
 import '../../respaldo/nube_respaldo.dart';
 import '../../respaldo/respaldo_provider.dart';
 import '../../respaldo/restaurador.dart';
-import '../../respaldo/telefono.dart';
 import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
@@ -14,25 +14,29 @@ import 'dialogo_respaldo_existente.dart';
 
 enum ModoVerificacion { activar, restaurar }
 
-/// Verifica el celular de la tienda con un código, para activar el respaldo
-/// o restaurarlo en este celular.
-class VerificarTelefonoScreen extends ConsumerStatefulWidget {
-  const VerificarTelefonoScreen({super.key, required this.modo});
+/// Verifica el correo de la tienda con un código que llega al correo, para
+/// activar el respaldo o restaurarlo en este celular.
+class VerificarCorreoScreen extends ConsumerStatefulWidget {
+  const VerificarCorreoScreen({super.key, required this.modo});
 
   final ModoVerificacion modo;
 
   @override
-  ConsumerState<VerificarTelefonoScreen> createState() =>
-      _VerificarTelefonoScreenState();
+  ConsumerState<VerificarCorreoScreen> createState() =>
+      _VerificarCorreoScreenState();
 }
 
-class _VerificarTelefonoScreenState
-    extends ConsumerState<VerificarTelefonoScreen> {
-  final _telefonoController = TextEditingController();
+/// Supabase deja configurar la longitud del código (6 por defecto, hasta 8),
+/// así que se aceptan ambas sin cambiar la app.
+const _minimoDigitosCodigo = 6;
+const _maximoDigitosCodigo = 8;
+
+class _VerificarCorreoScreenState extends ConsumerState<VerificarCorreoScreen> {
+  final _correoController = TextEditingController();
   final _codigoController = TextEditingController();
 
-  /// Número (E.164) al que se envió el código; null mientras se pide.
-  String? _telefono;
+  /// Correo (normalizado) al que se envió el código; null mientras se pide.
+  String? _correo;
   String? _error;
   bool _ocupado = false;
   int _segundosParaReenviar = 0;
@@ -43,7 +47,7 @@ class _VerificarTelefonoScreenState
   @override
   void dispose() {
     _cuentaRegresiva?.cancel();
-    _telefonoController.dispose();
+    _correoController.dispose();
     _codigoController.dispose();
     super.dispose();
   }
@@ -84,34 +88,37 @@ class _VerificarTelefonoScreenState
   }
 
   Future<void> _enviarCodigo() async {
-    final telefono = telefonoE164(_telefonoController.text);
-    if (telefono == null) {
+    final correo = correoNormalizado(_correoController.text);
+    if (correo == null) {
       setState(
-        () => _error = 'Escribe un celular de 10 dígitos que empiece por 3',
+        () => _error = 'Escribe un correo válido, como tienda@gmail.com',
       );
       return;
     }
     await _ejecutar(
       () async {
-        await _respaldo.enviarCodigo(telefono);
+        await _respaldo.enviarCodigo(correo);
         if (!mounted) return;
-        setState(() => _telefono = telefono);
+        setState(() => _correo = correo);
         _iniciarCuentaRegresiva();
       },
       errorGeneral:
-          'No pudimos enviar el código. Revisa el número y tu internet.',
+          'No pudimos enviar el código. Revisa el correo y tu internet.',
     );
   }
 
   Future<void> _reenviar() => _ejecutar(() async {
-    await _respaldo.enviarCodigo(_telefono!);
+    await _respaldo.enviarCodigo(_correo!);
     if (mounted) _iniciarCuentaRegresiva();
   }, errorGeneral: 'No pudimos reenviar el código. Revisa tu internet.');
 
   Future<void> _verificar() async {
     final codigo = _codigoController.text.trim();
-    if (!RegExp(r'^\d{6}$').hasMatch(codigo)) {
-      setState(() => _error = 'El código tiene 6 dígitos');
+    final formaCodigo = RegExp(
+      '^[0-9]{$_minimoDigitosCodigo,$_maximoDigitosCodigo}\$',
+    );
+    if (!formaCodigo.hasMatch(codigo)) {
+      setState(() => _error = 'El código tiene de 6 a 8 dígitos');
       return;
     }
     const sinConexion =
@@ -119,7 +126,7 @@ class _VerificarTelefonoScreenState
     DateTime? fechaExistente;
     var verificado = false;
     await _ejecutar(() async {
-      fechaExistente = await _respaldo.verificar(_telefono!, codigo);
+      fechaExistente = await _respaldo.verificar(_correo!, codigo);
       verificado = true;
     }, errorGeneral: sinConexion);
     if (!verificado || !mounted) return;
@@ -140,8 +147,11 @@ class _VerificarTelefonoScreenState
         avisar(context, 'Respaldo restaurado. Entra con tu PIN.');
         Navigator.of(context).popUntil((ruta) => ruta.isFirst);
       case ResultadoRestauracion.sinRespaldo:
-        avisar(context, 'No encontramos un respaldo para este número',
-            error: true);
+        avisar(
+          context,
+          'No encontramos un respaldo para este correo',
+          error: true,
+        );
         Navigator.of(context).pop();
       case ResultadoRestauracion.invalido:
         setState(
@@ -216,7 +226,7 @@ class _VerificarTelefonoScreenState
 
   @override
   Widget build(BuildContext context) {
-    final esperandoCodigo = _telefono != null;
+    final esperandoCodigo = _correo != null;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -238,7 +248,9 @@ class _VerificarTelefonoScreenState
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                esperandoCodigo ? Icons.sms_rounded : Icons.phone_iphone_rounded,
+                esperandoCodigo
+                    ? Icons.mark_email_unread_rounded
+                    : Icons.email_rounded,
                 size: 32,
                 color: ColoresApp.of(context).primario,
               ),
@@ -247,10 +259,11 @@ class _VerificarTelefonoScreenState
           const SizedBox(height: 16),
           Text(
             esperandoCodigo
-                ? 'Escribe el código que llegó por SMS al '
-                      '${telefonoEnmascarado(_telefono!)}.'
-                : 'Escribe el celular de la tienda. Te enviaremos un código '
-                      'por SMS.',
+                ? 'Escribe el código que enviamos a '
+                      '${correoEnmascarado(_correo!)}. Revisa tu correo '
+                      '(también la carpeta de spam).'
+                : 'Escribe el correo de la tienda. Te enviaremos un código '
+                      'a ese correo.',
             style: TextStyle(
               fontSize: 16,
               color: ColoresApp.of(context).textoSecundario,
@@ -259,13 +272,15 @@ class _VerificarTelefonoScreenState
           const SizedBox(height: 16),
           if (!esperandoCodigo)
             TextField(
-              key: const Key('campo_telefono'),
-              controller: _telefonoController,
-              keyboardType: TextInputType.phone,
-              maxLength: 10,
+              key: const Key('campo_correo'),
+              controller: _correoController,
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email],
+              autocorrect: false,
+              enableSuggestions: false,
               decoration: InputDecoration(
-                labelText: 'Celular',
-                prefixText: '+57 ',
+                labelText: 'Correo',
+                hintText: 'tienda@gmail.com',
                 errorText: _error,
                 errorMaxLines: 2,
               ),
@@ -275,9 +290,10 @@ class _VerificarTelefonoScreenState
               key: const Key('campo_codigo'),
               controller: _codigoController,
               keyboardType: TextInputType.number,
-              maxLength: 6,
+              autofillHints: const [AutofillHints.oneTimeCode],
+              maxLength: _maximoDigitosCodigo,
               decoration: InputDecoration(
-                labelText: 'Código de 6 dígitos',
+                labelText: 'Código del correo',
                 errorText: _error,
                 errorMaxLines: 2,
               ),
@@ -308,7 +324,9 @@ class _VerificarTelefonoScreenState
             Padding(
               padding: EdgeInsets.only(top: 16),
               child: Center(
-                child: CircularProgressIndicator(color: ColoresApp.of(context).primario),
+                child: CircularProgressIndicator(
+                  color: ColoresApp.of(context).primario,
+                ),
               ),
             ),
         ],

@@ -61,6 +61,22 @@ void main() {
     );
   });
 
+  test('Respaldo explica el ingreso con el código que llega al correo', () {
+    final tema = temasAyuda.firstWhere((t) => t.titulo == 'Respaldo');
+    final respuestas = tema.preguntas.map((p) => p.respuesta).join('\n');
+    expect(respuestas, isNot(contains('SMS')));
+    for (final pregunta in [
+      '¿Cómo activo el respaldo en la nube?',
+      'Cambié de celular, ¿cómo recupero mis datos?',
+    ]) {
+      final respuesta = tema.preguntas
+          .firstWhere((p) => p.pregunta == pregunta)
+          .respuesta;
+      expect(respuesta, contains('correo de la tienda'), reason: pregunta);
+      expect(respuesta, contains('llega al correo'), reason: pregunta);
+    }
+  });
+
   Future<void> montarPantalla(
     WidgetTester tester, {
     ThemeData? tema,

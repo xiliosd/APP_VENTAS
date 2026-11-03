@@ -60,9 +60,12 @@ Drift / SQLite (persistencia local, única fuente de verdad)
 
 No aplica: la app no expone ninguna API. Usa estos servicios externos, ambos opcionales:
 
-- **Supabase** (respaldo): inicio de sesión por teléfono con código OTP y un bucket privado
-  `respaldos` con políticas RLS. La configuración está en la Task 9 de
-  `docs/superpowers/plans/2026-10-05-app-ventas-fase2bc-respaldo.md`.
+- **Supabase** (respaldo): inicio de sesión por correo con código de un solo uso y un bucket
+  privado `respaldos` con políticas RLS (cada tienda solo ve su carpeta). En el proyecto:
+  proveedor Email activo, plantilla "Magic Link" con `{{ .Token }}` para que llegue el código,
+  bucket `respaldos` privado y las políticas de la Task 9 de
+  `docs/superpowers/plans/2026-10-05-app-ventas-fase2bc-respaldo.md`. Para uso real hace falta un
+  SMTP propio: el correo por defecto de Supabase envía pocos mensajes por hora.
 - **Open Food Facts** (consulta pública, sin clave): al escanear un código desconocido,
   autocompleta el nombre, la marca y el tamaño del producto.
 
