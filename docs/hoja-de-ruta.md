@@ -53,7 +53,8 @@ Actualizada: 2026-10-30. Cada fase pasa por especificación (`docs/superpowers/s
 
 ## Orden de lo que falta
 
-Orden elegido por el usuario el 2026-10-30; la monetización queda para después.
+Orden elegido por el usuario el 2026-10-30 y ajustado el 2026-11-03 (el vendedor entra al plan; solo
+la monetización y la subida a Play Store quedan para después).
 
 1. Vibración — diagnosticada: en el celular de prueba (Redmi Note 13, HyperOS 2, Android 15)
    la "respuesta háptica" del sistema está apagada (`haptic_feedback_enabled=0`) y la app,
@@ -82,30 +83,30 @@ Orden elegido por el usuario el 2026-10-30; la monetización queda para después
    - Paso 2 completo el 2026-10-31.
 3. Consultar precio por código de barras — hecho el 2026-10-31, junto con las preguntas
    frecuentes.
-4. Preparar para uso real — llave de firma propia, claves de Supabase (respaldo en la nube) y,
-   si se publica, requisitos de Play Store.
-5. Tienda centralizada — necesita Supabase listo del paso 4.
-6. Prueba en celular de lo que falta — compilar un APK y probar R3a, R3b, R4, las tandas 1 a 4
-   de mejoras de tienda y lo nuevo de los pasos 2 a 5 (ver "Pendiente de verificar").
+4. Preparar para uso real — llave de firma propia y claves de Supabase (respaldo en la nube).
+5. El vendedor — reordenado al plan por el usuario el 2026-11-03:
+   - Huella para el vendedor — hoy el interruptor "Entrar con huella" solo está en Ajustes, que
+     ve el administrador; el vendedor no puede activar su propia huella (detectado el 2026-10-31).
+   - Permisos de inventario — decidir si recibir mercancía, ajustar conteos y guardar pedidos
+     deben quedar solo para el administrador; hoy cualquier usuario puede hacerlo (detectado el
+     2026-10-31).
+   - Recorrido para el vendedor — el recorrido de primer uso solo lo ve el administrador, así que
+     el globo de "Consultar precio" no le llega al vendedor nuevo (detectado el 2026-10-31).
+6. Tienda centralizada — necesita Supabase listo del paso 4: varios celulares en la misma tienda
+   con un código único de tienda, alerta al admin cuando entra un celular nuevo, información
+   actualizada al ingresar y avisos de "por pedir" en todos los celulares; requiere
+   sincronización y cumplir la Ley 1581 de 2012.
+7. Prueba en celular de lo que falta — compilar un APK y probar R3a, R3b, R4, las tandas 1 a 4
+   de mejoras de tienda y lo nuevo de los pasos 2 a 6 (ver "Pendiente de verificar").
 
 ## Después
 
-- Huella para el vendedor — hoy el interruptor "Entrar con huella" solo está en Ajustes, que ve
-  el administrador; el vendedor no puede activar su propia huella (detectado el 2026-10-31).
-- Permisos de inventario — decidir si recibir mercancía, ajustar conteos y guardar pedidos deben
-  quedar solo para el administrador; hoy cualquier usuario puede hacerlo (detectado el 2026-10-31).
-- Recorrido para el vendedor — el recorrido de primer uso solo lo ve el administrador, así que el
-  globo de "Consultar precio" no le llega al vendedor nuevo (detectado el 2026-10-31).
+- Subida a Play Store — cuenta de desarrollador, política de privacidad (Ley 1581 de 2012),
+  ficha de la tienda y paquete `.aab` firmado con la llave del paso 4.
 - Monetización sin cobrarle al tendero (ideas presentadas el 2026-10-13): pedido digital al
   distribuidor (recomendado para empezar), promociones de marca, crédito y pagos con
   bancos/billeteras, recargas y pagos de servicios, datos agregados a escala; requiere
   sincronización con consentimiento y cumplir la Ley 1581 de 2012.
-- Tienda centralizada (proyecto aparte): varios celulares en la misma tienda con un código único
-  de tienda, alerta al admin cuando entra un celular nuevo, información actualizada al ingresar
-  y avisos de "por pedir" en todos los celulares; requiere sincronización y cumplir la Ley 1581
-  de 2012.
-- Preparar para uso real: llave de firma propia, compilar con las claves de Supabase y, si se
-  publica, requisitos de Play Store.
 
 ## Verificado en celular real
 
