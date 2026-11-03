@@ -146,6 +146,23 @@ void main() {
     expect(await sincronizadorB.cuantosPendientes(), 0);
   });
 
+  test(
+    'vaciar la base deja el celular listo para descargar otra tienda',
+    () async {
+      await sembrarTienda(b);
+      await sembrarTienda(a);
+      await sincronizadorA.convertirEnCompartida('La Esquina');
+
+      await sincronizadorB.vaciarBase();
+      await sincronizadorB.descargarTienda('tienda-1');
+
+      expect(await b.select(b.usuarios).get(), hasLength(1));
+      expect(await b.select(b.ventas).get(), hasLength(1));
+      expect(await sincronizadorB.cuantosPendientes(), 0);
+      expect(await sincronizadorB.ultimaSincronizacion(), isNotNull);
+    },
+  );
+
   test('descargar en un celular con datos no se permite', () async {
     await sembrarTienda(a);
     await sembrarTienda(b);

@@ -97,6 +97,21 @@ class Sincronizador {
     }
   }
 
+  /// Fecha de la última sincronización completa en este celular.
+  Future<DateTime?> ultimaSincronizacion() async =>
+      (await _estado())?.ultimaSincronizacion;
+
+  /// Borra todos los datos de la tienda de este celular (para bajar otra).
+  Future<void> vaciarBase() => db.transaction(() async {
+    // Sin la fila de estado los disparadores no anotan los borrados.
+    await db.delete(db.estadoSincronizacion).go();
+    await db.delete(db.cambiosPendientes).go();
+    for (final tabla in tablasConIdGlobal.reversed) {
+      await db.customStatement('DELETE FROM $tabla');
+    }
+    await db.customStatement('DELETE FROM configuracion_tienda');
+  });
+
   Future<ResultadoSincronizacion> sincronizar() async {
     final estado = await _estado();
     if (estado == null) return ResultadoSincronizacion.noCompartida;

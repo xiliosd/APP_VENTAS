@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/inicio_marca_provider.dart';
 import '../providers/sesion_provider.dart';
 import '../respaldo/respaldo_provider.dart';
+import '../sincronizacion/sincronizacion_provider.dart';
 import '../ui/error_carga.dart';
 import '../ui/movimiento.dart';
 import 'home/home_screen.dart';
@@ -47,9 +48,10 @@ class _RaizAppState extends ConsumerState<RaizApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Mantiene vivo el respaldo automático mientras la app está abierta,
-    // sin reconstruir esta pantalla en cada cambio de su estado.
+    // Mantiene vivos el respaldo y la sincronización automáticos mientras la
+    // app está abierta, sin reconstruir esta pantalla en cada cambio.
     ref.listen(respaldoProvider, (_, _) {});
+    ref.listen(sincronizacionProvider, (_, _) {});
 
     final pendiente = ref.watch(inicioMarcaPendienteProvider);
     final sesion = ref.watch(sesionProvider);

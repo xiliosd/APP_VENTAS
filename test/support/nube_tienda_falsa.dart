@@ -25,6 +25,10 @@ class NubeTiendaFalsa implements NubeTienda {
   /// Cantidad de filas de cada subida.
   final subidas = <int>[];
 
+  /// Veces que se consultó la versión mínima: una por ciclo de
+  /// sincronización.
+  int ciclos = 0;
+
   void _revisar() {
     if (sinConexion) throw const ErrorSinConexion();
     if (sesionVencida) throw const ErrorSesionTienda();
@@ -44,6 +48,7 @@ class NubeTiendaFalsa implements NubeTienda {
 
   @override
   Future<int> versionProtocoloMinima() async {
+    ciclos++;
     _revisar();
     return versionMinima;
   }

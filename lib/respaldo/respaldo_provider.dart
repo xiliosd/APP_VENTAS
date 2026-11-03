@@ -140,6 +140,11 @@ class RespaldoNotifier extends Notifier<EstadoRespaldo> {
     await respaldarAhora();
   }
 
+  Future<bool> _tiendaCompartida() async {
+    final db = ref.read(databaseProvider);
+    return await db.select(db.estadoSincronizacion).getSingleOrNull() != null;
+  }
+
   void _programar() {
     if (!_habilitado) return;
     _temporizador?.cancel();
@@ -152,6 +157,9 @@ class RespaldoNotifier extends Notifier<EstadoRespaldo> {
   Future<bool> respaldarAhora() async {
     final nube = _nube;
     if (nube == null || !_habilitado) return false;
+    // En una tienda compartida la nube ya tiene todo al día: no se sube
+    // además una copia completa.
+    if (await _tiendaCompartida()) return false;
     if (!nube.haySesion) {
       // La sesión venció o fue revocada (Supabase la cerró).
       state = state.copiar(fase: FaseRespaldo.requiereReconexion);
