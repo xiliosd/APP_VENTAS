@@ -157,8 +157,8 @@ Uso real descrito por el usuario:
    pendientes).
 8. Lo que no sube a la nube: huella, tamaño de letra, tema, recorrido y consejos (son del
    celular).
-9. **Lo pendiente de un celular desactivado se sube** (recomendación presentada al usuario;
-   no la objetó, confirmar al aprobar el documento): al enterarse de la desactivación, el
+9. **Lo pendiente de un celular desactivado se sube** (recomendación aprobada por el usuario
+   con el documento el 2026-11-03): al enterarse de la desactivación, el
    celular hace una última subida de los movimientos con `fecha` anterior a la desactivación,
    luego borra sus datos y vuelve a la bienvenida. El servidor acepta de un celular revocado
    solo esos movimientos (fecha < momento de revocación) y nada más; no le entrega datos.
