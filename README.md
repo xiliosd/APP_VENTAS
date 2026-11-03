@@ -62,7 +62,8 @@ No aplica: la app no expone ninguna API. Usa estos servicios externos, ambos opc
 
 - **Supabase** (respaldo): inicio de sesión por correo con código de un solo uso y un bucket
   privado `respaldos` con políticas RLS (cada tienda solo ve su carpeta). En el proyecto:
-  proveedor Email activo, plantilla "Magic Link" con `{{ .Token }}` para que llegue el código,
+  proveedor Email activo, plantillas "Confirm signup" (primera vez) y "Magic Link" con
+  `{{ .Token }}` para que llegue el código en vez de un enlace,
   bucket `respaldos` privado y las políticas de la Task 9 de
   `docs/superpowers/plans/2026-10-05-app-ventas-fase2bc-respaldo.md`. Para uso real hace falta un
   SMTP propio: el correo por defecto de Supabase envía pocos mensajes por hora.
