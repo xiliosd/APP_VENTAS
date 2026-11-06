@@ -13,6 +13,7 @@ import 'home/home_screen.dart';
 import 'inicio/inicio_marca_screen.dart';
 import 'login/bienvenida_screen.dart';
 import 'login/seleccionar_usuario_screen.dart';
+import 'vendedor/esperando_aprobacion_screen.dart';
 
 class RaizApp extends ConsumerStatefulWidget {
   const RaizApp({super.key});
@@ -56,6 +57,7 @@ class _RaizAppState extends ConsumerState<RaizApp> {
     final pendiente = ref.watch(inicioMarcaPendienteProvider);
     final sesion = ref.watch(sesionProvider);
     final hayUsuariosAsync = ref.watch(haySesionUsuariosProvider);
+    final esperandoAprobacion = ref.watch(solicitudPendienteProvider) != null;
 
     // El inicio sigue quieto en su final si la consulta aún no responde.
     final Widget pantalla;
@@ -84,6 +86,8 @@ class _RaizAppState extends ConsumerState<RaizApp> {
       }
       pantalla = sesion.haySesion
           ? const HomeScreen()
+          : esperandoAprobacion
+          ? const EsperandoAprobacionScreen()
           : hayUsuariosAsync.when(
               data: (existe) => existe
                   ? const SeleccionarUsuarioScreen()
