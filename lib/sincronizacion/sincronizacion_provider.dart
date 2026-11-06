@@ -273,11 +273,13 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
     await ref.read(usuariosConHuellaProvider.notifier).borrarTodas();
     final preferencias = ref.read(preferenciasProvider);
     await preferencias.remove(claveRecorrido);
+    await preferencias.remove(claveRecorridoVendedor);
     for (final consejo in Consejo.values) {
       await preferencias.remove(ConsejosVistos.claveConsejo(consejo));
     }
     ref
       ..invalidate(recorridoProvider)
+      ..invalidate(recorridoVendedorProvider)
       ..invalidate(consejosVistosProvider);
     await ref.read(solicitudPendienteProvider.notifier).borrar();
     await ref.read(nubeTiendaProvider)?.cerrarSesionCelular();
@@ -377,6 +379,7 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
         await _sincronizador?.tiendaId() == tiendaId &&
         (await db.select(db.usuarios).get()).isNotEmpty;
     if (!yaBajada) await descargarTienda(tiendaId);
+    await ref.read(recorridoVendedorProvider.notifier).marcarPendiente();
     final pin = _pinSolicitud;
     final idGlobal = membresia.usuarioIdGlobal;
     if (pin != null && idGlobal != null) {

@@ -2,6 +2,7 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/main.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/providers/preferencias_provider.dart';
+import 'package:app_ventas/providers/recorrido_provider.dart';
 import 'package:app_ventas/screens/login/bienvenida_screen.dart';
 import 'package:app_ventas/screens/login/seleccionar_usuario_screen.dart';
 import 'package:app_ventas/screens/vendedor/esperando_aprobacion_screen.dart';
@@ -181,6 +182,7 @@ void main() {
       findsOneWidget,
     );
     expect(prefs.getString(claveSolicitudPendiente), isNull);
+    expect(prefs.getBool(claveRecorridoVendedor), isTrue);
     final beto = await (db.select(
       db.usuarios,
     )..where((u) => u.idGlobal.equals('u-beto'))).getSingle();

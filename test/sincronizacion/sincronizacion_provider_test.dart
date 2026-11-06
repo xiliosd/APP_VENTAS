@@ -297,6 +297,7 @@ void main() {
       SharedPreferences.setMockInitialValues({
         'usuarios_con_huella': ['1'],
         'recorrido_paso': 'hecho',
+        'recorrido_vendedor_pendiente': true,
         'consejo_visto_escanearVenta': true,
         claveSolicitudPendiente: tienda,
       });
@@ -322,6 +323,7 @@ void main() {
       expect(container.read(sincronizacionProvider).revocada, isTrue);
       expect(preferencias.getStringList('usuarios_con_huella') ?? [], isEmpty);
       expect(preferencias.getString('recorrido_paso'), isNull);
+      expect(preferencias.getBool('recorrido_vendedor_pendiente'), isNull);
       expect(preferencias.getBool('consejo_visto_escanearVenta'), isNull);
       expect(preferencias.getString(claveSolicitudPendiente), isNull);
       expect(celular.sesion, isNull);

@@ -42,3 +42,28 @@ class RecorridoNotifier extends Notifier<PasoRecorrido> {
 final recorridoProvider = NotifierProvider<RecorridoNotifier, PasoRecorrido>(
   RecorridoNotifier.new,
 );
+
+/// Este celular es de un vendedor que acaba de unirse a la tienda y aún no ve
+/// su recorrido corto. Se marca al bajar la tienda tras la aprobación.
+const claveRecorridoVendedor = 'recorrido_vendedor_pendiente';
+
+class RecorridoVendedorNotifier extends Notifier<bool> {
+  @override
+  bool build() =>
+      ref.read(preferenciasProvider).getBool(claveRecorridoVendedor) ?? false;
+
+  Future<void> marcarPendiente() async {
+    state = true;
+    await ref.read(preferenciasProvider).setBool(claveRecorridoVendedor, true);
+  }
+
+  Future<void> terminar() async {
+    state = false;
+    await ref.read(preferenciasProvider).remove(claveRecorridoVendedor);
+  }
+}
+
+final recorridoVendedorProvider =
+    NotifierProvider<RecorridoVendedorNotifier, bool>(
+      RecorridoVendedorNotifier.new,
+    );

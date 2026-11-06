@@ -27,6 +27,7 @@ import '../fiado/lista_fiado_screen.dart';
 import '../historial/historial_screen.dart';
 import '../inventario/inventario_screen.dart';
 import '../recorrido/globos_inicio.dart';
+import '../recorrido/globos_vendedor.dart';
 import '../recorrido/paso_productos_screen.dart';
 import '../recorrido/paso_venta_screen.dart';
 import 'hoja_apariencia.dart';
@@ -121,6 +122,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final paso = ref.read(recorridoProvider);
       if (paso.enCurso) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _atender(paso));
+      }
+      // El vendedor recién unido ve su recorrido corto una vez; el admin que
+      // pruebe ese celular no lo gasta.
+      if (!sesion.esAdmin && ref.read(recorridoVendedorProvider)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || (_globos?.activo ?? false)) return;
+          final terminar = ref
+              .read(recorridoVendedorProvider.notifier)
+              .terminar;
+          _globos = mostrarGlobos(
+            context,
+            globosVendedor,
+            onTerminar: terminar,
+            onSaltar: terminar,
+          );
+        });
       }
     }
 
