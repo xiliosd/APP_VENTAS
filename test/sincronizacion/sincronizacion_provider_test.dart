@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:app_ventas/data/database.dart';
+import 'package:app_ventas/providers/aviso_por_pedir_provider.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/respaldo/respaldo_provider.dart';
@@ -8,6 +9,8 @@ import 'package:app_ventas/sincronizacion/nube_tienda.dart';
 import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
 import 'package:app_ventas/sincronizacion/sincronizador.dart';
 import 'package:app_ventas/sincronizacion/supabase_nube_tienda.dart';
+import 'package:app_ventas/util/aviso_existencias.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -329,6 +332,86 @@ void main() {
       expect(celular.sesion, isNull);
     },
   );
+
+  test('el aviso de por pedir bajado llega a la franja del Inicio', () async {
+    final usuario = await db
+        .into(db.usuarios)
+        .insert(
+          UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'h'),
+        );
+    final producto = await db
+        .into(db.productos)
+        .insert(
+          ProductosCompanion.insert(
+            nombre: 'Arepa',
+            precio: 3500,
+            controlaExistencias: const Value(true),
+            minimo: const Value(3),
+          ),
+        );
+    await db
+        .into(db.conteosInventario)
+        .insert(
+          ConteosInventarioCompanion.insert(
+            productoId: producto,
+            cantidad: 2,
+            tipo: TipoConteo.ajuste,
+            usuarioId: usuario,
+            fecha: DateTime(2026, 11, 6, 8),
+          ),
+        );
+    SharedPreferences.setMockInitialValues({});
+    final preferencias = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        preferenciasProvider.overrideWithValue(preferencias),
+        nubeTiendaProvider.overrideWithValue(nube),
+        nubeRespaldoProvider.overrideWithValue(null),
+        retardoSincronizacionProvider.overrideWithValue(retardo),
+        intervaloSincronizacionProvider.overrideWithValue(intervalo),
+        sincronizadorProvider.overrideWith(
+          (ref) => _SincronizadorConAviso(
+            db,
+            nube,
+            AvisoExistencias(
+              productoId: producto,
+              nombre: 'Arepa',
+              existencias: 2,
+              minimo: 3,
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    container
+      ..listen(sincronizacionProvider, (_, _) {})
+      ..listen(avisoPorPedirProvider, (_, _) {});
+
+    await esperar(retardo);
+
+    expect(
+      container.read(avisoPorPedirProvider).single.texto,
+      'Quedan 2 Arepa: toca pedir',
+    );
+  });
+}
+
+/// Un sincronizador cuyo ciclo bajó una venta que dejó [aviso] por pedir.
+class _SincronizadorConAviso extends Sincronizador {
+  _SincronizadorConAviso(super.db, super.nube, this.aviso);
+
+  final AvisoExistencias aviso;
+
+  @override
+  Future<bool> esCompartida() async => true;
+
+  @override
+  Future<ResultadoSincronizacion> sincronizar() async {
+    avisosBajados = [aviso];
+    return ResultadoSincronizacion.alDia;
+  }
 }
 
 /// Un sincronizador cuyo ciclo responde que el celular perdió el acceso.

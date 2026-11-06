@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/database_provider.dart';
+import '../providers/aviso_por_pedir_provider.dart';
 import '../providers/consejos_provider.dart';
 import '../providers/huella_provider.dart';
 import '../providers/preferencias_provider.dart';
@@ -222,6 +223,15 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
           pendientes: await sincronizador.cuantosPendientes(),
         );
         return;
+      }
+      // Lo que vendió otro celular también avisa "toca pedir" aquí.
+      if (fase == FaseSincronizacion.alDia &&
+          sincronizador.avisosBajados.isNotEmpty) {
+        try {
+          await ref
+              .read(avisoPorPedirProvider.notifier)
+              .trasVenta(sincronizador.avisosBajados);
+        } catch (_) {}
       }
       state = EstadoTiendaCompartida(
         fase: fase,

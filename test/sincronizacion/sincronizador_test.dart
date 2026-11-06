@@ -831,4 +831,112 @@ void main() {
       expect(await c.select(c.usuarios).get(), isNotEmpty);
     });
   });
+
+  group('por pedir por ventas de otro celular', () {
+    /// Producto con control de existencias (mínimo 3) contado en 5 en [db].
+    Future<({int usuario, int producto})> sembrarArepa(AppDatabase db) async {
+      final usuario = await db
+          .into(db.usuarios)
+          .insert(
+            UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'h'),
+          );
+      final producto = await db
+          .into(db.productos)
+          .insert(
+            ProductosCompanion.insert(
+              nombre: 'Arepa',
+              precio: 3500,
+              controlaExistencias: const Value(true),
+              minimo: const Value(3),
+            ),
+          );
+      await db
+          .into(db.conteosInventario)
+          .insert(
+            ConteosInventarioCompanion.insert(
+              productoId: producto,
+              cantidad: 5,
+              tipo: TipoConteo.ajuste,
+              usuarioId: usuario,
+              fecha: DateTime(2026, 11, 6, 8),
+            ),
+          );
+      return (usuario: usuario, producto: producto);
+    }
+
+    Future<void> vender(
+      AppDatabase db,
+      ({int usuario, int producto}) ids,
+      int cantidad,
+    ) async {
+      final venta = await db
+          .into(db.ventas)
+          .insert(
+            VentasCompanion.insert(
+              monto: 3500 * cantidad,
+              fecha: DateTime(2026, 11, 6, 9),
+              usuarioId: ids.usuario,
+            ),
+          );
+      await db
+          .into(db.lineasVenta)
+          .insert(
+            LineasVentaCompanion.insert(
+              ventaId: venta,
+              productoId: Value(ids.producto),
+              descripcion: 'Arepa',
+              precioUnitario: 3500,
+              cantidad: cantidad,
+            ),
+          );
+    }
+
+    test('una venta en A deja el aviso en B al sincronizar', () async {
+      final ids = await sembrarArepa(a);
+      await sincronizadorA.convertirEnCompartida('La Esquina');
+      await sincronizadorB.descargarTienda((await nube.miTienda())!);
+
+      await vender(a, ids, 3);
+      await sincronizadorA.sincronizar();
+      await sincronizadorB.sincronizar();
+
+      expect(
+        sincronizadorB.avisosBajados.single.texto,
+        'Quedan 2 Arepa: toca pedir',
+      );
+    });
+
+    test('una descarga nueva no avisa lo que ya estaba por pedir', () async {
+      final ids = await sembrarArepa(a);
+      await vender(a, ids, 3);
+      await sincronizadorA.convertirEnCompartida('La Esquina');
+
+      await sincronizadorB.descargarTienda((await nube.miTienda())!);
+
+      expect(sincronizadorB.avisosBajados, isEmpty);
+    });
+
+    test('la venta propia no vuelve como aviso bajado', () async {
+      final ids = await sembrarArepa(a);
+      await sincronizadorA.convertirEnCompartida('La Esquina');
+
+      await vender(a, ids, 3);
+      await sincronizadorA.sincronizar();
+
+      expect(sincronizadorA.avisosBajados, isEmpty);
+    });
+
+    test('un ciclo sin cambios de existencias no avisa', () async {
+      final ids = await sembrarArepa(a);
+      await sincronizadorA.convertirEnCompartida('La Esquina');
+      await sincronizadorB.descargarTienda((await nube.miTienda())!);
+      await vender(a, ids, 3);
+      await sincronizadorA.sincronizar();
+      await sincronizadorB.sincronizar();
+
+      await sincronizadorB.sincronizar();
+
+      expect(sincronizadorB.avisosBajados, isEmpty);
+    });
+  });
 }

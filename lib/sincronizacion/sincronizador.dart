@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 import 'package:sqlite3/common.dart' show SqliteException;
 
 import '../data/database.dart';
+import '../repositories/inventario_repository.dart';
+import '../util/aviso_existencias.dart';
 import 'filas_sincronizables.dart';
 import 'nube_tienda.dart';
 
@@ -64,6 +66,10 @@ class Sincronizador {
   /// Celulares que esperan aprobación, vistos en el último ciclo (solo en el
   /// celular del admin).
   List<CelularTienda> solicitudes = const [];
+
+  /// Productos que llegaron a su mínimo por lo que bajó el último ciclo
+  /// (ventas, conteos o entradas de otro celular).
+  List<AvisoExistencias> avisosBajados = const [];
 
   Future<EstadoSincronizacionFila?> _estado() => (db.select(
     db.estadoSincronizacion,
@@ -155,6 +161,7 @@ class Sincronizador {
   });
 
   Future<ResultadoSincronizacion> sincronizar() async {
+    avisosBajados = const [];
     final estado = await _estado();
     if (estado == null) return ResultadoSincronizacion.noCompartida;
     try {
@@ -344,6 +351,7 @@ class Sincronizador {
       if (pagina.length < tamanoLote) break;
     }
 
+    final antes = await _existenciasSiCambian(filas);
     await db.transaction(() async {
       await _marcarAplicando(true);
       // Un registro cambiado aquí después de subir gana: se sube luego.
@@ -386,6 +394,39 @@ class Sincronizador {
         ),
       );
     });
+    if (antes != null) avisosBajados = await _avisosDesde(antes);
+  }
+
+  static const _tablasDeExistencias = {
+    'ventas',
+    'lineas_venta',
+    'conteos_inventario',
+    'entradas_mercancia',
+    'lineas_entrada',
+    'productos',
+  };
+
+  /// Existencias de los productos con control antes de aplicar [filas], o
+  /// null si ninguna puede cambiarlas. El aviso es una ayuda: si falla, el
+  /// ciclo sigue sin él.
+  Future<Map<int, int>?> _existenciasSiCambian(List<FilaNube> filas) async {
+    if (!filas.any((f) => _tablasDeExistencias.contains(f.tabla))) return null;
+    try {
+      return {
+        for (final p in await InventarioRepository(db).productosConControl())
+          p.producto.id: p.existencias,
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<AvisoExistencias>> _avisosDesde(Map<int, int> antes) async {
+    try {
+      return await InventarioRepository(db).avisosTrasVenta(antes);
+    } catch (_) {
+      return const [];
+    }
   }
 
   /// Aplica una fila en su propio punto de guardado. Si no se puede (p. ej.
