@@ -20,7 +20,7 @@ class SeleccionarUsuarioScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final usuariosAsync = ref.watch(listaUsuariosProvider);
+    final usuariosAsync = ref.watch(listaUsuariosActivosProvider);
     return Scaffold(
       body: SafeArea(
         child: usuariosAsync.when(
@@ -31,15 +31,18 @@ class SeleccionarUsuarioScreen extends ConsumerWidget {
               const SizedBox(height: 32),
               NombreTienda(
                 estilo: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: ColoresApp.of(context).primario),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: ColoresApp.of(context).primario,
+                ),
               ),
               const SizedBox(height: 4),
               Text('¿Quién eres?', style: estiloTitulo()),
               const SizedBox(height: 4),
-              Text('Toca tu nombre para entrar',
-                  style: TextStyle(color: ColoresApp.of(context).textoSecundario)),
+              Text(
+                'Toca tu nombre para entrar',
+                style: TextStyle(color: ColoresApp.of(context).textoSecundario),
+              ),
               const SizedBox(height: 16),
               const SizedBox(height: 4),
               _GrillaUsuarios(usuarios: usuarios),
@@ -99,13 +102,17 @@ class _TarjetaUsuario extends StatelessWidget {
         key: Key('usuario_${usuario.id}'),
         color: c.superficie,
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radioTarjeta)),
+          borderRadius: BorderRadius.circular(radioTarjeta),
+        ),
         child: InkWell(
           borderRadius: BorderRadius.circular(radioTarjeta),
           onTap: () {
             Vibracion.toque();
-            Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => IngresarPinScreen(usuario: usuario)));
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => IngresarPinScreen(usuario: usuario),
+              ),
+            );
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
@@ -114,17 +121,24 @@ class _TarjetaUsuario extends StatelessWidget {
                 Hero(
                   tag: 'avatar_${usuario.id}',
                   child: AvatarInicial(
-                      id: usuario.id, nombre: usuario.nombre, radio: 36),
+                    id: usuario.id,
+                    nombre: usuario.nombre,
+                    radio: 36,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   usuario.nombre,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w700),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                Text(etiquetaRol(usuario.rol),
-                    style: TextStyle(color: c.textoSecundario)),
+                Text(
+                  etiquetaRol(usuario.rol),
+                  style: TextStyle(color: c.textoSecundario),
+                ),
               ],
             ),
           ),

@@ -77,6 +77,7 @@ class SesionNotifier extends Notifier<SesionState> {
     if (!ref.read(usuariosConHuellaProvider).contains(usuarioId)) return false;
     final usuarios = await ref.read(usuarioRepositoryProvider).listarUsuarios();
     final usuario = usuarios.where((u) => u.id == usuarioId).firstOrNull;
+    if (usuario != null && !usuario.activo) return false;
     if (usuario == null) {
       await huellas.conservarSolo(usuarios.map((u) => u.id));
       return false;

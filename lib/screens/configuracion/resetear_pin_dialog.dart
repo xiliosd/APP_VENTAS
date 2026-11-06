@@ -9,9 +9,17 @@ import 'usuarios_screen.dart' show mensajeErrorPin;
 
 /// Pide un PIN nuevo para [usuario]. Se cierra con `true` si lo guardó.
 class ResetearPinDialog extends ConsumerStatefulWidget {
-  const ResetearPinDialog({super.key, required this.usuario});
+  const ResetearPinDialog({
+    super.key,
+    required this.usuario,
+    this.activar = false,
+  });
 
   final Usuario usuario;
+
+  /// Para volver a dejar entrar a un vendedor desactivado: con un PIN nuevo,
+  /// porque el viejo pudo quedar en manos de otro.
+  final bool activar;
 
   @override
   ConsumerState<ResetearPinDialog> createState() => _ResetearPinDialogState();
@@ -58,6 +66,7 @@ class _ResetearPinDialogState extends ConsumerState<ResetearPinDialog> {
         }
       }
       await repo.resetearPin(usuario.id, pin);
+      if (widget.activar) await repo.activar(usuario.id);
       if (mounted) Navigator.of(context).pop(true);
     } finally {
       if (mounted) setState(() => _guardando = false);
@@ -67,7 +76,11 @@ class _ResetearPinDialogState extends ConsumerState<ResetearPinDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Resetear PIN de ${widget.usuario.nombre}'),
+      title: Text(
+        widget.activar
+            ? 'Activar a ${widget.usuario.nombre} con un PIN nuevo'
+            : 'Resetear PIN de ${widget.usuario.nombre}',
+      ),
       content: TextField(
         key: const Key('campo_nuevo_pin'),
         controller: _pinController,

@@ -6,20 +6,21 @@ import '../respaldo/respaldo_provider.dart';
 enum Consejo { escanearVenta, escanearProducto }
 
 class ConsejosVistos extends Notifier<Set<Consejo>> {
-  static String _clave(Consejo consejo) => 'consejo_visto_${consejo.name}';
+  static String claveConsejo(Consejo consejo) =>
+      'consejo_visto_${consejo.name}';
 
   @override
   Set<Consejo> build() {
     final preferencias = ref.read(preferenciasProvider);
     return {
       for (final c in Consejo.values)
-        if (preferencias.getBool(_clave(c)) ?? false) c,
+        if (preferencias.getBool(claveConsejo(c)) ?? false) c,
     };
   }
 
   Future<void> marcarVisto(Consejo consejo) async {
     state = {...state, consejo};
-    await ref.read(preferenciasProvider).setBool(_clave(consejo), true);
+    await ref.read(preferenciasProvider).setBool(claveConsejo(consejo), true);
   }
 }
 

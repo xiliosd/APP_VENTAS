@@ -633,4 +633,127 @@ void main() {
       ResultadoPin.ok,
     );
   });
+
+  group('celular de vendedor revocado', () {
+    final revocacion = DateTime(2026, 11, 6, 12);
+    late NubeTiendaFalsa celular;
+    late Sincronizador sincronizadorVendedor;
+    late String tienda;
+
+    /// Las dos ventas hechas en el celular del vendedor: 11:00 y 13:00.
+    late List<String> ventasVendedor;
+
+    setUp(() async {
+      nube.reloj = () => revocacion;
+      await sembrarTienda(a);
+      final betoA = await a
+          .into(a.usuarios)
+          .insert(
+            UsuariosCompanion.insert(
+              nombre: 'Beto',
+              rol: 'vendedor',
+              pinHash: hashPin('1234'),
+              numeroVendedor: const Value(1),
+            ),
+          );
+      await sincronizadorA.convertirEnCompartida('La Esquina');
+      tienda = (await nube.miTienda())!;
+      final idBeto = (await (a.select(
+        a.usuarios,
+      )..where((u) => u.id.equals(betoA))).getSingle()).idGlobal;
+      await nube.guardarPin(tienda, idBeto, '1234', 0);
+      celular = nube.otroCelular();
+      await celular.iniciarSesionCelular();
+      await celular.solicitarIngreso('ABC234', 1, '1234', 'Redmi');
+      await nube.responderSolicitud(tienda, celular.sesion!, aprobar: true);
+      sincronizadorVendedor = Sincronizador(b, celular);
+      await sincronizadorVendedor.descargarTienda(tienda);
+      final betoB = await (b.select(
+        b.usuarios,
+      )..where((u) => u.idGlobal.equals(idBeto))).getSingle();
+      ventasVendedor = [];
+      for (final hora in [11, 13]) {
+        final id = await b
+            .into(b.ventas)
+            .insert(
+              VentasCompanion.insert(
+                monto: 1000 * hora,
+                fecha: DateTime(2026, 11, 6, hora),
+                usuarioId: betoB.id,
+              ),
+            );
+        ventasVendedor.add(
+          (await (b.select(
+            b.ventas,
+          )..where((v) => v.id.equals(id))).getSingle()).idGlobal,
+        );
+      }
+      await nube.revocarCelular(tienda, celular.sesion!);
+    });
+
+    Future<List<String>> ventasEn(AppDatabase db) async => [
+      for (final venta in await db.select(db.ventas).get()) venta.idGlobal,
+    ];
+
+    test(
+      'entrega solo lo de antes de la revocación y borra la tienda',
+      () async {
+        final resultado = await sincronizadorVendedor.sincronizar();
+
+        expect(resultado, ResultadoSincronizacion.revocada);
+        final enNube = {
+          for (final fila in nube.filas)
+            if (fila.tabla == 'ventas') fila.idGlobal,
+        };
+        expect(enNube.intersection(ventasVendedor.toSet()), {
+          ventasVendedor[0],
+        });
+        expect(await b.select(b.usuarios).get(), isEmpty);
+        expect(await b.select(b.ventas).get(), isEmpty);
+        expect(await sincronizadorVendedor.esCompartida(), isFalse);
+      },
+    );
+
+    test('sin internet espera y no borra nada', () async {
+      final antes = await ventasEn(b);
+      celular.sinConexion = true;
+
+      expect(
+        await sincronizadorVendedor.sincronizar(),
+        ResultadoSincronizacion.sinConexion,
+      );
+      expect(await ventasEn(b), antes);
+
+      celular.sinConexion = false;
+      expect(
+        await sincronizadorVendedor.sincronizar(),
+        ResultadoSincronizacion.revocada,
+      );
+      expect(await b.select(b.ventas).get(), isEmpty);
+    });
+
+    test('si la entrega falla en el servidor igual borra la tienda', () async {
+      celular.errorAlEntregar = StateError('error del servidor');
+
+      expect(
+        await sincronizadorVendedor.sincronizar(),
+        ResultadoSincronizacion.revocada,
+      );
+      expect(await b.select(b.ventas).get(), isEmpty);
+    });
+
+    test('un celular aprobado sigue sincronizando normal', () async {
+      final otro = nube.otroCelular();
+      await otro.iniciarSesionCelular();
+      await otro.solicitarIngreso('ABC234', 1, '1234', 'Otro');
+      await nube.responderSolicitud(tienda, otro.sesion!, aprobar: true);
+      final c = AppDatabase(NativeDatabase.memory());
+      addTearDown(c.close);
+      final sincronizadorC = Sincronizador(c, otro);
+      await sincronizadorC.descargarTienda(tienda);
+
+      expect(await sincronizadorC.sincronizar(), ResultadoSincronizacion.alDia);
+      expect(await c.select(c.usuarios).get(), isNotEmpty);
+    });
+  });
 }

@@ -423,6 +423,101 @@ void main() {
       expect(find.textContaining('Vendedor 4'), findsWidgets);
     });
   });
+
+  group('desactivar un vendedor', () {
+    Future<SincronizacionFalsa> montarCon(
+      WidgetTester tester, {
+      FaseSincronizacion fase = FaseSincronizacion.alDia,
+      Object? errorAlDesactivar,
+    }) async {
+      final sincronizacion = SincronizacionFalsa(
+        inicial: EstadoTiendaCompartida(fase: fase),
+        errorAlDesactivar: errorAlDesactivar,
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            sincronizacionProvider.overrideWith(() => sincronizacion),
+          ],
+          child: const MaterialApp(home: UsuariosScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return sincronizacion;
+    }
+
+    Future<int> beto() => UsuarioRepository(db).crearUsuario(
+      nombre: 'Beto',
+      rol: 'vendedor',
+      pin: '1234',
+      numeroVendedor: 1,
+    );
+
+    Future<void> desactivar(WidgetTester tester, int id) async {
+      await tester.tap(find.byKey(Key('desactivar_$id')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          '¿Desactivar a Beto? No podrá entrar y su celular dejará de tener '
+          'los datos de la tienda.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('confirmar_desactivar')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('confirma, avisa a la nube y lo deja desactivado', (
+      tester,
+    ) async {
+      final id = await beto();
+      final sincronizacion = await montarCon(tester);
+
+      await desactivar(tester, id);
+
+      final usuario = await UsuarioRepository(db).buscar(id);
+      expect(usuario!.activo, isFalse);
+      expect(sincronizacion.desactivados, [usuario.idGlobal]);
+      expect(find.text('Desactivado'), findsOneWidget);
+      expect(find.byKey(Key('activar_$id')), findsOneWidget);
+    });
+
+    testWidgets('sin internet no lo desactiva y lo explica', (tester) async {
+      final id = await beto();
+      await montarCon(tester, errorAlDesactivar: const ErrorSinConexion());
+
+      await desactivar(tester, id);
+
+      expect(
+        find.text(
+          'Necesitas internet para desactivar a un vendedor de la tienda '
+          'compartida.',
+        ),
+        findsOneWidget,
+      );
+      expect((await UsuarioRepository(db).buscar(id))!.activo, isTrue);
+    });
+
+    testWidgets('activarlo pide un PIN nuevo y lo guarda en la nube', (
+      tester,
+    ) async {
+      final id = await beto();
+      await UsuarioRepository(db).desactivar(id);
+      final sincronizacion = await montarCon(tester);
+
+      await tester.tap(find.byKey(Key('activar_$id')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('campo_nuevo_pin')), '5678');
+      await tester.tap(find.byKey(const Key('boton_guardar_pin')));
+      await tester.pumpAndSettle();
+
+      final usuario = await UsuarioRepository(db).buscar(id);
+      expect(usuario!.activo, isTrue);
+      expect(sincronizacion.pinesGuardados.single.pin, '5678');
+      expect(await UsuarioRepository(db).verificarPin(id, '5678'), isNotNull);
+    });
+  });
 }
 
 /// Espera a [_espera] antes de guardar el PIN, para simular la latencia de la

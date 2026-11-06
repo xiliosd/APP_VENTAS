@@ -86,6 +86,9 @@ class NubeTiendaFalsa implements NubeTienda {
   /// sincronización.
   int ciclos = 0;
 
+  /// Si no es null, [entregarPendientes] lanza este error.
+  Object? errorAlEntregar;
+
   /// Lo que recibió [entregarPendientes] (aceptado o no).
   final entregas = <CambioSubida>[];
 
@@ -444,6 +447,7 @@ class NubeTiendaFalsa implements NubeTienda {
   @override
   Future<int> entregarPendientes(List<CambioSubida> cambios) async {
     _revisar();
+    if (errorAlEntregar != null) throw errorAlEntregar!;
     final miembro = _miembro;
     final revocadoEn = miembro?.revocadoEn;
     if (miembro?.estado != EstadoMiembro.revocado ||

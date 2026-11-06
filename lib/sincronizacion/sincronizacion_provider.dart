@@ -5,8 +5,10 @@ import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/database_provider.dart';
+import '../providers/consejos_provider.dart';
 import '../providers/huella_provider.dart';
 import '../providers/preferencias_provider.dart';
+import '../providers/recorrido_provider.dart';
 import '../providers/repository_providers.dart';
 import '../providers/sesion_provider.dart';
 import 'nube_tienda.dart';
@@ -81,6 +83,7 @@ class EstadoTiendaCompartida {
     this.ultimaSincronizacion,
     this.pendientes = 0,
     this.solicitudes = const [],
+    this.revocada = false,
   });
 
   final FaseSincronizacion fase;
@@ -92,6 +95,10 @@ class EstadoTiendaCompartida {
   /// Celulares de vendedores que esperan que el admin los apruebe (solo en
   /// el celular del admin).
   final List<CelularTienda> solicitudes;
+
+  /// El administrador le quitó el acceso a este celular y su copia de la
+  /// tienda se borró: la raíz lo avisa y vuelve a la bienvenida.
+  final bool revocada;
 
   EstadoTiendaCompartida copiar({
     FaseSincronizacion? fase,
@@ -186,17 +193,27 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
       }
       state = state.copiar(fase: FaseSincronizacion.sincronizando);
       final FaseSincronizacion fase;
+      final ResultadoSincronizacion resultado;
       try {
-        fase = switch (await sincronizador.sincronizar()) {
+        resultado = await sincronizador.sincronizar();
+        fase = switch (resultado) {
           ResultadoSincronizacion.alDia => FaseSincronizacion.alDia,
           ResultadoSincronizacion.sinConexion => FaseSincronizacion.sinConexion,
           ResultadoSincronizacion.actualizarApp =>
             FaseSincronizacion.actualizarApp,
           ResultadoSincronizacion.sesionVencida =>
             FaseSincronizacion.requiereReconexion,
-          ResultadoSincronizacion.noCompartida =>
-            FaseSincronizacion.noCompartida,
+          ResultadoSincronizacion.noCompartida ||
+          ResultadoSincronizacion.revocada => FaseSincronizacion.noCompartida,
         };
+        if (resultado == ResultadoSincronizacion.revocada) {
+          await _olvidarTienda();
+          state = const EstadoTiendaCompartida(
+            fase: FaseSincronizacion.noCompartida,
+            revocada: true,
+          );
+          return;
+        }
       } catch (_) {
         // Error inesperado (p. ej. del servidor): se reintenta en el
         // siguiente ciclo sin molestar mientras se vende.
@@ -249,6 +266,29 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
     if (sincronizador == null || tiendaId == null) return;
     await sincronizador.nube.guardarPin(tiendaId, idGlobal, pin, version);
   }
+
+  /// Tras perder el acceso: este celular olvida todo lo de la tienda (las
+  /// huellas, el recorrido, los consejos y la sesión en la nube).
+  Future<void> _olvidarTienda() async {
+    await ref.read(usuariosConHuellaProvider.notifier).borrarTodas();
+    final preferencias = ref.read(preferenciasProvider);
+    await preferencias.remove(claveRecorrido);
+    for (final consejo in Consejo.values) {
+      await preferencias.remove(ConsejosVistos.claveConsejo(consejo));
+    }
+    ref
+      ..invalidate(recorridoProvider)
+      ..invalidate(consejosVistosProvider);
+    await ref.read(solicitudPendienteProvider.notifier).borrar();
+    await ref.read(nubeTiendaProvider)?.cerrarSesionCelular();
+    ref.read(sesionProvider.notifier).cerrarSesion();
+    ref.invalidate(haySesionUsuariosProvider);
+  }
+
+  /// Quita el acceso a todos los celulares de ese vendedor y bloquea su PIN
+  /// en la nube. Lanza [ErrorSinConexion] sin internet.
+  Future<void> desactivarVendedor(String idGlobal) async =>
+      _sincronizador!.nube.desactivarVendedor(await _tiendaActual(), idGlobal);
 
   Future<String> _tiendaActual() async =>
       (await _sincronizador!.tiendaId()) ??

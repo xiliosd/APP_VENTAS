@@ -13,15 +13,14 @@ extension PasoRecorridoX on PasoRecorrido {
       this == PasoRecorrido.inicio;
 }
 
-const _clave = 'recorrido_paso';
+/// Paso del recorrido guardado en este celular.
+const claveRecorrido = 'recorrido_paso';
 
 class RecorridoNotifier extends Notifier<PasoRecorrido> {
   @override
   PasoRecorrido build() {
-    final guardado = ref.read(preferenciasProvider).getString(_clave);
-    return PasoRecorrido.values
-            .where((p) => p.name == guardado)
-            .firstOrNull ??
+    final guardado = ref.read(preferenciasProvider).getString(claveRecorrido);
+    return PasoRecorrido.values.where((p) => p.name == guardado).firstOrNull ??
         PasoRecorrido.ninguno;
   }
 
@@ -36,9 +35,10 @@ class RecorridoNotifier extends Notifier<PasoRecorrido> {
 
   Future<void> irA(PasoRecorrido paso) async {
     state = paso;
-    await ref.read(preferenciasProvider).setString(_clave, paso.name);
+    await ref.read(preferenciasProvider).setString(claveRecorrido, paso.name);
   }
 }
 
-final recorridoProvider =
-    NotifierProvider<RecorridoNotifier, PasoRecorrido>(RecorridoNotifier.new);
+final recorridoProvider = NotifierProvider<RecorridoNotifier, PasoRecorrido>(
+  RecorridoNotifier.new,
+);

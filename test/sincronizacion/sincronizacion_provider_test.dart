@@ -286,4 +286,57 @@ void main() {
     expect(container.read(sincronizacionProvider).solicitudes, isEmpty);
     expect((await celular.miMembresia())!.estado, EstadoMiembro.aprobado);
   });
+
+  test(
+    'un celular revocado olvida huellas y preferencias de la tienda',
+    () async {
+      await compartir();
+      final tienda = (await nube.miTienda())!;
+      final celular = nube.otroCelular();
+      await celular.iniciarSesionCelular();
+      SharedPreferences.setMockInitialValues({
+        'usuarios_con_huella': ['1'],
+        'recorrido_paso': 'hecho',
+        'consejo_visto_escanearVenta': true,
+        claveSolicitudPendiente: tienda,
+      });
+      final preferencias = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          preferenciasProvider.overrideWithValue(preferencias),
+          nubeTiendaProvider.overrideWithValue(celular),
+          nubeRespaldoProvider.overrideWithValue(null),
+          retardoSincronizacionProvider.overrideWithValue(retardo),
+          intervaloSincronizacionProvider.overrideWithValue(intervalo),
+          sincronizadorProvider.overrideWith(
+            (ref) => _SincronizadorRevocado(db, celular),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.listen(sincronizacionProvider, (_, _) {});
+
+      await esperar(retardo);
+
+      expect(container.read(sincronizacionProvider).revocada, isTrue);
+      expect(preferencias.getStringList('usuarios_con_huella') ?? [], isEmpty);
+      expect(preferencias.getString('recorrido_paso'), isNull);
+      expect(preferencias.getBool('consejo_visto_escanearVenta'), isNull);
+      expect(preferencias.getString(claveSolicitudPendiente), isNull);
+      expect(celular.sesion, isNull);
+    },
+  );
+}
+
+/// Un sincronizador cuyo ciclo responde que el celular perdió el acceso.
+class _SincronizadorRevocado extends Sincronizador {
+  _SincronizadorRevocado(super.db, super.nube);
+
+  @override
+  Future<bool> esCompartida() async => true;
+
+  @override
+  Future<ResultadoSincronizacion> sincronizar() async =>
+      ResultadoSincronizacion.revocada;
 }

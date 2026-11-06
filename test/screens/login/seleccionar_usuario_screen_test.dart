@@ -3,6 +3,7 @@ import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:app_ventas/screens/login/seleccionar_usuario_screen.dart';
 import 'package:app_ventas/ui/tema_app.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,27 +21,37 @@ void main() {
   Future<List<int>> montar(WidgetTester tester, List<String> nombres) async {
     final ids = <int>[];
     for (var i = 0; i < nombres.length; i++) {
-      ids.add(await db.into(db.usuarios).insert(UsuariosCompanion.insert(
-          nombre: nombres[i],
-          rol: i == 0 ? 'admin' : 'vendedor',
-          pinHash: 'x')));
+      ids.add(
+        await db
+            .into(db.usuarios)
+            .insert(
+              UsuariosCompanion.insert(
+                nombre: nombres[i],
+                rol: i == 0 ? 'admin' : 'vendedor',
+                pinHash: 'x',
+              ),
+            ),
+      );
     }
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-        databaseProvider.overrideWithValue(db),
-        preferenciasProvider.overrideWithValue(await _preferencias()),
-      ],
+          databaseProvider.overrideWithValue(db),
+          preferenciasProvider.overrideWithValue(await _preferencias()),
+        ],
         child: MaterialApp(
-            theme: temaClaro(), home: const SeleccionarUsuarioScreen()),
+          theme: temaClaro(),
+          home: const SeleccionarUsuarioScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
     return ids;
   }
 
-  testWidgets('muestra la marca, cada usuario con su inicial y su rol',
-      (tester) async {
+  testWidgets('muestra la marca, cada usuario con su inicial y su rol', (
+    tester,
+  ) async {
     await montar(tester, ['Ana', 'Beto']);
 
     expect(find.text('VeciTienda'), findsOneWidget);
@@ -76,13 +87,41 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('tocar una tarjeta abre el PIN con el avatar animado',
-      (tester) async {
+  testWidgets('tocar una tarjeta abre el PIN con el avatar animado', (
+    tester,
+  ) async {
     final ids = await montar(tester, ['Ana']);
     expect(find.byType(Hero), findsOneWidget);
     await tester.tap(find.byKey(Key('usuario_${ids[0]}')));
     await tester.pumpAndSettle();
     expect(find.text('Hola, Ana'), findsOneWidget);
+  });
+
+  testWidgets('un vendedor desactivado no aparece en ¿Quién eres?', (
+    tester,
+  ) async {
+    final ids = await montar(tester, ['Ana', 'Beto', 'Caro']);
+    await (db.update(db.usuarios)..where((u) => u.id.equals(ids[1]))).write(
+      const UsuariosCompanion(activo: Value(false)),
+    );
+    // Una app nueva (como al volver a abrirla), con la lista recargada.
+    await tester.pumpWidget(
+      ProviderScope(
+        key: UniqueKey(),
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          preferenciasProvider.overrideWithValue(await _preferencias()),
+        ],
+        child: MaterialApp(
+          theme: temaClaro(),
+          home: const SeleccionarUsuarioScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Beto'), findsNothing);
+    expect(find.text('Caro'), findsOneWidget);
   });
 }
 

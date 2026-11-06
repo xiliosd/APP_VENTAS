@@ -8,11 +8,14 @@ import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:app_ventas/screens/home/home_screen.dart';
 import 'package:app_ventas/screens/login/seleccionar_usuario_screen.dart';
 import 'package:app_ventas/screens/raiz_app.dart';
+import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../support/sincronizacion_prueba.dart';
 
 void main() {
   late AppDatabase db;
@@ -178,5 +181,23 @@ void main() {
     expect(cambio.duration, Duration.zero);
     expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.byType(SeleccionarUsuarioScreen), findsNothing);
+  });
+
+  testWidgets('si este celular pierde el acceso, lo avisa', (tester) async {
+    final sincronizacion = SincronizacionFalsa();
+    await abrir(
+      tester,
+      valores: {'inicio_completo_visto': true},
+      overrides: [sincronizacionProvider.overrideWith(() => sincronizacion)],
+    );
+    await tester.pumpAndSettle();
+
+    sincronizacion.marcarRevocada();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Este celular ya no tiene acceso a la tienda.'),
+      findsOneWidget,
+    );
   });
 }

@@ -24,6 +24,7 @@ class SincronizacionFalsa extends SincronizacionNotifier {
     this.errorAlCompartir,
     this.errorAlGuardarPin,
     this.celularesTienda = const [],
+    this.errorAlDesactivar,
   });
 
   final EstadoTiendaCompartida inicial;
@@ -35,6 +36,8 @@ class SincronizacionFalsa extends SincronizacionNotifier {
   final Object? errorAlGuardarPin;
 
   final List<CelularTienda> celularesTienda;
+  final Object? errorAlDesactivar;
+  final desactivados = <String>[];
   final respuestas = <(String, bool)>[];
   final revocaciones = <String>[];
 
@@ -113,4 +116,16 @@ class SincronizacionFalsa extends SincronizacionNotifier {
   @override
   Future<void> revocarCelular(String usuarioAuth) async =>
       revocaciones.add(usuarioAuth);
+
+  @override
+  Future<void> desactivarVendedor(String idGlobal) async {
+    if (errorAlDesactivar != null) throw errorAlDesactivar!;
+    desactivados.add(idGlobal);
+  }
+
+  /// Simula el ciclo en que la nube dice que este celular ya no tiene acceso.
+  void marcarRevocada() => state = const EstadoTiendaCompartida(
+    fase: FaseSincronizacion.noCompartida,
+    revocada: true,
+  );
 }

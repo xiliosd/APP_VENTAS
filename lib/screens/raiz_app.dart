@@ -52,7 +52,15 @@ class _RaizAppState extends ConsumerState<RaizApp> {
     // Mantiene vivos el respaldo y la sincronización automáticos mientras la
     // app está abierta, sin reconstruir esta pantalla en cada cambio.
     ref.listen(respaldoProvider, (_, _) {});
-    ref.listen(sincronizacionProvider, (_, _) {});
+    ref.listen<EstadoTiendaCompartida>(sincronizacionProvider, (antes, ahora) {
+      if (ahora.revocada && !(antes?.revocada ?? false)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Este celular ya no tiene acceso a la tienda.'),
+          ),
+        );
+      }
+    });
 
     final pendiente = ref.watch(inicioMarcaPendienteProvider);
     final sesion = ref.watch(sesionProvider);

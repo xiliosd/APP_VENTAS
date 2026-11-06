@@ -18,7 +18,24 @@ enum ResultadoSincronizacion {
   actualizarApp,
   sesionVencida,
   noCompartida,
+
+  /// Este celular de vendedor perdió el acceso: entregó lo pendiente y su
+  /// copia de la tienda se borró.
+  revocada,
 }
+
+/// Movimientos que un celular revocado todavía puede entregar: lo que vendió
+/// o anotó, no los cambios al catálogo ni a los clientes.
+const tablasMovimientos = {
+  'ventas',
+  'lineas_venta',
+  'pagos_fiado',
+  'gastos',
+  'conteos_inventario',
+  'entradas_mercancia',
+  'lineas_entrada',
+  'correcciones',
+};
 
 /// El correo ya tiene una tienda compartida con datos: compartir desde este
 /// celular la mezclaría con la suya. Hay que usar esa tienda aquí.
@@ -142,6 +159,13 @@ class Sincronizador {
         return ResultadoSincronizacion.actualizarApp;
       }
       final membresia = await nube.miMembresia();
+      // Un celular de vendedor con tienda que no está aprobado (le quitaron
+      // el acceso, o quedó en un estado que no corresponde) entrega y borra.
+      if (membresia != null &&
+          membresia.esVendedor &&
+          membresia.estado != EstadoMiembro.aprobado) {
+        return await _entregarYVaciar(membresia);
+      }
       final esAdmin = membresia?.rol == 'admin';
       await _subir(estado.tiendaId);
       if (esAdmin) await _subirPinesLegados(estado.tiendaId);
@@ -155,6 +179,54 @@ class Sincronizador {
     } on ErrorSesionTienda {
       return ResultadoSincronizacion.sesionVencida;
     }
+  }
+
+  /// Entrega una vez los movimientos pendientes (la nube solo acepta los de
+  /// antes de la revocación) y borra la tienda de este celular. Sin internet
+  /// no borra nada: lo intenta en el siguiente ciclo. Cualquier otra falla al
+  /// entregar no impide el borrado: el celular ya no debe tener los datos.
+  Future<ResultadoSincronizacion> _entregarYVaciar(Membresia membresia) async {
+    if (membresia.estado == EstadoMiembro.revocado) {
+      try {
+        final cambios = await _movimientosPendientes();
+        if (cambios.isNotEmpty) await nube.entregarPendientes(cambios);
+      } on ErrorSinConexion {
+        return ResultadoSincronizacion.sinConexion;
+      } catch (_) {
+        // Rechazo del servidor (p. ej. más de 30 días): se borra igual.
+      }
+    }
+    await vaciarBase();
+    return ResultadoSincronizacion.revocada;
+  }
+
+  Future<List<CambioSubida>> _movimientosPendientes() async {
+    final pendientes =
+        await (db.select(db.cambiosPendientes)..where(
+              (p) => p.borrado.equals(false) & p.tabla.isIn(tablasMovimientos),
+            ))
+            .get();
+    // Padres antes que hijos: una línea solo entra si su venta ya está.
+    int orden(CambioPendiente p) => tablasConIdGlobal.indexOf(p.tabla);
+    pendientes.sort((a, b) => orden(a).compareTo(orden(b)));
+    final cambios = <CambioSubida>[];
+    for (final pendiente in pendientes) {
+      try {
+        final datos = await leerFila(db, pendiente.tabla, pendiente.idGlobal);
+        if (datos == null) continue;
+        cambios.add(
+          CambioSubida(
+            tabla: pendiente.tabla,
+            idGlobal: pendiente.idGlobal,
+            datos: datos,
+            borrado: false,
+          ),
+        );
+      } on ReferenciaFaltante {
+        continue;
+      }
+    }
+    return cambios;
   }
 
   /// La tienda compartida de este celular, o null si no es compartida.

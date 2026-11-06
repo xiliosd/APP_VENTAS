@@ -40,6 +40,69 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
     }
   }
 
+  Future<void> _desactivar(Usuario usuario) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (contexto) => AlertDialog(
+        title: const Text('Desactivar vendedor'),
+        content: Text(
+          '¿Desactivar a ${usuario.nombre}? No podrá entrar y su celular '
+          'dejará de tener los datos de la tienda.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(contexto, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const Key('confirmar_desactivar'),
+            style: FilledButton.styleFrom(
+              backgroundColor: ColoresApp.of(contexto).sale,
+              foregroundColor: ColoresApp.of(contexto).sobreSale,
+            ),
+            onPressed: () => Navigator.pop(contexto, true),
+            child: const Text('Desactivar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true || !mounted) return;
+    final sincronizacion = ref.read(sincronizacionProvider.notifier);
+    // En la tienda compartida primero se le quita el acceso en la nube: si
+    // no llega, su celular seguiría con los datos.
+    if (await sincronizacion.esCompartida()) {
+      try {
+        await sincronizacion.desactivarVendedor(usuario.idGlobal);
+      } catch (error) {
+        if (mounted) {
+          avisar(
+            context,
+            error is ErrorSinConexion
+                ? 'Necesitas internet para desactivar a un vendedor de la '
+                      'tienda compartida.'
+                : mensajeErrorTienda(error),
+            error: true,
+          );
+        }
+        return;
+      }
+    }
+    await ref.read(usuarioRepositoryProvider).desactivar(usuario.id);
+    if (!mounted) return;
+    ref.invalidate(listaUsuariosProvider);
+    avisar(context, '${usuario.nombre} ya no puede entrar');
+  }
+
+  Future<void> _activar(Usuario usuario) async {
+    final activado = await showDialog<bool>(
+      context: context,
+      builder: (_) => ResetearPinDialog(usuario: usuario, activar: true),
+    );
+    if (activado != true || !mounted) return;
+    ref.invalidate(listaUsuariosProvider);
+    avisar(context, '${usuario.nombre} puede entrar otra vez');
+  }
+
   Future<void> _resetearPin(Usuario usuario) async {
     final actualizado = await showDialog<bool>(
       context: context,
@@ -78,31 +141,52 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
                         ),
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 4),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Pildora(
-                              key: Key('rol_${u.id}'),
-                              texto:
-                                  u.rol == 'vendedor' &&
-                                      u.numeroVendedor != null
-                                  ? 'Vendedor ${u.numeroVendedor}'
-                                  : etiquetaRol(u.rol),
-                              color: u.rol == 'admin'
-                                  ? ColoresApp.of(context).primario
-                                  : ColoresApp.of(context).marcaVerde,
-                            ),
+                          child: Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              Pildora(
+                                key: Key('rol_${u.id}'),
+                                texto:
+                                    u.rol == 'vendedor' &&
+                                        u.numeroVendedor != null
+                                    ? 'Vendedor ${u.numeroVendedor}'
+                                    : etiquetaRol(u.rol),
+                                color: u.rol == 'admin'
+                                    ? ColoresApp.of(context).primario
+                                    : ColoresApp.of(context).marcaVerde,
+                              ),
+                              if (!u.activo)
+                                Pildora(
+                                  texto: 'Desactivado',
+                                  color: ColoresApp.of(context).sale,
+                                ),
+                            ],
                           ),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (u.rol == 'vendedor')
+                            if (u.rol == 'vendedor' && u.activo) ...[
                               IconButton(
                                 key: Key('conectar_celular_${u.id}'),
                                 tooltip: 'Conectar su celular',
                                 icon: const Icon(Icons.smartphone_rounded),
                                 onPressed: () =>
                                     conectarCelularVendedor(context, ref, u),
+                              ),
+                              IconButton(
+                                key: Key('desactivar_${u.id}'),
+                                tooltip: 'Desactivar',
+                                icon: const Icon(Icons.person_off_rounded),
+                                onPressed: () => _desactivar(u),
+                              ),
+                            ],
+                            if (!u.activo)
+                              TextButton(
+                                key: Key('activar_${u.id}'),
+                                onPressed: () => _activar(u),
+                                child: const Text('Activar'),
                               ),
                             const Icon(
                               Icons.lock_reset_rounded,
