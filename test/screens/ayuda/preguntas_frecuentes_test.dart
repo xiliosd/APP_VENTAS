@@ -77,6 +77,20 @@ void main() {
     }
   });
 
+  test('Respaldo explica cómo entra y sale un vendedor', () {
+    final tema = temasAyuda.firstWhere((t) => t.titulo == 'Respaldo');
+    String respuesta(String pregunta) =>
+        tema.preguntas.firstWhere((p) => p.pregunta == pregunta).respuesta;
+
+    final entrar = respuesta('¿Cómo entra un vendedor desde su celular?');
+    expect(entrar, contains('Conectar su celular'));
+    expect(entrar, contains('Unirme a una tienda'));
+    expect(entrar, contains('Aprobar'));
+    final salir = respuesta('¿Cómo le quito el acceso a un vendedor?');
+    expect(salir, contains('Desactivar'));
+    expect(salir, contains('Quitar acceso'));
+  });
+
   Future<void> montarPantalla(
     WidgetTester tester, {
     ThemeData? tema,

@@ -47,6 +47,12 @@ Drift / SQLite (persistencia local, única fuente de verdad)
   genérica `filas` de Supabase (referencias como `id_global`), baja lo nuevo desde un cursor
   de versión y lo aplica en una transacción. Corre al abrir la app, unos segundos después de
   cada cambio y cada minuto; si dos celulares cambian lo mismo, gana el último que sube.
+  Cada celular de vendedor entra con una sesión anónima propia que el admin aprueba
+  (`miembros`: pendiente → aprobado, rechazado o revocado). El PIN no viaja en `filas`: la
+  nube lo guarda en `pines` con bcrypt y lo revisa por funciones (5 intentos y 15 minutos de
+  bloqueo); el primer ingreso de un usuario en un celular nuevo se revisa en línea y queda
+  guardado en ese celular. Un celular revocado entrega sus movimientos de antes de la
+  revocación (hasta 30 días) y borra su copia de la tienda.
 - `lib/util/` — moneda (COP entero), hash de PIN y fechas.
 
 ### Excepciones a los lineamientos
@@ -78,7 +84,13 @@ No aplica: la app no expone ninguna API. Usa estos servicios externos, ambos opc
   La tienda compartida usa las tablas `tiendas`, `miembros`, `filas` y `configuracion_app`
   con RLS por tienda: migración en `supabase/migrations/20261103000000_tienda_compartida.sql`
   y comprobaciones (corren en una transacción que se deshace) en
-  `supabase/tests/tienda_compartida_prueba.sql`.
+  `supabase/tests/tienda_compartida_prueba.sql`. Los celulares de vendedores y los PIN usan
+  la migración `supabase/migrations/20261104000000_vendedores.sql` (código de tienda, tabla
+  `pines` y funciones `solicitar_ingreso`, `responder_solicitud`, `revocar_celular`,
+  `desactivar_vendedor`, `entregar_pendientes`…), verificada con
+  `supabase/tests/vendedores_prueba.sql`. Paso manual en el panel de Supabase:
+  Authentication → Sign In / Providers → activar **"Allow anonymous sign-ins"** (los
+  vendedores entran con una sesión anónima; nunca pueden crear tiendas).
 - **Open Food Facts** (consulta pública, sin clave): al escanear un código desconocido,
   autocompleta el nombre, la marca y el tamaño del producto.
 

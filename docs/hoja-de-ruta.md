@@ -110,6 +110,14 @@ la monetización y la subida a Play Store quedan para después).
    - E2 — nube y sincronización del admin: hecho el 2026-11-03 (base v12, disparadores que
      anotan los cambios, tabla `filas` en Supabase, botón "Usar la tienda en varios
      celulares" en Ajustes → Respaldo y descarga de la tienda en un celular nuevo).
+   - E3 — entrada y salida del vendedor: hecho el 2026-11-06 (base v13). El vendedor pide
+     entrar desde su celular con el código de la tienda, su número y su PIN; el admin lo
+     aprueba en un aviso o en Ajustes → "Celulares de la tienda". El PIN ya no viaja en los
+     datos de la tienda: la nube lo guarda cifrado (bcrypt) y bloquea 15 minutos tras 5
+     intentos; el primer ingreso de un usuario en un celular nuevo necesita internet.
+     "Desactivar" (Usuarios) o "Quitar acceso" (Celulares) hacen que ese celular entregue lo
+     pendiente y borre la tienda. Los celulares con la app de E2 dejan de sincronizar hasta
+     actualizarla (protocolo 2).
    Incluye lo que viene del paso 5:
    - Huella del vendedor — que la active él mismo desde su cuenta en su celular (hoy el
      interruptor solo está en Ajustes, que ve el administrador).
@@ -150,6 +158,13 @@ la monetización y la subida a Play Store quedan para después).
   (`haptic_feedback_enabled=0`, leído por adb el 2026-10-30).
 
 ## Pendiente de verificar
+
+- E3 (entrada y salida del vendedor), con un segundo celular o un emulador como vendedor:
+  activar "Allow anonymous sign-ins" en Supabase; crear el vendedor y "Conectar su celular";
+  en el celular del vendedor, "Unirme a una tienda" y esperar; aprobarlo en el aviso; que el
+  vendedor venda y la venta llegue al admin en un minuto; desactivarlo y ver que su celular
+  vuelve a la bienvenida. También: el celular del admin con la app de E2 entra con su PIN
+  después de actualizar (su PIN viejo se sube solo).
 
 - Renovación R3a (fiado y gastos), R3b (reportes, historial con filtros, corrección y cobro QR
   renovados) y R4 (administración).

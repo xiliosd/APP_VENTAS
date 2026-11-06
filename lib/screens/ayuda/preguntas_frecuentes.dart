@@ -377,6 +377,26 @@ const temasAyuda = <TemaAyuda>[
           'conexión. En otro celular tuyo, instala la app, toca "Ya tengo una '
           'tienda: restaurar respaldo" y entra con el mismo correo.',
     ),
+    PreguntaFrecuente(
+      '¿Cómo entra un vendedor desde su celular?',
+      '${_soloAdmin}en "Ajustes" → "Usuarios", toca el celular junto al '
+          'vendedor ("Conectar su celular"). Si la tienda aún no está en '
+          'varios celulares, la app te pide compartirla primero. Verás el '
+          'código de la tienda y su número de vendedor. En el celular del '
+          'vendedor: instala la app, toca "Unirme a una tienda" y escribe el '
+          'código, su número y su PIN. En tu celular sale un aviso: toca '
+          '"Aprobar" solo si es su celular. La primera vez necesita internet; '
+          'después vende sin internet como siempre.',
+    ),
+    PreguntaFrecuente(
+      '¿Cómo le quito el acceso a un vendedor?',
+      '${_soloAdmin}en "Ajustes" → "Usuarios", toca "Desactivar" junto al '
+          'vendedor: ya no podrá entrar y su celular entrega lo que tenga '
+          'pendiente y borra los datos de la tienda. Para quitarle el acceso '
+          'solo a un celular (por ejemplo, uno perdido), ve a "Ajustes" → '
+          '"Celulares de la tienda" y toca "Quitar acceso". Para que vuelva, '
+          'toca "Activar" y dale un PIN nuevo.',
+    ),
   ]),
   TemaAyuda('Apariencia', [
     PreguntaFrecuente(
