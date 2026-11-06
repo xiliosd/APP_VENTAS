@@ -48,7 +48,7 @@ begin
     raise exception 'editar no sube la versión';
   end if;
   if (select valor from public.configuracion_app
-      where clave = 'version_protocolo_minima') <> '1' then
+      where clave = 'version_protocolo_minima') is null then
     raise exception 'falta la versión mínima del protocolo';
   end if;
 end $$;
