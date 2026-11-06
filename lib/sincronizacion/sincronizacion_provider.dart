@@ -181,6 +181,20 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
     await sincronizarAhora();
   }
 
+  /// Guarda en la nube el PIN del usuario [idGlobal] (con la tienda
+  /// compartida). Lanza [ErrorSinConexion] sin internet: el PIN no se debe
+  /// cambiar en este celular si no llegó a la nube.
+  Future<void> guardarPinEnTienda({
+    required String idGlobal,
+    required String pin,
+    required int version,
+  }) async {
+    final sincronizador = _sincronizador;
+    final tiendaId = await sincronizador?.tiendaId();
+    if (sincronizador == null || tiendaId == null) return;
+    await sincronizador.nube.guardarPin(tiendaId, idGlobal, pin, version);
+  }
+
   /// Si esta versión de la app puede compartir la tienda (tiene nube).
   bool get disponible => _sincronizador != null;
 
@@ -209,6 +223,10 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
     await sincronizarAhora();
   }
 }
+
+/// Al crear un usuario o cambiar un PIN en la tienda compartida sin internet.
+const mensajeSinInternetPin =
+    'Necesitas internet para guardar el PIN en la tienda compartida.';
 
 /// Mensaje para el usuario de un error al compartir o descargar la tienda.
 String mensajeErrorTienda(Object error) => switch (error) {

@@ -25,6 +25,7 @@ class UsuarioRepository {
     required String rol,
     required String pin,
     int? numeroVendedor,
+    String? idGlobal,
   }) {
     return _db
         .into(_db.usuarios)
@@ -34,6 +35,7 @@ class UsuarioRepository {
             rol: rol,
             pinHash: hashPin(pin),
             numeroVendedor: Value(numeroVendedor),
+            idGlobal: idGlobal == null ? const Value.absent() : Value(idGlobal),
           ),
         );
   }

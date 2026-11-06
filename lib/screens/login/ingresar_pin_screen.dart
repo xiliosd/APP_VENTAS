@@ -75,16 +75,16 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
   }
 
   Future<void> _validar() async {
-    final ok = await ref
+    final resultado = await ref
         .read(sesionProvider.notifier)
         .iniciarSesion(widget.usuario.id, _pin);
     if (!mounted) return;
-    if (!ok) {
-      Vibracion.error();
+    if (resultado != ResultadoIngreso.ok) {
+      if (resultado == ResultadoIngreso.pinIncorrecto) Vibracion.error();
       setState(() {
-        _error = 'PIN incorrecto';
+        _error = mensajeIngreso(resultado);
         _pin = '';
-        _errores++;
+        if (resultado == ResultadoIngreso.pinIncorrecto) _errores++;
       });
     } else if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
@@ -153,13 +153,14 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
                     ),
                     const SizedBox(height: 24),
                     IndicadoresPin(llenos: _pin.length, errores: _errores),
-                    SizedBox(
-                      height: 32,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 32),
                       child: _error == null
                           ? null
                           : Center(
                               child: Text(
                                 _error!,
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: ColoresApp.of(context).sale,
                                 ),
@@ -191,3 +192,14 @@ class _IngresarPinScreenState extends ConsumerState<IngresarPinScreen> {
     );
   }
 }
+
+/// Lo que se le dice al usuario cuando no pudo entrar con su PIN.
+String mensajeIngreso(ResultadoIngreso resultado) => switch (resultado) {
+  ResultadoIngreso.ok => '',
+  ResultadoIngreso.pinIncorrecto => 'PIN incorrecto',
+  ResultadoIngreso.necesitaInternet =>
+    'Es la primera vez que entras en este celular: conéctate a internet.',
+  ResultadoIngreso.bloqueado => 'Demasiados intentos. Espera 15 minutos.',
+  ResultadoIngreso.inactivo =>
+    'Este usuario está desactivado. Habla con el administrador.',
+};

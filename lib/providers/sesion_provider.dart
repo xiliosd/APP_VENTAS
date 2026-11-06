@@ -1,8 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
+import '../sincronizacion/nube_tienda.dart';
+import '../sincronizacion/sincronizacion_provider.dart';
 import 'huella_provider.dart';
 import 'repository_providers.dart';
+
+enum ResultadoIngreso {
+  ok,
+  pinIncorrecto,
+  necesitaInternet,
+  bloqueado,
+  inactivo,
+}
 
 class SesionState {
   const SesionState({this.usuarioActivo});
@@ -17,12 +27,47 @@ class SesionNotifier extends Notifier<SesionState> {
   @override
   SesionState build() => const SesionState();
 
-  Future<bool> iniciarSesion(int usuarioId, String pin) async {
+  /// Revisa el PIN en este celular. Un usuario que llegó de la tienda
+  /// compartida y nunca entró aquí no tiene PIN guardado: se revisa en la
+  /// nube (con internet) y queda guardado para entrar sin internet después.
+  Future<ResultadoIngreso> iniciarSesion(int usuarioId, String pin) async {
     final repo = ref.read(usuarioRepositoryProvider);
+    final guardado = await repo.buscar(usuarioId);
+    if (guardado == null) return ResultadoIngreso.pinIncorrecto;
+    if (!guardado.activo) return ResultadoIngreso.inactivo;
+    if (guardado.pinHash.isEmpty) {
+      final resultado = await _revisarEnLinea(guardado, pin);
+      if (resultado != ResultadoIngreso.ok) return resultado;
+      await repo.guardarPinLocal(usuarioId, pin);
+    }
     final usuario = await repo.verificarPin(usuarioId, pin);
-    if (usuario == null) return false;
+    if (usuario == null) return ResultadoIngreso.pinIncorrecto;
     state = SesionState(usuarioActivo: usuario);
-    return true;
+    return ResultadoIngreso.ok;
+  }
+
+  Future<ResultadoIngreso> _revisarEnLinea(Usuario usuario, String pin) async {
+    final sincronizador = ref.read(sincronizadorProvider);
+    final tiendaId = await sincronizador?.tiendaId();
+    if (sincronizador == null || tiendaId == null) {
+      return ResultadoIngreso.pinIncorrecto;
+    }
+    try {
+      return switch (await sincronizador.nube.verificarPin(
+        tiendaId,
+        usuario.idGlobal,
+        pin,
+      )) {
+        ResultadoPin.ok => ResultadoIngreso.ok,
+        ResultadoPin.incorrecto => ResultadoIngreso.pinIncorrecto,
+        ResultadoPin.bloqueado => ResultadoIngreso.bloqueado,
+        ResultadoPin.inactivo => ResultadoIngreso.inactivo,
+      };
+    } on ErrorSinConexion {
+      return ResultadoIngreso.necesitaInternet;
+    } on ErrorSesionTienda {
+      return ResultadoIngreso.necesitaInternet;
+    }
   }
 
   /// Tras una huella aprobada: abre sesión sin PIN si [usuarioId] la tiene

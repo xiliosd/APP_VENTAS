@@ -77,6 +77,222 @@ class SupabaseNubeTienda implements NubeTienda {
     ];
   });
 
+  @override
+  Future<void> iniciarSesionCelular() async {
+    if (_cliente.auth.currentUser != null) return;
+    try {
+      await _cliente.auth.signInAnonymously();
+    } catch (error) {
+      throw traducirErrorTienda(error);
+    }
+  }
+
+  @override
+  Future<void> cerrarSesionCelular() async {
+    try {
+      await _cliente.auth.signOut(scope: SignOutScope.local);
+    } catch (_) {
+      // Sin internet la sesión local igual se borra.
+    }
+  }
+
+  @override
+  Future<String> codigoTienda(String tiendaId) => _conSesion(
+    () async =>
+        await _cliente.rpc('codigo_tienda', params: {'p_tienda': tiendaId})
+            as String,
+  );
+
+  @override
+  Future<SolicitudIngreso> solicitarIngreso(
+    String codigo,
+    int numeroVendedor,
+    String pin,
+    String nombreCelular,
+  ) => _conSesion(() async {
+    final respuesta = await _cliente.rpc(
+      'solicitar_ingreso',
+      params: {
+        'p_codigo': codigo,
+        'p_numero': numeroVendedor,
+        'p_pin': pin,
+        'p_celular': nombreCelular,
+      },
+    );
+    return SolicitudIngreso.desdeJson(
+      (respuesta as Map).cast<String, Object?>(),
+    );
+  });
+
+  @override
+  Future<Membresia?> miMembresia() => _conSesion(() async {
+    final respuesta = await _cliente.rpc('mi_membresia');
+    if (respuesta == null) return null;
+    return Membresia.desdeJson((respuesta as Map).cast<String, Object?>());
+  });
+
+  @override
+  Future<List<CelularTienda>> celulares(String tiendaId) => _conSesion(
+    () async {
+      final miembros = await _cliente
+          .from('miembros')
+          .select(
+            'usuario_id, rol, estado, usuario_id_global, nombre_celular, '
+            'solicitado_en',
+          )
+          .eq('tienda_id', tiendaId)
+          .order('solicitado_en');
+      final ids = [
+        for (final m in miembros)
+          if (m['usuario_id_global'] != null) m['usuario_id_global'] as String,
+      ];
+      final nombres = <String, String>{};
+      if (ids.isNotEmpty) {
+        final usuarios = await _cliente
+            .from('filas')
+            .select('id_global, datos')
+            .eq('tienda_id', tiendaId)
+            .eq('tabla', 'usuarios')
+            .inFilter('id_global', ids);
+        for (final fila in usuarios) {
+          final nombre = (fila['datos'] as Map?)?['nombre'];
+          if (nombre is String) nombres[fila['id_global'] as String] = nombre;
+        }
+      }
+      return [
+        for (final m in miembros)
+          CelularTienda(
+            usuarioAuth: m['usuario_id'] as String,
+            rol: m['rol'] as String,
+            estado: estadoMiembroDesde(m['estado'] as String?),
+            solicitadoEn: DateTime.parse(m['solicitado_en'] as String),
+            nombreCelular: m['nombre_celular'] as String?,
+            usuarioIdGlobal: m['usuario_id_global'] as String?,
+            nombreVendedor: nombres[m['usuario_id_global']],
+          ),
+      ];
+    },
+  );
+
+  @override
+  Future<List<CelularTienda>> solicitudes(String tiendaId) async => [
+    for (final celular in await celulares(tiendaId))
+      if (celular.rol == 'vendedor' &&
+          celular.estado == EstadoMiembro.pendiente)
+        celular,
+  ];
+
+  @override
+  Future<void> responderSolicitud(
+    String tiendaId,
+    String usuarioAuth, {
+    required bool aprobar,
+  }) => _conSesion(
+    () => _cliente.rpc(
+      'responder_solicitud',
+      params: {
+        'p_tienda': tiendaId,
+        'p_usuario': usuarioAuth,
+        'p_aprobar': aprobar,
+      },
+    ),
+  );
+
+  @override
+  Future<void> revocarCelular(String tiendaId, String usuarioAuth) =>
+      _conSesion(
+        () => _cliente.rpc(
+          'revocar_celular',
+          params: {'p_tienda': tiendaId, 'p_usuario': usuarioAuth},
+        ),
+      );
+
+  @override
+  Future<void> desactivarVendedor(String tiendaId, String idGlobal) =>
+      _conSesion(
+        () => _cliente.rpc(
+          'desactivar_vendedor',
+          params: {'p_tienda': tiendaId, 'p_id_global': idGlobal},
+        ),
+      );
+
+  @override
+  Future<void> guardarPin(
+    String tiendaId,
+    String idGlobal,
+    String pin,
+    int version,
+  ) => _conSesion(
+    () => _cliente.rpc(
+      'guardar_pin',
+      params: {
+        'p_tienda': tiendaId,
+        'p_id_global': idGlobal,
+        'p_pin': pin,
+        'p_version': version,
+      },
+    ),
+  );
+
+  @override
+  Future<void> guardarPinLegado(
+    String tiendaId,
+    String idGlobal,
+    String hash,
+    int version,
+  ) => _conSesion(
+    () => _cliente.rpc(
+      'guardar_pin_legado',
+      params: {
+        'p_tienda': tiendaId,
+        'p_id_global': idGlobal,
+        'p_hash': hash,
+        'p_version': version,
+      },
+    ),
+  );
+
+  @override
+  Future<List<String>> pinesFaltantes(String tiendaId) => _conSesion(() async {
+    final respuesta = await _cliente.rpc(
+      'pines_faltantes',
+      params: {'p_tienda': tiendaId},
+    );
+    return [for (final id in respuesta as List) id as String];
+  });
+
+  @override
+  Future<ResultadoPin> verificarPin(
+    String tiendaId,
+    String idGlobal,
+    String pin,
+  ) => _conSesion(() async {
+    final respuesta = await _cliente.rpc(
+      'verificar_pin',
+      params: {'p_tienda': tiendaId, 'p_id_global': idGlobal, 'p_pin': pin},
+    );
+    return resultadoPinDesde(respuesta as String?);
+  });
+
+  @override
+  Future<int> entregarPendientes(List<CambioSubida> cambios) =>
+      _conSesion(() async {
+        final respuesta = await _cliente.rpc(
+          'entregar_pendientes',
+          params: {
+            'p_filas': [
+              for (final cambio in cambios)
+                {
+                  'tabla': cambio.tabla,
+                  'id_global': cambio.idGlobal,
+                  'datos': cambio.datos,
+                },
+            ],
+          },
+        );
+        return respuesta as int;
+      });
+
   Future<T> _conSesion<T>(Future<T> Function() accion) async {
     if (_cliente.auth.currentUser == null) throw const ErrorSesionTienda();
     try {

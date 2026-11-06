@@ -137,7 +137,9 @@ class Sincronizador {
           versionProtocoloSincronizacion) {
         return ResultadoSincronizacion.actualizarApp;
       }
+      final membresia = await nube.miMembresia();
       await _subir(estado.tiendaId);
+      if (membresia?.rol == 'admin') await _subirPinesLegados(estado.tiendaId);
       await _bajarYAplicar(estado);
       return ResultadoSincronizacion.alDia;
     } on ErrorSinConexion {
@@ -146,6 +148,29 @@ class Sincronizador {
       return ResultadoSincronizacion.sesionVencida;
     }
   }
+
+  /// La tienda compartida de este celular, o null si no es compartida.
+  Future<String?> tiendaId() async => (await _estado())?.tiendaId;
+
+  /// Los PIN de antes de E3 solo estaban en los celulares: el del admin los
+  /// sube una vez para que cada usuario pueda entrar en un celular nuevo sin
+  /// volver a escribirlos. La nube los pasa a bcrypt en el primer ingreso.
+  Future<void> _subirPinesLegados(String tiendaId) async {
+    for (final idGlobal in await nube.pinesFaltantes(tiendaId)) {
+      final usuario = await (db.select(
+        db.usuarios,
+      )..where((u) => u.idGlobal.equals(idGlobal))).getSingleOrNull();
+      if (usuario == null || !_hashSha256.hasMatch(usuario.pinHash)) continue;
+      await nube.guardarPinLegado(
+        tiendaId,
+        idGlobal,
+        usuario.pinHash,
+        usuario.versionPin,
+      );
+    }
+  }
+
+  static final _hashSha256 = RegExp(r'^[0-9a-f]{64}$');
 
   Future<void> _subir(String tiendaId) async {
     // Se avanza por id: una anotación que vuelve a cambiar durante la subida

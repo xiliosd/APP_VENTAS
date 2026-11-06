@@ -10,6 +10,7 @@ class SincronizacionFalsa extends SincronizacionNotifier {
     this.tienda,
     this.errorAlDescargar,
     this.errorAlCompartir,
+    this.errorAlGuardarPin,
   });
 
   final EstadoTiendaCompartida inicial;
@@ -18,6 +19,9 @@ class SincronizacionFalsa extends SincronizacionNotifier {
   final String? tienda;
   final Object? errorAlDescargar;
   final Object? errorAlCompartir;
+  final Object? errorAlGuardarPin;
+
+  final pinesGuardados = <({String idGlobal, String pin, int version})>[];
 
   int compartidas = 0;
   int sincronizaciones = 0;
@@ -58,4 +62,14 @@ class SincronizacionFalsa extends SincronizacionNotifier {
 
   @override
   Future<void> sincronizarAhora() async => sincronizaciones++;
+
+  @override
+  Future<void> guardarPinEnTienda({
+    required String idGlobal,
+    required String pin,
+    required int version,
+  }) async {
+    if (errorAlGuardarPin != null) throw errorAlGuardarPin!;
+    pinesGuardados.add((idGlobal: idGlobal, pin: pin, version: version));
+  }
 }

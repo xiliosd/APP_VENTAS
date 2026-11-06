@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/repository_providers.dart';
+import '../../sincronizacion/sincronizacion_provider.dart';
 import '../../util/pin_hash.dart';
+import 'usuarios_screen.dart' show mensajeErrorPin;
 
 /// Pide un PIN nuevo para [usuario]. Se cierra con `true` si lo guardó.
 class ResetearPinDialog extends ConsumerStatefulWidget {
@@ -38,9 +40,24 @@ class _ResetearPinDialogState extends ConsumerState<ResetearPinDialog> {
     }
     setState(() => _guardando = true);
     try {
-      await ref
-          .read(usuarioRepositoryProvider)
-          .resetearPin(widget.usuario.id, pin);
+      final repo = ref.read(usuarioRepositoryProvider);
+      final sincronizacion = ref.read(sincronizacionProvider.notifier);
+      final usuario = await repo.buscar(widget.usuario.id) ?? widget.usuario;
+      // En la tienda compartida el PIN nuevo debe llegar a la nube primero:
+      // la versión siguiente hace que los otros celulares olviden el viejo.
+      if (await sincronizacion.esCompartida()) {
+        try {
+          await sincronizacion.guardarPinEnTienda(
+            idGlobal: usuario.idGlobal,
+            pin: pin,
+            version: usuario.versionPin + 1,
+          );
+        } catch (error) {
+          if (mounted) setState(() => _error = mensajeErrorPin(error));
+          return;
+        }
+      }
+      await repo.resetearPin(usuario.id, pin);
       if (mounted) Navigator.of(context).pop(true);
     } finally {
       if (mounted) setState(() => _guardando = false);
@@ -57,6 +74,7 @@ class _ResetearPinDialogState extends ConsumerState<ResetearPinDialog> {
         decoration: InputDecoration(
           labelText: 'Nuevo PIN de 4 dígitos',
           errorText: _error,
+          errorMaxLines: 3,
         ),
         keyboardType: TextInputType.number,
         obscureText: true,

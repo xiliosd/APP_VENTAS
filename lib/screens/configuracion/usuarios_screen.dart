@@ -13,6 +13,9 @@ import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
 import '../../ui/pildora.dart';
 import '../../ui/selector_segmentado.dart';
+import '../../sincronizacion/nube_tienda.dart';
+import '../../sincronizacion/sincronizacion_provider.dart';
+import '../../util/id_global.dart';
 import '../../util/pin_hash.dart';
 import 'resetear_pin_dialog.dart';
 
@@ -69,16 +72,20 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
                         key: Key('usuario_item_${u.id}'),
                         leading: AvatarInicial(id: u.id, nombre: u.nombre),
                         title: Text(
-                            u.id == actual ? '${u.nombre} (tú)' : u.nombre,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600)),
+                          u.id == actual ? '${u.nombre} (tú)' : u.nombre,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Pildora(
                               key: Key('rol_${u.id}'),
-                              texto: etiquetaRol(u.rol),
+                              texto:
+                                  u.rol == 'vendedor' &&
+                                      u.numeroVendedor != null
+                                  ? 'Vendedor ${u.numeroVendedor}'
+                                  : etiquetaRol(u.rol),
                               color: u.rol == 'admin'
                                   ? ColoresApp.of(context).primario
                                   : ColoresApp.of(context).marcaVerde,
@@ -113,6 +120,7 @@ class _FormularioUsuarioState extends ConsumerState<_FormularioUsuario> {
   String _rol = 'vendedor';
   String? _errorNombre;
   String? _errorPin;
+  String? _errorGeneral;
   bool _guardando = false;
 
   @override
@@ -132,11 +140,39 @@ class _FormularioUsuarioState extends ConsumerState<_FormularioUsuario> {
     });
     if (_errorNombre != null || _errorPin != null) return;
 
-    setState(() => _guardando = true);
+    setState(() {
+      _guardando = true;
+      _errorGeneral = null;
+    });
     try {
-      await ref
-          .read(usuarioRepositoryProvider)
-          .crearUsuario(nombre: nombre, rol: _rol, pin: pin);
+      final repo = ref.read(usuarioRepositoryProvider);
+      final sincronizacion = ref.read(sincronizacionProvider.notifier);
+      final numero = _rol == 'vendedor'
+          ? await repo.siguienteNumeroVendedor()
+          : null;
+      String? idGlobal;
+      // En la tienda compartida el PIN vive en la nube: si no llega, el
+      // usuario no podría entrar en otro celular, así que no se crea.
+      if (await sincronizacion.esCompartida()) {
+        idGlobal = generarIdGlobal();
+        try {
+          await sincronizacion.guardarPinEnTienda(
+            idGlobal: idGlobal,
+            pin: pin,
+            version: 0,
+          );
+        } catch (error) {
+          if (mounted) setState(() => _errorGeneral = mensajeErrorPin(error));
+          return;
+        }
+      }
+      await repo.crearUsuario(
+        nombre: nombre,
+        rol: _rol,
+        pin: pin,
+        numeroVendedor: numero,
+        idGlobal: idGlobal,
+      );
       if (mounted) Navigator.of(context).pop(true);
     } finally {
       if (mounted) setState(() => _guardando = false);
@@ -152,8 +188,10 @@ class _FormularioUsuarioState extends ConsumerState<_FormularioUsuario> {
           key: const Key('campo_nombre_usuario'),
           controller: _nombreController,
           autofocus: true,
-          decoration:
-              InputDecoration(labelText: 'Nombre', errorText: _errorNombre),
+          decoration: InputDecoration(
+            labelText: 'Nombre',
+            errorText: _errorNombre,
+          ),
         ),
         const SizedBox(height: 12),
         TextField(
@@ -163,7 +201,9 @@ class _FormularioUsuarioState extends ConsumerState<_FormularioUsuario> {
           obscureText: true,
           maxLength: 4,
           decoration: InputDecoration(
-              labelText: 'PIN de 4 dígitos', errorText: _errorPin),
+            labelText: 'PIN de 4 dígitos',
+            errorText: _errorPin,
+          ),
         ),
         const SizedBox(height: 4),
         SelectorSegmentado<String>(
@@ -172,6 +212,14 @@ class _FormularioUsuarioState extends ConsumerState<_FormularioUsuario> {
           valor: _rol,
           onCambio: (rol) => setState(() => _rol = rol),
         ),
+        if (_errorGeneral != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            _errorGeneral!,
+            key: const Key('error_crear_usuario'),
+            style: TextStyle(color: ColoresApp.of(context).sale),
+          ),
+        ],
         const SizedBox(height: 16),
         BotonPrincipal(
           key: const Key('boton_crear_usuario'),
@@ -182,3 +230,8 @@ class _FormularioUsuarioState extends ConsumerState<_FormularioUsuario> {
     );
   }
 }
+
+/// Por qué no se pudo guardar el PIN en la tienda compartida.
+String mensajeErrorPin(Object error) => error is ErrorSinConexion
+    ? mensajeSinInternetPin
+    : mensajeErrorTienda(error);

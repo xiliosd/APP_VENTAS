@@ -4,17 +4,21 @@ import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/screens/login/ingresar_pin_screen.dart';
 import 'package:app_ventas/widgets/indicadores_pin.dart';
+import 'package:app_ventas/sincronizacion/supabase_nube_tienda.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../support/nube_tienda_falsa.dart';
 import '../../support/vibraciones.dart';
 
 void main() {
-  testWidgets('PIN correcto abre sesión y PIN incorrecto muestra error',
-      (tester) async {
+  testWidgets('PIN correcto abre sesión y PIN incorrecto muestra error', (
+    tester,
+  ) async {
     final registro = registrarVibraciones(tester);
     // Celular de 411x914 dp: en la vista de prueba (800x600) el teclado
     // queda debajo del borde.
@@ -23,12 +27,13 @@ void main() {
     addTearDown(tester.view.reset);
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
-    final usuarioId = await db.into(db.usuarios).insert(
+    final usuarioId = await db
+        .into(db.usuarios)
+        .insert(
           UsuariosCompanion.insert(
             nombre: 'Ana',
             rol: 'admin',
-            pinHash:
-                '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', // "1234"
+            pinHash: '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', // "1234"
           ),
         );
     final usuario = (await db.select(db.usuarios).get()).single;
@@ -47,8 +52,10 @@ void main() {
         child: MaterialApp(home: IngresarPinScreen(usuario: usuario)),
       ),
     );
-    expect(tester.widget<Text>(find.text('Hola, Ana')).style?.fontFamily,
-        'Nunito');
+    expect(
+      tester.widget<Text>(find.text('Hola, Ana')).style?.fontFamily,
+      'Nunito',
+    );
 
     for (final digito in ['0', '0', '0', '0']) {
       await tester.tap(find.byKey(Key('tecla_$digito')));
@@ -58,8 +65,10 @@ void main() {
     expect(container.read(sesionProvider).haySesion, isFalse);
     expect(find.byType(IndicadoresPin), findsOneWidget);
     expect(tester.getSize(find.byKey(const Key('tecla_1'))).width, 76);
-    expect(registro.where((v) => v == 'HapticFeedbackType.selectionClick'),
-        hasLength(4));
+    expect(
+      registro.where((v) => v == 'HapticFeedbackType.selectionClick'),
+      hasLength(4),
+    );
     expect(registro.last, 'HapticFeedbackType.heavyImpact');
 
     for (final digito in ['1', '2', '3', '4']) {
@@ -70,8 +79,9 @@ void main() {
     expect(container.read(sesionProvider).usuarioActivo?.id, usuarioId);
   });
 
-  testWidgets('PIN correcto cierra la pantalla cuando fue empujada al stack',
-      (tester) async {
+  testWidgets('PIN correcto cierra la pantalla cuando fue empujada al stack', (
+    tester,
+  ) async {
     // Celular de 411x914 dp: en la vista de prueba (800x600) el teclado
     // queda debajo del borde.
     tester.view.physicalSize = const Size(1080, 2400);
@@ -79,12 +89,13 @@ void main() {
     addTearDown(tester.view.reset);
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
-    await db.into(db.usuarios).insert(
+    await db
+        .into(db.usuarios)
+        .insert(
           UsuariosCompanion.insert(
             nombre: 'Ana',
             rol: 'admin',
-            pinHash:
-                '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', // "1234"
+            pinHash: '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4', // "1234"
           ),
         );
     final usuario = (await db.select(db.usuarios).get()).single;
@@ -131,6 +142,65 @@ void main() {
     expect(container.read(sesionProvider).haySesion, isTrue);
     expect(find.byType(IngresarPinScreen), findsNothing);
     expect(find.byKey(const Key('pantalla_host')), findsOneWidget);
+  });
+
+  testWidgets('la primera vez en este celular sin internet pide conectarse', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    final nube = NubeTiendaFalsa();
+    final tienda = await nube.crearTienda('La Esquina');
+    await db
+        .into(db.usuarios)
+        .insert(
+          UsuariosCompanion.insert(
+            nombre: 'Beto',
+            rol: 'vendedor',
+            pinHash: '',
+          ),
+        );
+    await db
+        .into(db.estadoSincronizacion)
+        .insert(
+          EstadoSincronizacionCompanion.insert(
+            id: const Value(1),
+            tiendaId: tienda,
+          ),
+        );
+    nube.sinConexion = true;
+    final usuario = (await db.select(db.usuarios).get()).single;
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(db),
+        preferenciasProvider.overrideWithValue(await _preferencias()),
+        nubeTiendaProvider.overrideWithValue(nube),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(home: IngresarPinScreen(usuario: usuario)),
+      ),
+    );
+    for (final digito in ['1', '2', '3', '4']) {
+      await tester.tap(find.byKey(Key('tecla_$digito')));
+      await tester.pumpAndSettle();
+    }
+
+    expect(
+      find.text(
+        'Es la primera vez que entras en este celular: conéctate a internet.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('PIN incorrecto'), findsNothing);
+    expect(container.read(sesionProvider).haySesion, isFalse);
   });
 }
 

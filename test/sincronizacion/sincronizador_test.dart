@@ -5,6 +5,7 @@ import 'package:app_ventas/repositories/inventario_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
 import 'package:app_ventas/sincronizacion/nube_tienda.dart';
 import 'package:app_ventas/sincronizacion/sincronizador.dart';
+import 'package:app_ventas/util/pin_hash.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -609,5 +610,27 @@ void main() {
     final enB = await InventarioRepository(b).existencias(productoB.id);
     expect(enA, enB);
     expect(enA, 20 - 2 - 3);
+  });
+
+  test('el celular del admin sube los PIN que la nube no tiene', () async {
+    await a
+        .into(a.usuarios)
+        .insert(
+          UsuariosCompanion.insert(
+            nombre: 'Ana',
+            rol: 'admin',
+            pinHash: hashPin('4321'),
+          ),
+        );
+
+    await sincronizadorA.convertirEnCompartida('La Esquina');
+
+    final tienda = (await nube.miTienda())!;
+    final ana = await a.select(a.usuarios).getSingle();
+    expect(await nube.pinesFaltantes(tienda), isEmpty);
+    expect(
+      await nube.verificarPin(tienda, ana.idGlobal, '4321'),
+      ResultadoPin.ok,
+    );
   });
 }

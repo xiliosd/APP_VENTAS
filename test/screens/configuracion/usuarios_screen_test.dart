@@ -5,12 +5,15 @@ import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/providers/repository_providers.dart';
 import 'package:app_ventas/repositories/usuario_repository.dart';
 import 'package:app_ventas/screens/configuracion/usuarios_screen.dart';
+import 'package:app_ventas/sincronizacion/nube_tienda.dart';
+import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/montaje.dart';
+import '../../support/sincronizacion_prueba.dart';
 
 void main() {
   late AppDatabase db;
@@ -33,13 +36,17 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('crear un usuario sin tocar el rol crea un vendedor',
-      (tester) async {
+  testWidgets('crear un usuario sin tocar el rol crea un vendedor', (
+    tester,
+  ) async {
     await montar(tester);
     await abrirFormulario(tester);
     expect(find.text('Agregar usuario'), findsOneWidget);
 
-    await tester.enterText(find.byKey(const Key('campo_nombre_usuario')), 'Beto');
+    await tester.enterText(
+      find.byKey(const Key('campo_nombre_usuario')),
+      'Beto',
+    );
     await tester.enterText(find.byKey(const Key('campo_pin_usuario')), '4321');
     await tester.tap(find.byKey(const Key('boton_crear_usuario')));
     await tester.pumpAndSettle();
@@ -49,19 +56,26 @@ void main() {
     expect(usuarios.single.rol, 'vendedor');
     expect(find.text('Beto'), findsOneWidget);
     expect(find.text('Usuario creado'), findsOneWidget);
-    expect(find.text('Vendedor'), findsOneWidget);
+    expect(find.text('Vendedor 1'), findsOneWidget);
   });
 
-  testWidgets('elegir Administrador en el selector crea un admin',
-      (tester) async {
+  testWidgets('elegir Administrador en el selector crea un admin', (
+    tester,
+  ) async {
     await montar(tester);
     await abrirFormulario(tester);
 
-    await tester.enterText(find.byKey(const Key('campo_nombre_usuario')), 'Carla');
+    await tester.enterText(
+      find.byKey(const Key('campo_nombre_usuario')),
+      'Carla',
+    );
     await tester.enterText(find.byKey(const Key('campo_pin_usuario')), '1111');
-    await tester.tap(find.descendant(
+    await tester.tap(
+      find.descendant(
         of: find.byKey(const Key('selector_rol')),
-        matching: find.text('Administrador')));
+        matching: find.text('Administrador'),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('boton_crear_usuario')));
     await tester.pumpAndSettle();
@@ -70,12 +84,16 @@ void main() {
     expect(usuarios.single.rol, 'admin');
   });
 
-  testWidgets('PIN inválido al crear muestra error y no crea el usuario',
-      (tester) async {
+  testWidgets('PIN inválido al crear muestra error y no crea el usuario', (
+    tester,
+  ) async {
     await montar(tester);
     await abrirFormulario(tester);
 
-    await tester.enterText(find.byKey(const Key('campo_nombre_usuario')), 'Beto');
+    await tester.enterText(
+      find.byKey(const Key('campo_nombre_usuario')),
+      'Beto',
+    );
     await tester.enterText(find.byKey(const Key('campo_pin_usuario')), '12');
     await tester.tap(find.byKey(const Key('boton_crear_usuario')));
     await tester.pumpAndSettle();
@@ -84,10 +102,15 @@ void main() {
     expect(await db.select(db.usuarios).get(), isEmpty);
   });
 
-  testWidgets('resetear el PIN de un usuario guarda el nuevo PIN',
-      (tester) async {
+  testWidgets('resetear el PIN de un usuario guarda el nuevo PIN', (
+    tester,
+  ) async {
     final repo = UsuarioRepository(db);
-    final id = await repo.crearUsuario(nombre: 'Beto', rol: 'vendedor', pin: '1111');
+    final id = await repo.crearUsuario(
+      nombre: 'Beto',
+      rol: 'vendedor',
+      pin: '1111',
+    );
     await montar(tester);
 
     await tester.tap(find.byKey(Key('usuario_item_$id')));
@@ -104,25 +127,32 @@ void main() {
     expect(await repo.verificarPin(id, '1111'), isNull);
   });
 
-  testWidgets('PIN inválido en el reseteo muestra error y no cierra el diálogo',
-      (tester) async {
-    final repo = UsuarioRepository(db);
-    final id = await repo.crearUsuario(nombre: 'Beto', rol: 'vendedor', pin: '1111');
-    await montar(tester);
+  testWidgets(
+    'PIN inválido en el reseteo muestra error y no cierra el diálogo',
+    (tester) async {
+      final repo = UsuarioRepository(db);
+      final id = await repo.crearUsuario(
+        nombre: 'Beto',
+        rol: 'vendedor',
+        pin: '1111',
+      );
+      await montar(tester);
 
-    await tester.tap(find.byKey(Key('usuario_item_$id')));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('campo_nuevo_pin')), '12a4');
-    await tester.tap(find.byKey(const Key('boton_guardar_pin')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(Key('usuario_item_$id')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('campo_nuevo_pin')), '12a4');
+      await tester.tap(find.byKey(const Key('boton_guardar_pin')));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(AlertDialog), findsOneWidget);
-    expect(find.text('El PIN debe tener 4 dígitos'), findsOneWidget);
-    expect(await repo.verificarPin(id, '1111'), isNotNull);
-  });
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('El PIN debe tener 4 dígitos'), findsOneWidget);
+      expect(await repo.verificarPin(id, '1111'), isNotNull);
+    },
+  );
 
-  testWidgets('un doble toque en Guardar PIN cierra solo el diálogo',
-      (tester) async {
+  testWidgets('un doble toque en Guardar PIN cierra solo el diálogo', (
+    tester,
+  ) async {
     final id = await UsuarioRepository(db)
         .crearUsuario(nombre: 'Beto', rol: 'vendedor', pin: '1111');
     final guardado = Completer<void>();
@@ -131,14 +161,16 @@ void main() {
       ProviderScope(
         overrides: [
           databaseProvider.overrideWithValue(db),
-          usuarioRepositoryProvider
-              .overrideWithValue(_UsuarioRepositoryLento(db, guardado.future)),
+          usuarioRepositoryProvider.overrideWithValue(
+            _UsuarioRepositoryLento(db, guardado.future),
+          ),
         ],
         child: MaterialApp(navigatorKey: navegador, home: const Text('Inicio')),
       ),
     );
-    navegador.currentState!
-        .push(MaterialPageRoute(builder: (_) => const UsuariosScreen()));
+    navegador.currentState!.push(
+      MaterialPageRoute(builder: (_) => const UsuariosScreen()),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(Key('usuario_item_$id')));
@@ -155,29 +187,142 @@ void main() {
     expect(find.byType(UsuariosScreen), findsOneWidget);
   });
 
-  testWidgets('cada usuario lleva su chip de rol y el actual dice (tú)',
-      (tester) async {
+  testWidgets('cada usuario lleva su chip de rol y el actual dice (tú)', (
+    tester,
+  ) async {
     final container = await containerConSesion(db);
     addTearDown(container.dispose);
     await UsuarioRepository(db)
         .crearUsuario(nombre: 'Beto', rol: 'vendedor', pin: '1234');
     await tester.pumpWidget(
-        appDePrueba(container, inicio: const UsuariosScreen()));
+      appDePrueba(container, inicio: const UsuariosScreen()),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Ana (tú)'), findsOneWidget);
     expect(find.text('Beto'), findsOneWidget);
     expect(find.text('Beto (tú)'), findsNothing);
-    final beto = (await (db.select(db.usuarios)
-              ..where((u) => u.nombre.equals('Beto')))
-            .getSingle())
-        .id;
+    final beto = (await (db.select(
+      db.usuarios,
+    )..where((u) => u.nombre.equals('Beto'))).getSingle()).id;
     expect(
-        find.descendant(
-            of: find.byKey(Key('rol_$beto')), matching: find.text('Vendedor')),
-        findsOneWidget);
+      find.descendant(
+        of: find.byKey(Key('rol_$beto')),
+        matching: find.text('Vendedor'),
+      ),
+      findsOneWidget,
+    );
   });
 
+  group('tienda compartida', () {
+    Future<SincronizacionFalsa> montarCompartida(
+      WidgetTester tester, {
+      Object? errorAlGuardarPin,
+    }) async {
+      final sincronizacion = SincronizacionFalsa(
+        inicial: const EstadoTiendaCompartida(fase: FaseSincronizacion.alDia),
+        errorAlGuardarPin: errorAlGuardarPin,
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            sincronizacionProvider.overrideWith(() => sincronizacion),
+          ],
+          child: const MaterialApp(home: UsuariosScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return sincronizacion;
+    }
+
+    Future<void> crearBeto(WidgetTester tester) async {
+      await abrirFormulario(tester);
+      await tester.enterText(
+        find.byKey(const Key('campo_nombre_usuario')),
+        'Beto',
+      );
+      await tester.enterText(
+        find.byKey(const Key('campo_pin_usuario')),
+        '4321',
+      );
+      await tester.tap(find.byKey(const Key('boton_crear_usuario')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('sin internet no crea el vendedor y lo explica', (
+      tester,
+    ) async {
+      await montarCompartida(
+        tester,
+        errorAlGuardarPin: const ErrorSinConexion(),
+      );
+
+      await crearBeto(tester);
+
+      expect(
+        find.text(
+          'Necesitas internet para guardar el PIN en la tienda compartida.',
+        ),
+        findsOneWidget,
+      );
+      expect(await db.select(db.usuarios).get(), isEmpty);
+    });
+
+    testWidgets('con internet guarda el PIN en la nube y crea el vendedor', (
+      tester,
+    ) async {
+      final sincronizacion = await montarCompartida(tester);
+
+      await crearBeto(tester);
+
+      final beto = await db.select(db.usuarios).getSingle();
+      expect(beto.numeroVendedor, 1);
+      expect(sincronizacion.pinesGuardados.single.idGlobal, beto.idGlobal);
+      expect(sincronizacion.pinesGuardados.single.pin, '4321');
+      expect(find.text('Vendedor 1'), findsOneWidget);
+    });
+
+    testWidgets('sin internet no cambia el PIN', (tester) async {
+      final id = await UsuarioRepository(db)
+          .crearUsuario(nombre: 'Ana', rol: 'admin', pin: '1234');
+      await montarCompartida(
+        tester,
+        errorAlGuardarPin: const ErrorSinConexion(),
+      );
+
+      await tester.tap(find.byKey(Key('usuario_item_$id')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('campo_nuevo_pin')), '9999');
+      await tester.tap(find.byKey(const Key('boton_guardar_pin')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Necesitas internet para guardar el PIN en la tienda compartida.',
+        ),
+        findsOneWidget,
+      );
+      expect(await UsuarioRepository(db).verificarPin(id, '1234'), isNotNull);
+    });
+
+    testWidgets('el PIN nuevo sube con la versión siguiente', (tester) async {
+      final id = await UsuarioRepository(db)
+          .crearUsuario(nombre: 'Ana', rol: 'admin', pin: '1234');
+      final sincronizacion = await montarCompartida(tester);
+
+      await tester.tap(find.byKey(Key('usuario_item_$id')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('campo_nuevo_pin')), '9999');
+      await tester.tap(find.byKey(const Key('boton_guardar_pin')));
+      await tester.pumpAndSettle();
+
+      expect(sincronizacion.pinesGuardados.single.version, 1);
+      final ana = await db.select(db.usuarios).getSingle();
+      expect(ana.versionPin, 1);
+      expect(await UsuarioRepository(db).verificarPin(id, '9999'), isNotNull);
+    });
+  });
 }
 
 /// Espera a [_espera] antes de guardar el PIN, para simular la latencia de la
