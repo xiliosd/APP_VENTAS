@@ -53,6 +53,10 @@ Drift / SQLite (persistencia local, única fuente de verdad)
   bloqueo); el primer ingreso de un usuario en un celular nuevo se revisa en línea y queda
   guardado en ese celular. Un celular revocado entrega sus movimientos de antes de la
   revocación (hasta 30 días) y borra su copia de la tienda.
+  Cuando un ciclo baja ventas, conteos o entradas, el `Sincronizador` compara las existencias
+  antes y después y deja en `avisosBajados` los productos que llegaron a su mínimo, que el
+  Inicio muestra como tras una venta propia. Un celular de vendedor recién aprobado guarda
+  `recorrido_vendedor_pendiente` para mostrar una sola vez su recorrido corto.
 - `lib/util/` — moneda (COP entero), hash de PIN y fechas.
 
 ### Excepciones a los lineamientos

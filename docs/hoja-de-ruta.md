@@ -118,11 +118,11 @@ la monetización y la subida a Play Store quedan para después).
      "Desactivar" (Usuarios) o "Quitar acceso" (Celulares) hacen que ese celular entregue lo
      pendiente y borre la tienda. Los celulares con la app de E2 dejan de sincronizar hasta
      actualizarla (protocolo 2).
-   Incluye lo que viene del paso 5:
-   - Huella del vendedor — que la active él mismo desde su cuenta en su celular (hoy el
-     interruptor solo está en Ajustes, que ve el administrador).
-   - Recorrido del vendedor — al abrir la app por primera vez en su celular (hoy el recorrido de
-     primer uso solo lo ve el administrador, así que el globo de "Consultar precio" no le llega).
+   - E4 — huella, recorrido y avisos: hecho el 2026-11-06. Cada usuario activa su huella desde
+     su cuenta (su inicial → "Entrar con huella"); el vendedor ve un recorrido corto la primera
+     vez que entra en su celular; cuando lo que bajó de otro celular deja un producto en su
+     mínimo, el Inicio muestra "Quedan N …: toca pedir" como tras una venta propia. El aviso
+     "Un celular nuevo quiere entrar como …" ya venía de E3. Paso 6 completo.
 7. Prueba en celular de lo que falta — compilar un APK y probar R3a, R3b, R4, las tandas 1 a 4
    de mejoras de tienda y lo nuevo de los pasos 2 a 6 (ver "Pendiente de verificar").
 
@@ -158,6 +158,10 @@ la monetización y la subida a Play Store quedan para después).
   (`haptic_feedback_enabled=0`, leído por adb el 2026-10-30).
 
 ## Pendiente de verificar
+
+- E4, con el celular del vendedor: activar la huella desde su cuenta; ver el recorrido corto
+  una sola vez; una venta en el celular del vendedor que deja un producto en su mínimo hace
+  aparecer "Quedan N …: toca pedir" en el celular del admin en un minuto.
 
 - E3 (entrada y salida del vendedor), con un segundo celular o un emulador como vendedor:
   activar "Allow anonymous sign-ins" en Supabase; crear el vendedor y "Conectar su celular";
