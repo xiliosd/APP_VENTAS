@@ -7,7 +7,7 @@ import 'nube_tienda.dart';
 
 /// Versión del formato con que este celular sube y baja filas. Si la nube
 /// exige una mayor, el celular deja de sincronizar hasta actualizar la app.
-const versionProtocoloSincronizacion = 1;
+const versionProtocoloSincronizacion = 2;
 
 /// Filas por subida y por página de bajada.
 const tamanoLote = 500;

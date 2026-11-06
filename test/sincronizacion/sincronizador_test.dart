@@ -274,7 +274,8 @@ void main() {
     expect(await sincronizadorB.esCompartida(), isTrue);
     final usuario = await b.select(b.usuarios).getSingle();
     expect(usuario.nombre, 'Ana');
-    expect(usuario.pinHash, 'h');
+    // El PIN no viaja: su primer ingreso en B se revisa en línea.
+    expect(usuario.pinHash, '');
     final configuracion = await b.select(b.configuracionTienda).getSingle();
     expect(configuracion.nombreTienda, 'La Esquina');
     expect(configuracion.imagenQr, [7, 7]);

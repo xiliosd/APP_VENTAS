@@ -52,7 +52,20 @@ class Usuarios extends Table with ConIdGlobal {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get nombre => text()();
   TextColumn get rol => text()(); // 'admin' | 'vendedor'
+  /// Vacío en un celular al que el usuario llegó desde la nube y aún no entró:
+  /// el PIN no viaja en la tienda compartida, se revisa en línea la primera
+  /// vez y luego se guarda aquí.
   TextColumn get pinHash => text()();
+
+  /// Un vendedor desactivado no aparece en "¿Quién eres?" ni puede entrar.
+  BoolColumn get activo => boolean().withDefault(const Constant(true))();
+
+  /// Lo que el vendedor escribe para unirse desde su celular; solo vendedores.
+  IntColumn get numeroVendedor => integer().nullable()();
+
+  /// Sube cada vez que se cambia el PIN: otro celular con una versión menor
+  /// sabe que su PIN guardado ya no sirve.
+  IntColumn get versionPin => integer().withDefault(const Constant(0))();
 }
 
 @DataClassName('Producto')
@@ -375,7 +388,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -454,6 +467,11 @@ class AppDatabase extends _$AppDatabase {
       await m.createTable(cambiosPendientes);
       await m.createTable(estadoSincronizacion);
       await _crearDisparadores();
+    }
+    if (desde < 13) {
+      await m.addColumn(usuarios, usuarios.activo);
+      await m.addColumn(usuarios, usuarios.numeroVendedor);
+      await m.addColumn(usuarios, usuarios.versionPin);
     }
   }
 

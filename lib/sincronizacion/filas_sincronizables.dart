@@ -92,6 +92,8 @@ Future<Map<String, Object?>?> leerFila(
       .get();
   if (filas.isEmpty) return null;
   final datos = Map<String, Object?>.of(filas.single.data)..remove('id');
+  // El PIN se queda en cada celular; la nube lo guarda aparte (`pines`).
+  if (tabla == 'usuarios') datos.remove('pin_hash');
   for (final MapEntry(key: columna, value: apuntada) in _referencias(
     tabla,
     datos,
@@ -168,10 +170,17 @@ Future<void> aplicarFila(
       !await _ganaProveedorRepetido(db, valores)) {
     return;
   }
+  // SQLite revisa el NOT NULL de la fila nueva aun cuando termina en
+  // actualización: el PIN vacío va siempre en la inserción y solo entra en la
+  // actualización cuando el guardado aquí ya no sirve.
+  final conservar = {'id_global'};
+  if (tabla == 'usuarios' && !await _pinLocalCaduco(db, valores)) {
+    conservar.add('pin_hash');
+  }
   final nombres = valores.keys.toList();
   final actualizar = [
     for (final nombre in nombres)
-      if (nombre != 'id_global') '$nombre = excluded.$nombre',
+      if (!conservar.contains(nombre)) '$nombre = excluded.$nombre',
   ];
   await db.customStatement(
     'INSERT INTO $tabla (${nombres.join(', ')}) '
@@ -179,6 +188,26 @@ Future<void> aplicarFila(
     'ON CONFLICT (id_global) DO UPDATE SET ${actualizar.join(', ')}',
     [for (final nombre in nombres) valores[nombre]],
   );
+}
+
+/// El PIN guardado en este celular no se pisa con lo que llega de la nube.
+/// Un usuario nuevo queda sin PIN (su primer ingreso aquí se revisa en
+/// línea), y si el PIN se cambió en otro celular (`version_pin` mayor) el
+/// guardado aquí se borra porque ya no sirve. Deja `pin_hash` vacío en
+/// [valores] y devuelve si también debe borrarse el guardado.
+Future<bool> _pinLocalCaduco(
+  AppDatabase db,
+  Map<String, Object?> valores,
+) async {
+  valores['pin_hash'] = '';
+  final local = await db
+      .customSelect(
+        'SELECT version_pin FROM usuarios WHERE id_global = ?',
+        variables: [Variable.withString(valores['id_global']! as String)],
+      )
+      .getSingleOrNull();
+  final versionQueLlega = (valores['version_pin'] as int?) ?? 0;
+  return local == null || versionQueLlega > local.read<int>('version_pin');
 }
 
 /// Producto y proveedor no se repiten: si dos celulares agregaron el mismo

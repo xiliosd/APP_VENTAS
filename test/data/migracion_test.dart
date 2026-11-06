@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/esquema_v1.dart';
 import '../support/esquema_v10.dart';
 import '../support/esquema_v11.dart';
+import '../support/esquema_v12.dart';
 import '../support/esquema_v2.dart';
 import '../support/esquema_v3.dart';
 import '../support/esquema_v4.dart';
@@ -76,7 +77,7 @@ void main() {
       1,
       2,
     ]);
-    expect(db.schemaVersion, 12);
+    expect(db.schemaVersion, 13);
   });
 
   test('una base v2 abre en v3 sin nada anulado y sin correcciones', () async {
@@ -587,6 +588,35 @@ void main() {
     () async {
       final archivo = File('${carpeta.path}/v11c.sqlite');
       crearBaseV11(archivo.path);
+      final migrada = AppDatabase(NativeDatabase(archivo));
+      addTearDown(migrada.close);
+      final nueva = AppDatabase(NativeDatabase.memory());
+      addTearDown(nueva.close);
+
+      expect(await columnasPorTabla(migrada), await columnasPorTabla(nueva));
+    },
+  );
+
+  test('una base v12 abre en v13 con usuarios activos y sin número', () async {
+    final archivo = File('${carpeta.path}/v12u.sqlite');
+    crearBaseV12(archivo.path);
+    final db = AppDatabase(NativeDatabase(archivo));
+    addTearDown(db.close);
+
+    final usuarios = await db.select(db.usuarios).get();
+    expect(usuarios, isNotEmpty);
+    for (final usuario in usuarios) {
+      expect(usuario.activo, isTrue);
+      expect(usuario.numeroVendedor, isNull);
+      expect(usuario.versionPin, 0);
+    }
+  });
+
+  test(
+    'una base v12 migrada tiene las mismas columnas que una base nueva',
+    () async {
+      final archivo = File('${carpeta.path}/v12c.sqlite');
+      crearBaseV12(archivo.path);
       final migrada = AppDatabase(NativeDatabase(archivo));
       addTearDown(migrada.close);
       final nueva = AppDatabase(NativeDatabase.memory());

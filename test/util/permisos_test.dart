@@ -9,6 +9,8 @@ void main() {
     nombre: 'Ana',
     rol: 'admin',
     pinHash: 'x',
+    activo: true,
+    versionPin: 0,
   );
   const beto = Usuario(
     id: 2,
@@ -16,6 +18,8 @@ void main() {
     nombre: 'Beto',
     rol: 'vendedor',
     pinHash: 'y',
+    activo: true,
+    versionPin: 0,
   );
   final ahora = DateTime(2026, 10, 6, 15);
 

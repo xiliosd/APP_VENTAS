@@ -319,4 +319,61 @@ void main() {
       );
     },
   );
+
+  group('usuarios y su PIN', () {
+    Future<String> usuarioGlobalEnA() async =>
+        idGlobalDe(a, 'usuarios', await usuarioEn(a));
+
+    Future<Usuario> usuarioEnB(String idGlobal) => (b.select(
+      b.usuarios,
+    )..where((u) => u.idGlobal.equals(idGlobal))).getSingle();
+
+    test('el PIN no viaja a la nube', () async {
+      final datos = await leerFila(a, 'usuarios', await usuarioGlobalEnA());
+
+      expect(datos, isNot(contains('pin_hash')));
+      expect(datos!['nombre'], 'Ana');
+    });
+
+    test('un usuario nuevo de la nube queda con PIN vacío', () async {
+      final idGlobal = await usuarioGlobalEnA();
+
+      await copiar('usuarios', idGlobal);
+
+      expect((await usuarioEnB(idGlobal)).pinHash, '');
+    });
+
+    test('un usuario que llega de la nube no pisa el PIN local', () async {
+      final idGlobal = await usuarioGlobalEnA();
+      await copiar('usuarios', idGlobal);
+      await (b.update(b.usuarios)..where((u) => u.idGlobal.equals(idGlobal)))
+          .write(const UsuariosCompanion(pinHash: Value('guardado')));
+      await (a.update(a.usuarios)..where((u) => u.idGlobal.equals(idGlobal)))
+          .write(const UsuariosCompanion(nombre: Value('Ana María')));
+
+      await copiar('usuarios', idGlobal);
+
+      final enB = await usuarioEnB(idGlobal);
+      expect(enB.nombre, 'Ana María');
+      expect(enB.pinHash, 'guardado');
+    });
+
+    test(
+      'un PIN cambiado en otro celular borra el PIN guardado aquí',
+      () async {
+        final idGlobal = await usuarioGlobalEnA();
+        await copiar('usuarios', idGlobal);
+        await (b.update(b.usuarios)..where((u) => u.idGlobal.equals(idGlobal)))
+            .write(const UsuariosCompanion(pinHash: Value('guardado')));
+        await (a.update(a.usuarios)..where((u) => u.idGlobal.equals(idGlobal)))
+            .write(const UsuariosCompanion(versionPin: Value(1)));
+
+        await copiar('usuarios', idGlobal);
+
+        final enB = await usuarioEnB(idGlobal);
+        expect(enB.versionPin, 1);
+        expect(enB.pinHash, '');
+      },
+    );
+  });
 }
