@@ -88,7 +88,10 @@ No aplica: la app no expone ninguna API. Usa estos servicios externos, ambos opc
   la migración `supabase/migrations/20261104000000_vendedores.sql` (código de tienda, tabla
   `pines` y funciones `solicitar_ingreso`, `responder_solicitud`, `revocar_celular`,
   `desactivar_vendedor`, `entregar_pendientes`…), verificada con
-  `supabase/tests/vendedores_prueba.sql`. Paso manual en el panel de Supabase:
+  `supabase/tests/vendedores_prueba.sql`. Los arreglos de la revisión (entrega única y
+  coherente del celular revocado; usuarios y configuración solo los escribe el admin) van en
+  `supabase/migrations/20261106000000_vendedores_entrega.sql`, verificados con
+  `supabase/tests/vendedores_entrega_prueba.sql`. Paso manual en el panel de Supabase:
   Authentication → Sign In / Providers → activar **"Allow anonymous sign-ins"** (los
   vendedores entran con una sesión anónima; nunca pueden crear tiendas).
 - **Open Food Facts** (consulta pública, sin clave): al escanear un código desconocido,
