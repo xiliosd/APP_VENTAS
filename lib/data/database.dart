@@ -472,6 +472,11 @@ class AppDatabase extends _$AppDatabase {
       await m.addColumn(usuarios, usuarios.activo);
       await m.addColumn(usuarios, usuarios.numeroVendedor);
       await m.addColumn(usuarios, usuarios.versionPin);
+      // El de usuarios ya no se dispara al guardar solo el PIN.
+      await customStatement(
+        'DROP TRIGGER IF EXISTS sincronizar_usuarios_edicion',
+      );
+      await _crearDisparadores();
     }
   }
 

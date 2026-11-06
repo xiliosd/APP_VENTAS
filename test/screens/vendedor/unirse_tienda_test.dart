@@ -7,7 +7,9 @@ import 'package:app_ventas/screens/login/seleccionar_usuario_screen.dart';
 import 'package:app_ventas/screens/vendedor/esperando_aprobacion_screen.dart';
 import 'package:app_ventas/sincronizacion/nube_tienda.dart';
 import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
+import 'package:app_ventas/sincronizacion/sincronizador.dart';
 import 'package:app_ventas/sincronizacion/supabase_nube_tienda.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -255,5 +257,59 @@ void main() {
     )..where((u) => u.idGlobal.equals('u-beto'))).getSingle();
     // Sin el PIN en memoria, su primer ingreso se revisa en línea.
     expect(beto.pinHash, isEmpty);
+  });
+
+  testWidgets('si se cerró tras bajar la tienda, no se queda esperando', (
+    tester,
+  ) async {
+    await celular.iniciarSesionCelular();
+    await celular.solicitarIngreso(codigo, 1, '1234', 'Redmi');
+    final solicitud = (await admin.solicitudes(tienda)).single;
+    await admin.responderSolicitud(
+      tienda,
+      solicitud.usuarioAuth,
+      aprobar: true,
+    );
+    // La tienda alcanzó a bajar, pero la app se cerró antes de olvidar la
+    // solicitud.
+    await Sincronizador(db, celular).descargarTienda(tienda);
+
+    final prefs = await abrir(
+      tester,
+      valores: {claveSolicitudPendiente: tienda},
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SeleccionarUsuarioScreen), findsOneWidget);
+    expect(prefs.getString(claveSolicitudPendiente), isNull);
+  });
+
+  testWidgets('cancelar a mitad de una descarga no deja la tienda a medias', (
+    tester,
+  ) async {
+    await celular.iniciarSesionCelular();
+    await celular.solicitarIngreso(codigo, 1, '1234', 'Redmi');
+    final solicitud = (await admin.solicitudes(tienda)).single;
+    await admin.responderSolicitud(
+      tienda,
+      solicitud.usuarioAuth,
+      aprobar: true,
+    );
+    // Una descarga que se cortó (sin internet): quedó el estado sin datos.
+    celular.sinConexion = true;
+    await db
+        .into(db.estadoSincronizacion)
+        .insert(
+          EstadoSincronizacionCompanion.insert(
+            id: const Value(1),
+            tiendaId: tienda,
+          ),
+        );
+    await abrir(tester, valores: {claveSolicitudPendiente: tienda});
+
+    await tester.tap(find.byKey(const Key('boton_cancelar_solicitud')));
+    await tester.pumpAndSettle();
+
+    expect(await db.select(db.estadoSincronizacion).get(), isEmpty);
   });
 }

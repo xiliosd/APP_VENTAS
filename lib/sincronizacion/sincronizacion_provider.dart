@@ -369,11 +369,17 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
     if (membresia.estado == EstadoMiembro.pendiente) {
       return EstadoMiembro.pendiente;
     }
-    await descargarTienda(tiendaId);
+    // Si la app se cerró justo después de bajar la tienda, ya está aquí:
+    // bajarla otra vez fallaría ("el celular ya tiene una tienda") y el
+    // celular se quedaría esperando para siempre.
+    final db = ref.read(databaseProvider);
+    final yaBajada =
+        await _sincronizador?.tiendaId() == tiendaId &&
+        (await db.select(db.usuarios).get()).isNotEmpty;
+    if (!yaBajada) await descargarTienda(tiendaId);
     final pin = _pinSolicitud;
     final idGlobal = membresia.usuarioIdGlobal;
     if (pin != null && idGlobal != null) {
-      final db = ref.read(databaseProvider);
       final vendedor = await (db.select(
         db.usuarios,
       )..where((u) => u.idGlobal.equals(idGlobal))).getSingleOrNull();
@@ -391,6 +397,15 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
   /// Deja de esperar la aprobación y cierra la sesión de este celular.
   Future<void> cancelarSolicitud() async {
     _pinSolicitud = null;
+    // Una descarga cortada deja el estado de la tienda sin datos: se borra
+    // para que el celular quede como nuevo.
+    final sincronizador = _sincronizador;
+    final db = ref.read(databaseProvider);
+    if (sincronizador != null &&
+        await sincronizador.esCompartida() &&
+        (await db.select(db.usuarios).get()).isEmpty) {
+      await sincronizador.vaciarBase();
+    }
     await ref.read(solicitudPendienteProvider.notifier).borrar();
     await ref.read(nubeTiendaProvider)?.cerrarSesionCelular();
   }

@@ -24,9 +24,13 @@ enum ResultadoSincronizacion {
   revocada,
 }
 
-/// Movimientos que un celular revocado todavía puede entregar: lo que vendió
-/// o anotó, no los cambios al catálogo ni a los clientes.
-const tablasMovimientos = {
+/// Lo que un celular revocado todavía puede entregar: lo que vendió o anotó,
+/// y los clientes, productos y proveedores nuevos a los que eso apunta. Solo
+/// filas nuevas: lo que ya estaba en la nube no se cambia.
+const tablasEntregables = {
+  'clientes',
+  'productos',
+  'proveedores',
   'ventas',
   'lineas_venta',
   'pagos_fiado',
@@ -203,17 +207,24 @@ class Sincronizador {
   Future<List<CambioSubida>> _movimientosPendientes() async {
     final pendientes =
         await (db.select(db.cambiosPendientes)..where(
-              (p) => p.borrado.equals(false) & p.tabla.isIn(tablasMovimientos),
+              (p) => p.borrado.equals(false) & p.tabla.isIn(tablasEntregables),
             ))
             .get();
     // Padres antes que hijos: una línea solo entra si su venta ya está.
     int orden(CambioPendiente p) => tablasConIdGlobal.indexOf(p.tabla);
     pendientes.sort((a, b) => orden(a).compareTo(orden(b)));
     final cambios = <CambioSubida>[];
+    final entregados = <String>{};
     for (final pendiente in pendientes) {
       try {
         final datos = await leerFila(db, pendiente.tabla, pendiente.idGlobal);
         if (datos == null) continue;
+        // Una línea o corrección de un movimiento que ya estaba en la nube
+        // describiría un cambio que no se entrega: se omite (la nube también
+        // la rechaza).
+        final padre = _padreEntregado(pendiente.tabla, datos);
+        if (padre != null && !entregados.contains(padre)) continue;
+        entregados.add('${pendiente.tabla}/${pendiente.idGlobal}');
         cambios.add(
           CambioSubida(
             tabla: pendiente.tabla,
@@ -228,6 +239,18 @@ class Sincronizador {
     }
     return cambios;
   }
+
+  /// 'tabla/id_global' del movimiento del que depende una línea o corrección,
+  /// o null si la fila no depende de otra.
+  String? _padreEntregado(String tabla, Map<String, Object?> datos) =>
+      switch (tabla) {
+        'lineas_venta' => 'ventas/${datos['venta_id']}',
+        'lineas_entrada' => 'entradas_mercancia/${datos['entrada_id']}',
+        'correcciones' =>
+          '${tablaDeMovimiento[datos['tipo_movimiento']]}/'
+              '${datos['movimiento_id']}',
+        _ => null,
+      };
 
   /// La tienda compartida de este celular, o null si no es compartida.
   Future<String?> tiendaId() async => (await _estado())?.tiendaId;

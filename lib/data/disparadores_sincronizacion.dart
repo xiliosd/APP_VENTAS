@@ -1,6 +1,12 @@
 /// `id_global` fijo de la única fila de `configuracion_tienda` en la nube.
 const idGlobalConfiguracion = 'unica';
 
+/// Columnas de `usuarios` que viajan a la tienda compartida: el PIN guardado
+/// en un celular no se sube (la nube lo guarda aparte), así que cambiarlo no
+/// anota nada. Una columna nueva de `usuarios` que deba viajar va aquí.
+const columnasUsuarioCompartidas =
+    'id_global, nombre, rol, activo, numero_vendedor, version_pin';
+
 /// Sentencias `CREATE TRIGGER` que anotan en `cambios_pendientes` cada alta,
 /// edición o borrado de [tablas] (y de `configuracion_tienda`).
 ///
@@ -31,7 +37,15 @@ List<String> sentenciasDisparadores(List<String> tablas) {
   return [
     for (final tabla in tablas) ...[
       disparador(tabla, 'insercion', 'INSERT', 'NEW.id_global', 0),
-      disparador(tabla, 'edicion', 'UPDATE', 'NEW.id_global', 0),
+      disparador(
+        tabla,
+        'edicion',
+        tabla == 'usuarios'
+            ? 'UPDATE OF $columnasUsuarioCompartidas'
+            : 'UPDATE',
+        'NEW.id_global',
+        0,
+      ),
       disparador(tabla, 'borrado', 'DELETE', 'OLD.id_global', 1),
     ],
     disparador(

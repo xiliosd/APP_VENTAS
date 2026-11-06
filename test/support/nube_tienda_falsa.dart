@@ -34,6 +34,9 @@ class _Miembro {
   String? nombreCelular;
   DateTime solicitadoEn;
   DateTime? revocadoEn;
+
+  /// Ya entregó lo pendiente de su última revocación.
+  bool entregado = false;
 }
 
 class _Pin {
@@ -354,7 +357,8 @@ class NubeTiendaFalsa implements NubeTienda {
     }
     miembro
       ..estado = EstadoMiembro.revocado
-      ..revocadoEn = _a.ahora();
+      ..revocadoEn = _a.ahora()
+      ..entregado = false;
   }
 
   @override
@@ -433,7 +437,10 @@ class NubeTiendaFalsa implements NubeTienda {
     return _pinValido(idGlobal, pin);
   }
 
-  static const _tablasMovimientos = {
+  static const _tablasEntregables = {
+    'clientes',
+    'productos',
+    'proveedores',
     'ventas',
     'lineas_venta',
     'pagos_fiado',
@@ -444,6 +451,28 @@ class NubeTiendaFalsa implements NubeTienda {
     'correcciones',
   };
 
+  static const _sinFecha = {
+    'clientes',
+    'productos',
+    'proveedores',
+    'lineas_venta',
+    'lineas_entrada',
+  };
+
+  static const _referencias = {
+    'cliente_id': 'clientes',
+    'producto_id': 'productos',
+    'proveedor_id': 'proveedores',
+    'usuario_id': 'usuarios',
+    'entrada_id': 'entradas_mercancia',
+  };
+
+  static const _tablaDeMovimiento = {
+    'venta': 'ventas',
+    'abono': 'pagos_fiado',
+    'gasto': 'gastos',
+  };
+
   @override
   Future<int> entregarPendientes(List<CambioSubida> cambios) async {
     _revisar();
@@ -452,33 +481,47 @@ class NubeTiendaFalsa implements NubeTienda {
     final revocadoEn = miembro?.revocadoEn;
     if (miembro?.estado != EstadoMiembro.revocado ||
         revocadoEn == null ||
+        miembro!.entregado ||
         _a.ahora().difference(revocadoEn) > const Duration(days: 30)) {
       throw StateError('este celular no puede entregar movimientos');
     }
+    miembro.entregado = true;
     entregas.addAll(cambios);
-    var aceptadas = 0;
+    final entregadas = <String>{};
     for (final cambio in cambios) {
       final datos = cambio.datos;
+      final clave = '${cambio.tabla}/${cambio.idGlobal}';
       if (datos == null ||
-          !_tablasMovimientos.contains(cambio.tabla) ||
-          _a.filas.containsKey('${cambio.tabla}/${cambio.idGlobal}')) {
+          !_tablasEntregables.contains(cambio.tabla) ||
+          _a.filas.containsKey(clave)) {
         continue;
       }
-      if (cambio.tabla == 'lineas_venta' || cambio.tabla == 'lineas_entrada') {
-        final padre = cambio.tabla == 'lineas_venta'
-            ? 'ventas/${datos['venta_id']}'
-            : 'entradas_mercancia/${datos['entrada_id']}';
-        if (_a.filas[padre] == null || _a.filas[padre]!.borrado) continue;
-      } else {
+      final padre = switch (cambio.tabla) {
+        'lineas_venta' => 'ventas/${datos['venta_id']}',
+        'lineas_entrada' => 'entradas_mercancia/${datos['entrada_id']}',
+        'correcciones' =>
+          '${_tablaDeMovimiento[datos['tipo_movimiento']]}/'
+              '${datos['movimiento_id']}',
+        _ => null,
+      };
+      if (padre != null && !entregadas.contains(padre)) continue;
+      if (!_sinFecha.contains(cambio.tabla)) {
         final fecha = datos['fecha'];
         if (fecha is! int ||
             fecha >= revocadoEn.millisecondsSinceEpoch ~/ 1000) {
           continue;
         }
       }
+      final huerfana = _referencias.entries.any((referencia) {
+        final id = datos[referencia.key];
+        if (id == null) return false;
+        final apuntada = _a.filas['${referencia.value}/$id'];
+        return apuntada == null || apuntada.borrado;
+      });
+      if (huerfana) continue;
       _guardarFila(cambio);
-      aceptadas++;
+      entregadas.add(clave);
     }
-    return aceptadas;
+    return entregadas.length;
   }
 }

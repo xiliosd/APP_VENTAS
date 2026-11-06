@@ -7,6 +7,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/esquema_v11.dart';
+import '../support/esquema_v12.dart';
 
 void main() {
   late AppDatabase db;
@@ -112,5 +113,50 @@ void main() {
         )
         .get();
     expect(disparadores, hasLength(47));
+  });
+
+  test('guardar solo el PIN en este celular no se anota para subir', () async {
+    await compartir();
+    final id = await db
+        .into(db.usuarios)
+        .insert(
+          UsuariosCompanion.insert(
+            nombre: 'Beto',
+            rol: 'vendedor',
+            pinHash: '',
+          ),
+        );
+    await db.delete(db.cambiosPendientes).go();
+
+    await (db.update(db.usuarios)..where((u) => u.id.equals(id))).write(
+      const UsuariosCompanion(pinHash: Value('guardado')),
+    );
+    expect(await pendientes(), isEmpty);
+
+    await (db.update(db.usuarios)..where((u) => u.id.equals(id))).write(
+      const UsuariosCompanion(nombre: Value('Beto B')),
+    );
+    expect((await pendientes()).single.tabla, 'usuarios');
+  });
+
+  test('una base v12 migrada tampoco anota el PIN guardado', () async {
+    final carpeta = await Directory.systemTemp.createTemp('disp');
+    addTearDown(() => carpeta.delete(recursive: true));
+    final archivo = File('${carpeta.path}/v12.sqlite');
+    crearBaseV12(archivo.path);
+    final migrada = AppDatabase(NativeDatabase(archivo));
+    addTearDown(migrada.close);
+    await migrada
+        .into(migrada.estadoSincronizacion)
+        .insert(
+          EstadoSincronizacionCompanion.insert(
+            id: const Value(1),
+            tiendaId: 't',
+          ),
+        );
+
+    await migrada.customStatement("UPDATE usuarios SET pin_hash = 'otro'");
+
+    expect(await migrada.select(migrada.cambiosPendientes).get(), isEmpty);
   });
 }

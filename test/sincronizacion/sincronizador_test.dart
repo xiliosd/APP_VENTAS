@@ -742,6 +742,81 @@ void main() {
       expect(await b.select(b.ventas).get(), isEmpty);
     });
 
+    test('entrega el cliente creado sin internet junto con su fiado', () async {
+      final betoB = await (b.select(
+        b.usuarios,
+      )..where((u) => u.rol.equals('vendedor'))).getSingle();
+      final cliente = await b
+          .into(b.clientes)
+          .insert(ClientesCompanion.insert(nombre: 'Doña Rosa'));
+      final venta = await b
+          .into(b.ventas)
+          .insert(
+            VentasCompanion.insert(
+              monto: 5000,
+              fecha: DateTime(2026, 11, 6, 10),
+              usuarioId: betoB.id,
+              esFiado: const Value(true),
+              clienteId: Value(cliente),
+            ),
+          );
+      final idCliente = (await (b.select(
+        b.clientes,
+      )..where((c) => c.id.equals(cliente))).getSingle()).idGlobal;
+      final idVenta = (await (b.select(
+        b.ventas,
+      )..where((v) => v.id.equals(venta))).getSingle()).idGlobal;
+
+      await sincronizadorVendedor.sincronizar();
+
+      final enNube = {for (final fila in nube.filas) fila.idGlobal};
+      expect(enNube, containsAll([idCliente, idVenta]));
+    });
+
+    test(
+      'no entrega la corrección de una venta que ya estaba en la nube',
+      () async {
+        // La venta de la tienda (sembrada por el admin) ya está en la nube.
+        final venta = await (b.select(
+          b.ventas,
+        )..where((v) => v.monto.equals(7000))).getSingle();
+        final betoB = await (b.select(
+          b.usuarios,
+        )..where((u) => u.rol.equals('vendedor'))).getSingle();
+        await b
+            .into(b.correcciones)
+            .insert(
+              CorreccionesCompanion.insert(
+                tipoMovimiento: TipoMovimiento.venta,
+                movimientoId: venta.id,
+                usuarioId: betoB.id,
+                accion: AccionCorreccion.anulado,
+                fecha: DateTime(2026, 11, 6, 10),
+                antes: '{}',
+              ),
+            );
+
+        await sincronizadorVendedor.sincronizar();
+
+        expect(
+          celular.entregas.where((c) => c.tabla == 'correcciones'),
+          isEmpty,
+        );
+      },
+    );
+
+    test('un celular revocado entrega una sola vez', () async {
+      expect(
+        await sincronizadorVendedor.sincronizar(),
+        ResultadoSincronizacion.revocada,
+      );
+
+      await expectLater(
+        celular.entregarPendientes(const []),
+        throwsA(isA<StateError>()),
+      );
+    });
+
     test('un celular aprobado sigue sincronizando normal', () async {
       final otro = nube.otroCelular();
       await otro.iniciarSesionCelular();
