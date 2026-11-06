@@ -4,6 +4,7 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/respaldo/respaldo_provider.dart';
+import 'package:app_ventas/sincronizacion/nube_tienda.dart';
 import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
 import 'package:app_ventas/sincronizacion/sincronizador.dart';
 import 'package:app_ventas/sincronizacion/supabase_nube_tienda.dart';
@@ -246,5 +247,43 @@ void main() {
 
     expect(subio, isFalse);
     expect(respaldo.subidas, 0);
+  });
+
+  test('el celular del admin trae las solicitudes en cada ciclo', () async {
+    await compartir();
+    final tienda = (await nube.miTienda())!;
+    await nube.subir(tienda, [
+      const CambioSubida(
+        tabla: 'usuarios',
+        idGlobal: 'u-beto',
+        datos: {
+          'id_global': 'u-beto',
+          'nombre': 'Beto',
+          'rol': 'vendedor',
+          'activo': 1,
+          'numero_vendedor': 1,
+        },
+        borrado: false,
+      ),
+    ]);
+    await nube.guardarPin(tienda, 'u-beto', '1234', 0);
+    final celular = nube.otroCelular();
+    await celular.iniciarSesionCelular();
+    await celular.solicitarIngreso('ABC234', 1, '1234', 'Redmi');
+    final container = await contenedor();
+    container.listen(sincronizacionProvider, (_, _) {});
+
+    // Al abrir sincroniza una vez.
+    await esperar(retardo);
+
+    final solicitudes = container.read(sincronizacionProvider).solicitudes;
+    expect(solicitudes.single.nombreVendedor, 'Beto');
+
+    await container
+        .read(sincronizacionProvider.notifier)
+        .responderSolicitud(solicitudes.single, aprobar: true);
+
+    expect(container.read(sincronizacionProvider).solicitudes, isEmpty);
+    expect((await celular.miMembresia())!.estado, EstadoMiembro.aprobado);
   });
 }

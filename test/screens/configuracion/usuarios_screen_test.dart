@@ -4,6 +4,7 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/providers/repository_providers.dart';
 import 'package:app_ventas/repositories/usuario_repository.dart';
+import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:app_ventas/screens/configuracion/usuarios_screen.dart';
 import 'package:app_ventas/sincronizacion/nube_tienda.dart';
 import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
@@ -321,6 +322,105 @@ void main() {
       final ana = await db.select(db.usuarios).getSingle();
       expect(ana.versionPin, 1);
       expect(await UsuarioRepository(db).verificarPin(id, '9999'), isNotNull);
+    });
+  });
+
+  group('conectar el celular de un vendedor', () {
+    Future<SincronizacionFalsa> montarConectar(
+      WidgetTester tester, {
+      required FaseSincronizacion fase,
+      FaseRespaldo respaldo = FaseRespaldo.activo,
+    }) async {
+      final sincronizacion = SincronizacionFalsa(
+        inicial: EstadoTiendaCompartida(fase: fase),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            sincronizacionProvider.overrideWith(() => sincronizacion),
+            respaldoProvider.overrideWith(() => RespaldoFijo(respaldo)),
+          ],
+          child: const MaterialApp(home: UsuariosScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return sincronizacion;
+    }
+
+    Future<int> beto() => UsuarioRepository(db).crearUsuario(
+      nombre: 'Beto',
+      rol: 'vendedor',
+      pin: '1234',
+      numeroVendedor: 1,
+    );
+
+    testWidgets('en la tienda compartida muestra el código y el número', (
+      tester,
+    ) async {
+      final id = await beto();
+      await montarConectar(tester, fase: FaseSincronizacion.alDia);
+
+      await tester.tap(find.byKey(Key('conectar_celular_$id')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Para que Beto entre desde su celular'), findsOneWidget);
+      expect(find.textContaining('Código ABC234 · Vendedor 1'), findsOneWidget);
+    });
+
+    testWidgets('si la tienda no es compartida pide compartirla primero', (
+      tester,
+    ) async {
+      final id = await beto();
+      final sincronizacion = await montarConectar(
+        tester,
+        fase: FaseSincronizacion.noCompartida,
+      );
+
+      await tester.tap(find.byKey(Key('conectar_celular_$id')));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Usar la tienda en varios celulares?'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('confirmar_compartir')));
+      await tester.pumpAndSettle();
+
+      expect(sincronizacion.compartidas, 1);
+      expect(find.textContaining('Código ABC234 · Vendedor 1'), findsOneWidget);
+    });
+
+    testWidgets('sin respaldo activo pide activarlo primero', (tester) async {
+      final id = await beto();
+      await montarConectar(
+        tester,
+        fase: FaseSincronizacion.noCompartida,
+        respaldo: FaseRespaldo.desactivado,
+      );
+
+      await tester.tap(find.byKey(Key('conectar_celular_$id')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Primero activa el respaldo en Ajustes → Respaldo.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('un vendedor sin número recibe uno al conectarlo', (
+      tester,
+    ) async {
+      await UsuarioRepository(db).crearUsuario(
+        nombre: 'Caro',
+        rol: 'vendedor',
+        pin: '1234',
+        numeroVendedor: 3,
+      );
+      final id = await UsuarioRepository(db)
+          .crearUsuario(nombre: 'Beto', rol: 'vendedor', pin: '1234');
+      await montarConectar(tester, fase: FaseSincronizacion.alDia);
+
+      await tester.tap(find.byKey(Key('conectar_celular_$id')));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Vendedor 4'), findsWidgets);
     });
   });
 }

@@ -18,6 +18,7 @@ import '../../ui/vibracion.dart';
 import '../../widgets/nombre_tienda.dart';
 import '../ayuda/preguntas_frecuentes_screen.dart';
 import '../configuracion/ajustes_screen.dart';
+import '../configuracion/atender_solicitudes.dart';
 import '../configuracion/hoja_nombre_tienda.dart';
 import '../fiado/lista_fiado_screen.dart';
 import '../historial/historial_screen.dart';
@@ -54,18 +55,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     switch (paso) {
       case PasoRecorrido.productos:
         navegador.push(
-            MaterialPageRoute(builder: (_) => const PasoProductosScreen()));
+          MaterialPageRoute(builder: (_) => const PasoProductosScreen()),
+        );
       case PasoRecorrido.venta:
         navegador.push(
-            MaterialPageRoute(builder: (_) => const PasoVentaScreen()));
+          MaterialPageRoute(builder: (_) => const PasoVentaScreen()),
+        );
       case PasoRecorrido.inicio:
         if (_globos?.activo ?? false) return;
         setState(() => _tabActual = 0);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
-          _globos = mostrarGlobos(context, globosInicio,
-              onTerminar: _terminarRecorrido,
-              onSaltar: () => ref.read(recorridoProvider.notifier).saltar());
+          _globos = mostrarGlobos(
+            context,
+            globosInicio,
+            onTerminar: _terminarRecorrido,
+            onSaltar: () => ref.read(recorridoProvider.notifier).saltar(),
+          );
         });
       case PasoRecorrido.ninguno:
       case PasoRecorrido.hecho:
@@ -128,26 +134,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     final tabs = <_Pestana>[
-      _Pestana('Inicio', Icons.space_dashboard_outlined,
-          Icons.space_dashboard_rounded,
-          ResumenScreen(
-              onVerFiado: () => setState(() => _tabActual = 1),
-              onVerPorPedir: () => setState(() => _tabActual = 2))),
-      const _Pestana('Fiado', Icons.people_outline_rounded,
-          Icons.people_rounded, ListaFiadoScreen()),
-      const _Pestana('Inventario', Icons.inventory_2_outlined,
-          Icons.inventory_2_rounded, InventarioScreen()),
-      const _Pestana('Historial', Icons.receipt_long_outlined,
-          Icons.receipt_long_rounded, HistorialScreen()),
+      _Pestana(
+        'Inicio',
+        Icons.space_dashboard_outlined,
+        Icons.space_dashboard_rounded,
+        ResumenScreen(
+          onVerFiado: () => setState(() => _tabActual = 1),
+          onVerPorPedir: () => setState(() => _tabActual = 2),
+        ),
+      ),
+      const _Pestana(
+        'Fiado',
+        Icons.people_outline_rounded,
+        Icons.people_rounded,
+        ListaFiadoScreen(),
+      ),
+      const _Pestana(
+        'Inventario',
+        Icons.inventory_2_outlined,
+        Icons.inventory_2_rounded,
+        InventarioScreen(),
+      ),
+      const _Pestana(
+        'Historial',
+        Icons.receipt_long_outlined,
+        Icons.receipt_long_rounded,
+        HistorialScreen(),
+      ),
       if (sesion.esAdmin)
-        const _Pestana('Ajustes', Icons.settings_outlined,
-            Icons.settings_rounded, AjustesScreen()),
+        const _Pestana(
+          'Ajustes',
+          Icons.settings_outlined,
+          Icons.settings_rounded,
+          AjustesScreen(),
+        ),
     ];
     if (_tabActual >= tabs.length) _tabActual = 0;
 
     final esInicio = _tabActual == 0;
     final escala = MediaQuery.textScalerOf(context);
-    return Scaffold(
+    final pantalla = Scaffold(
       appBar: AppBar(
         toolbarHeight: esInicio
             ? math.max(
@@ -158,13 +184,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         // Sin la línea gris del tema bajo el azul.
         shape: esInicio ? const Border() : null,
         // Header de marca solo en Inicio; las demás pestañas, barra blanca.
-        backgroundColor:
-            esInicio ? ColoresApp.of(context).tarjetaPrincipal : null,
-        foregroundColor:
-            esInicio ? ColoresApp.of(context).sobreTarjetaPrincipal : null,
-        titleTextStyle:
-            esInicio ? estiloTitulo(
-                tamano: 20, color: ColoresApp.of(context).sobreTarjetaPrincipal) : null,
+        backgroundColor: esInicio
+            ? ColoresApp.of(context).tarjetaPrincipal
+            : null,
+        foregroundColor: esInicio
+            ? ColoresApp.of(context).sobreTarjetaPrincipal
+            : null,
+        titleTextStyle: esInicio
+            ? estiloTitulo(
+                tamano: 20,
+                color: ColoresApp.of(context).sobreTarjetaPrincipal,
+              )
+            : null,
         title: esInicio
             ? Row(
                 children: [
@@ -182,11 +213,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                         NombreTienda(
                           estilo: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: ColoresApp.of(context)
-                                  .sobreTarjetaPrincipal
-                                  .withValues(alpha: 0.75)),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: ColoresApp.of(context).sobreTarjetaPrincipal
+                                .withValues(alpha: 0.75),
+                          ),
                         ),
                       ],
                     ),
@@ -213,8 +244,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           for (final t in tabs)
             NavigationDestination(
               icon: t.titulo == 'Fiado'
-                  ? ObjetivoRecorrido(
-                      id: 'pestana_fiado', child: Icon(t.icono))
+                  ? ObjetivoRecorrido(id: 'pestana_fiado', child: Icon(t.icono))
                   : Icon(t.icono),
               selectedIcon: Icon(t.iconoActivo),
               label: t.titulo,
@@ -222,6 +252,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
     );
+    // Solo el admin aprueba los celulares de los vendedores.
+    return sesion.esAdmin ? AtenderSolicitudes(child: pantalla) : pantalla;
   }
 }
 
@@ -299,8 +331,10 @@ class _MenuCuenta extends ConsumerWidget {
               const Icon(Icons.logout_rounded),
               const SizedBox(width: 12),
               Flexible(
-                child: Text('Cerrar sesión (${usuario.nombre})',
-                    overflow: TextOverflow.ellipsis),
+                child: Text(
+                  'Cerrar sesión (${usuario.nombre})',
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -325,8 +359,10 @@ class _InsigniaMarca extends StatelessWidget {
         color: ColoresApp.blancoMarca,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Image.asset('assets/marca/isotipo.png',
-          semanticLabel: 'VeciTienda'),
+      child: Image.asset(
+        'assets/marca/isotipo.png',
+        semanticLabel: 'VeciTienda',
+      ),
     );
   }
 }

@@ -59,6 +59,18 @@ class UsuarioRepository {
     return (fila.read(mayor) ?? 0) + 1;
   }
 
+  /// El número de vendedor de [usuarioId]; si no tiene (vendedor de antes de
+  /// los celulares de vendedores), le da el siguiente.
+  Future<int> asegurarNumeroVendedor(int usuarioId) async {
+    final usuario = await buscar(usuarioId);
+    final actual = usuario?.numeroVendedor;
+    if (actual != null) return actual;
+    final numero = await siguienteNumeroVendedor();
+    await (_db.update(_db.usuarios)..where((u) => u.id.equals(usuarioId)))
+        .write(UsuariosCompanion(numeroVendedor: Value(numero)));
+    return numero;
+  }
+
   Future<void> resetearPin(int usuarioId, String nuevoPin) {
     return _db.customUpdate(
       'UPDATE usuarios SET pin_hash = ?, version_pin = version_pin + 1 '

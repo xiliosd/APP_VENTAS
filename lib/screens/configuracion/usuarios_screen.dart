@@ -17,6 +17,7 @@ import '../../sincronizacion/nube_tienda.dart';
 import '../../sincronizacion/sincronizacion_provider.dart';
 import '../../util/id_global.dart';
 import '../../util/pin_hash.dart';
+import 'conectar_vendedor_sheet.dart';
 import 'resetear_pin_dialog.dart';
 
 class UsuariosScreen extends ConsumerStatefulWidget {
@@ -92,7 +93,23 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
                             ),
                           ),
                         ),
-                        trailing: const Icon(Icons.lock_reset_rounded),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (u.rol == 'vendedor')
+                              IconButton(
+                                key: Key('conectar_celular_${u.id}'),
+                                tooltip: 'Conectar su celular',
+                                icon: const Icon(Icons.smartphone_rounded),
+                                onPressed: () =>
+                                    conectarCelularVendedor(context, ref, u),
+                              ),
+                            const Icon(
+                              Icons.lock_reset_rounded,
+                              semanticLabel: 'Cambiar PIN',
+                            ),
+                          ],
+                        ),
                         onTap: () => _resetearPin(u),
                       ),
                   ],

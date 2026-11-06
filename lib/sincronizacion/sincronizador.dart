@@ -40,6 +40,10 @@ class Sincronizador {
   final AppDatabase db;
   final NubeTienda nube;
 
+  /// Celulares que esperan aprobación, vistos en el último ciclo (solo en el
+  /// celular del admin).
+  List<CelularTienda> solicitudes = const [];
+
   Future<EstadoSincronizacionFila?> _estado() => (db.select(
     db.estadoSincronizacion,
   )..where((e) => e.id.equals(1))).getSingleOrNull();
@@ -138,9 +142,13 @@ class Sincronizador {
         return ResultadoSincronizacion.actualizarApp;
       }
       final membresia = await nube.miMembresia();
+      final esAdmin = membresia?.rol == 'admin';
       await _subir(estado.tiendaId);
-      if (membresia?.rol == 'admin') await _subirPinesLegados(estado.tiendaId);
+      if (esAdmin) await _subirPinesLegados(estado.tiendaId);
       await _bajarYAplicar(estado);
+      solicitudes = esAdmin
+          ? await nube.solicitudes(estado.tiendaId)
+          : const [];
       return ResultadoSincronizacion.alDia;
     } on ErrorSinConexion {
       return ResultadoSincronizacion.sinConexion;

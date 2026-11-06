@@ -8,6 +8,7 @@ import '../../providers/recorrido_provider.dart';
 import '../../providers/sesion_provider.dart';
 import '../../respaldo/respaldo_provider.dart';
 import '../../servicios/autenticacion_huella.dart';
+import '../../sincronizacion/sincronizacion_provider.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/entrada_escalonada.dart';
@@ -18,6 +19,7 @@ import '../ayuda/preguntas_frecuentes_screen.dart';
 import '../qr/configurar_qr_screen.dart';
 import '../respaldo/respaldo_screen.dart';
 import '../clientes/clientes_screen.dart';
+import 'celulares_tienda_screen.dart';
 import 'hoja_nombre_tienda.dart';
 import 'productos_screen.dart';
 import 'proveedores_screen.dart';
@@ -34,9 +36,12 @@ class AjustesScreen extends ConsumerWidget {
     final respaldoActivo =
         ref.watch(respaldoProvider).fase == FaseRespaldo.activo;
     final suave = c.sobreTarjetaPrincipal.withValues(alpha: 0.75);
+    final compartida =
+        ref.watch(sincronizacionProvider).fase !=
+        FaseSincronizacion.noCompartida;
 
-    void abrir(Widget pantalla) => Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => pantalla));
+    void abrir(Widget pantalla) =>
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => pantalla));
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -92,119 +97,149 @@ class AjustesScreen extends ConsumerWidget {
         const SizedBox(height: 24),
         EntradaEscalonada(
           indice: 1,
-          child: _Grupo(titulo: 'TIENDA', opciones: [
-            _Opcion(
-              key: const Key('menu_productos'),
-              icono: Icons.inventory_2_outlined,
-              color: c.primario,
-              titulo: 'Productos',
-              subtitulo: 'Catálogo y precios',
-              onTap: () => abrir(const ProductosScreen()),
-            ),
-            _Opcion(
-              key: const Key('menu_proveedores'),
-              icono: Icons.local_shipping_outlined,
-              color: c.fiado,
-              titulo: 'Proveedores',
-              subtitulo: 'A quién le compras',
-              onTap: () => abrir(const ProveedoresScreen()),
-            ),
-            _Opcion(
-              key: const Key('menu_clientes'),
-              icono: Icons.people_outline_rounded,
-              color: c.entra,
-              titulo: 'Clientes',
-              subtitulo: 'Datos y compras de tus clientes',
-              onTap: () => abrir(const ClientesScreen()),
-            ),
-            _Opcion(
-              key: const Key('menu_usuarios'),
-              icono: Icons.group_outlined,
-              color: c.marcaVerde,
-              titulo: 'Usuarios',
-              subtitulo: 'Administradores, vendedores y PIN',
-              onTap: () => abrir(const UsuariosScreen()),
-            ),
-          ]),
+          child: _Grupo(
+            titulo: 'TIENDA',
+            opciones: [
+              _Opcion(
+                key: const Key('menu_productos'),
+                icono: Icons.inventory_2_outlined,
+                color: c.primario,
+                titulo: 'Productos',
+                subtitulo: 'Catálogo y precios',
+                onTap: () => abrir(const ProductosScreen()),
+              ),
+              _Opcion(
+                key: const Key('menu_proveedores'),
+                icono: Icons.local_shipping_outlined,
+                color: c.fiado,
+                titulo: 'Proveedores',
+                subtitulo: 'A quién le compras',
+                onTap: () => abrir(const ProveedoresScreen()),
+              ),
+              _Opcion(
+                key: const Key('menu_clientes'),
+                icono: Icons.people_outline_rounded,
+                color: c.entra,
+                titulo: 'Clientes',
+                subtitulo: 'Datos y compras de tus clientes',
+                onTap: () => abrir(const ClientesScreen()),
+              ),
+              _Opcion(
+                key: const Key('menu_usuarios'),
+                icono: Icons.group_outlined,
+                color: c.marcaVerde,
+                titulo: 'Usuarios',
+                subtitulo: 'Administradores, vendedores y PIN',
+                onTap: () => abrir(const UsuariosScreen()),
+              ),
+              if (compartida)
+                _Opcion(
+                  key: const Key('tile_celulares_tienda'),
+                  icono: Icons.devices_rounded,
+                  color: c.primario,
+                  titulo: 'Celulares de la tienda',
+                  subtitulo: 'Quién entra desde su celular y el código',
+                  onTap: () => abrir(const CelularesTiendaScreen()),
+                ),
+            ],
+          ),
         ),
         const SizedBox(height: 24),
         EntradaEscalonada(
           indice: 2,
-          child: _Grupo(titulo: 'COBROS Y DATOS', opciones: [
-            _Opcion(
-              key: const Key('menu_cobro_qr'),
-              icono: Icons.qr_code_2_rounded,
-              color: c.entra,
-              titulo: 'Cobro por QR',
-              subtitulo: 'Tu QR de Nequi, Daviplata o banco',
-              onTap: () => abrir(const ConfigurarQrScreen()),
-            ),
-            _Opcion(
-              key: const Key('menu_respaldo'),
-              icono: Icons.cloud_upload_outlined,
-              color: c.primario,
-              titulo: 'Respaldo',
-              subtitulo: 'Copia de seguridad en la nube',
-              estado: respaldoActivo
-                  ? Row(
-                      key: const Key('estado_respaldo_menu'),
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                              color: c.entra, shape: BoxShape.circle),
-                        ),
-                        const SizedBox(width: 6),
-                        const Text('Activo',
+          child: _Grupo(
+            titulo: 'COBROS Y DATOS',
+            opciones: [
+              _Opcion(
+                key: const Key('menu_cobro_qr'),
+                icono: Icons.qr_code_2_rounded,
+                color: c.entra,
+                titulo: 'Cobro por QR',
+                subtitulo: 'Tu QR de Nequi, Daviplata o banco',
+                onTap: () => abrir(const ConfigurarQrScreen()),
+              ),
+              _Opcion(
+                key: const Key('menu_respaldo'),
+                icono: Icons.cloud_upload_outlined,
+                color: c.primario,
+                titulo: 'Respaldo',
+                subtitulo: 'Copia de seguridad en la nube',
+                estado: respaldoActivo
+                    ? Row(
+                        key: const Key('estado_respaldo_menu'),
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: c.entra,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Activo',
                             style: TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w700)),
-                      ],
-                    )
-                  : null,
-              onTap: () => abrir(const RespaldoScreen()),
-            ),
-          ]),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      )
+                    : null,
+                onTap: () => abrir(const RespaldoScreen()),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 24),
         EntradaEscalonada(
           indice: 3,
-          child: _Grupo(titulo: 'AYUDA', opciones: [
-            _Opcion(
-              key: const Key('boton_repetir_recorrido'),
-              icono: Icons.tour_outlined,
-              color: c.primario,
-              titulo: 'Ver el recorrido otra vez',
-              subtitulo: 'Venta de práctica y guía del Inicio',
-              // El Inicio, que está a la vista, abre el paso 3.
-              onTap: () => ref
-                  .read(recorridoProvider.notifier)
-                  .irA(PasoRecorrido.venta),
-            ),
-            _Opcion(
-              key: const Key('boton_preguntas_frecuentes'),
-              icono: Icons.help_outline_rounded,
-              color: c.primario,
-              titulo: 'Preguntas frecuentes',
-              subtitulo: 'Cómo hacer cada cosa en la app',
-              onTap: () => abrir(const PreguntasFrecuentesScreen()),
-            ),
-          ]),
+          child: _Grupo(
+            titulo: 'AYUDA',
+            opciones: [
+              _Opcion(
+                key: const Key('boton_repetir_recorrido'),
+                icono: Icons.tour_outlined,
+                color: c.primario,
+                titulo: 'Ver el recorrido otra vez',
+                subtitulo: 'Venta de práctica y guía del Inicio',
+                // El Inicio, que está a la vista, abre el paso 3.
+                onTap: () => ref
+                    .read(recorridoProvider.notifier)
+                    .irA(PasoRecorrido.venta),
+              ),
+              _Opcion(
+                key: const Key('boton_preguntas_frecuentes'),
+                icono: Icons.help_outline_rounded,
+                color: c.primario,
+                titulo: 'Preguntas frecuentes',
+                subtitulo: 'Cómo hacer cada cosa en la app',
+                onTap: () => abrir(const PreguntasFrecuentesScreen()),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 24),
         EntradaEscalonada(
           indice: 4,
-          child: _Grupo(titulo: 'CUENTA', opciones: [
-            if (ref.watch(huellaDisponibleProvider).valueOrNull ?? false)
-              const _FilaHuella(),
-            ListTile(
-              key: const Key('ajustes_cerrar_sesion'),
-              leading: IconoCuadrado(icono: Icons.logout_rounded, color: c.sale),
-              title: Text('Cerrar sesión', style: TextStyle(color: c.sale)),
-              onTap: () => ref.read(sesionProvider.notifier).cerrarSesion(),
-            ),
-          ]),
+          child: _Grupo(
+            titulo: 'CUENTA',
+            opciones: [
+              if (ref.watch(huellaDisponibleProvider).valueOrNull ?? false)
+                const _FilaHuella(),
+              ListTile(
+                key: const Key('ajustes_cerrar_sesion'),
+                leading: IconoCuadrado(
+                  icono: Icons.logout_rounded,
+                  color: c.sale,
+                ),
+                title: Text('Cerrar sesión', style: TextStyle(color: c.sale)),
+                onTap: () => ref.read(sesionProvider.notifier).cerrarSesion(),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -264,10 +299,7 @@ class _Opcion extends StatelessWidget {
       subtitle: Text(subtitulo),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          ?estado,
-          const Icon(Icons.chevron_right_rounded),
-        ],
+        children: [?estado, const Icon(Icons.chevron_right_rounded)],
       ),
       onTap: onTap,
     );
@@ -319,7 +351,10 @@ class _FilaHuella extends ConsumerWidget {
     final c = ColoresApp.of(context);
     return SwitchListTile(
       key: const Key('interruptor_huella'),
-      secondary: IconoCuadrado(icono: Icons.fingerprint_rounded, color: c.primario),
+      secondary: IconoCuadrado(
+        icono: Icons.fingerprint_rounded,
+        color: c.primario,
+      ),
       title: const Text('Entrar con huella'),
       subtitle: const Text('Sin escribir el PIN, en este celular'),
       value: activa,

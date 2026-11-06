@@ -80,6 +80,7 @@ class EstadoTiendaCompartida {
     required this.fase,
     this.ultimaSincronizacion,
     this.pendientes = 0,
+    this.solicitudes = const [],
   });
 
   final FaseSincronizacion fase;
@@ -87,6 +88,22 @@ class EstadoTiendaCompartida {
 
   /// Cambios de este celular que aún no llegan a la nube.
   final int pendientes;
+
+  /// Celulares de vendedores que esperan que el admin los apruebe (solo en
+  /// el celular del admin).
+  final List<CelularTienda> solicitudes;
+
+  EstadoTiendaCompartida copiar({
+    FaseSincronizacion? fase,
+    DateTime? ultimaSincronizacion,
+    int? pendientes,
+    List<CelularTienda>? solicitudes,
+  }) => EstadoTiendaCompartida(
+    fase: fase ?? this.fase,
+    ultimaSincronizacion: ultimaSincronizacion ?? this.ultimaSincronizacion,
+    pendientes: pendientes ?? this.pendientes,
+    solicitudes: solicitudes ?? this.solicitudes,
+  );
 }
 
 /// El sincronizador de este celular, o null si la app no tiene nube.
@@ -167,11 +184,7 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
         );
         return;
       }
-      state = EstadoTiendaCompartida(
-        fase: FaseSincronizacion.sincronizando,
-        ultimaSincronizacion: state.ultimaSincronizacion,
-        pendientes: state.pendientes,
-      );
+      state = state.copiar(fase: FaseSincronizacion.sincronizando);
       final FaseSincronizacion fase;
       try {
         fase = switch (await sincronizador.sincronizar()) {
@@ -187,9 +200,8 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
       } catch (_) {
         // Error inesperado (p. ej. del servidor): se reintenta en el
         // siguiente ciclo sin molestar mientras se vende.
-        state = EstadoTiendaCompartida(
+        state = state.copiar(
           fase: FaseSincronizacion.error,
-          ultimaSincronizacion: state.ultimaSincronizacion,
           pendientes: await sincronizador.cuantosPendientes(),
         );
         return;
@@ -198,6 +210,9 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
         fase: fase,
         ultimaSincronizacion: await sincronizador.ultimaSincronizacion(),
         pendientes: await sincronizador.cuantosPendientes(),
+        solicitudes: fase == FaseSincronizacion.alDia
+            ? sincronizador.solicitudes
+            : state.solicitudes,
       );
     } finally {
       _enCurso = false;
@@ -234,6 +249,40 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
     if (sincronizador == null || tiendaId == null) return;
     await sincronizador.nube.guardarPin(tiendaId, idGlobal, pin, version);
   }
+
+  Future<String> _tiendaActual() async =>
+      (await _sincronizador!.tiendaId()) ??
+      (throw StateError('La tienda no es compartida'));
+
+  /// El código que el admin le dicta al vendedor.
+  Future<String> codigoTienda() async =>
+      _sincronizador!.nube.codigoTienda(await _tiendaActual());
+
+  /// Todos los celulares de la tienda (para el admin).
+  Future<List<CelularTienda>> celulares() async =>
+      _sincronizador!.nube.celulares(await _tiendaActual());
+
+  Future<void> responderSolicitud(
+    CelularTienda solicitud, {
+    required bool aprobar,
+  }) async {
+    await _sincronizador!.nube.responderSolicitud(
+      await _tiendaActual(),
+      solicitud.usuarioAuth,
+      aprobar: aprobar,
+    );
+    state = state.copiar(
+      solicitudes: [
+        for (final otra in state.solicitudes)
+          if (otra.usuarioAuth != solicitud.usuarioAuth) otra,
+      ],
+    );
+  }
+
+  /// Le quita el acceso a un celular de vendedor: en su siguiente ciclo
+  /// entrega lo pendiente y borra la tienda.
+  Future<void> revocarCelular(String usuarioAuth) async =>
+      _sincronizador!.nube.revocarCelular(await _tiendaActual(), usuarioAuth);
 
   /// El PIN escrito al pedir entrada, para guardarlo al bajar la tienda. Solo
   /// en memoria: si la app se cierra, el primer ingreso se revisa en línea.

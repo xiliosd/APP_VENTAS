@@ -2,12 +2,16 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
 import 'package:app_ventas/screens/configuracion/ajustes_screen.dart';
+import 'package:app_ventas/screens/configuracion/celulares_tienda_screen.dart';
+import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/montaje.dart';
 import '../../support/respaldo_prueba.dart';
+import '../../support/sincronizacion_prueba.dart';
 
 void main() {
   late AppDatabase db;
@@ -15,11 +19,14 @@ void main() {
   setUp(() => db = AppDatabase(NativeDatabase.memory()));
   tearDown(() => db.close());
 
-  Future<void> montar(WidgetTester tester) async {
+  Future<void> montar(
+    WidgetTester tester, {
+    List<Override> overrides = const [],
+  }) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
-    final container = await containerConSesion(db);
+    final container = await containerConSesion(db, overrides: overrides);
     addTearDown(container.dispose);
     await tester.pumpWidget(
       appDePrueba(container, inicio: const Scaffold(body: AjustesScreen())),
@@ -107,5 +114,35 @@ void main() {
     );
     expect(find.byKey(const Key('estado_respaldo_menu')), findsOneWidget);
     expect(find.text('Activo'), findsOneWidget);
+  });
+
+  testWidgets('con la tienda compartida abre Celulares de la tienda', (
+    tester,
+  ) async {
+    await montar(
+      tester,
+      overrides: [
+        sincronizacionProvider.overrideWith(
+          () => SincronizacionFalsa(
+            inicial: const EstadoTiendaCompartida(
+              fase: FaseSincronizacion.alDia,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    await tester.tap(find.byKey(const Key('tile_celulares_tienda')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CelularesTiendaScreen), findsOneWidget);
+  });
+
+  testWidgets('sin tienda compartida no muestra Celulares de la tienda', (
+    tester,
+  ) async {
+    await montar(tester);
+
+    expect(find.byKey(const Key('tile_celulares_tienda')), findsNothing);
   });
 }

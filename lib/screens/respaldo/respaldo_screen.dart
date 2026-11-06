@@ -166,7 +166,7 @@ class _Activo extends ConsumerWidget {
             key: const Key('boton_compartir_tienda'),
             texto: 'Usar la tienda en varios celulares',
             variante: VarianteBoton.contorno,
-            onPressed: () => _compartir(context, ref),
+            onPressed: () => compartirTiendaConConfirmacion(context, ref),
           ),
         ],
         const SizedBox(height: 12),
@@ -208,7 +208,12 @@ class _Activo extends ConsumerWidget {
   }
 }
 
-Future<void> _compartir(BuildContext context, WidgetRef ref) async {
+/// Pide confirmación y deja la tienda compartida. Devuelve true si este
+/// celular quedó con su tienda en la nube.
+Future<bool> compartirTiendaConConfirmacion(
+  BuildContext context,
+  WidgetRef ref,
+) async {
   final confirmado = await showDialog<bool>(
     context: context,
     builder: (contexto) => AlertDialog(
@@ -231,11 +236,12 @@ Future<void> _compartir(BuildContext context, WidgetRef ref) async {
       ],
     ),
   );
-  if (confirmado != true) return;
+  if (confirmado != true) return false;
   final tienda = ref.read(sincronizacionProvider.notifier);
   try {
     await tienda.compartirTienda();
     if (context.mounted) avisar(context, 'La tienda ya está en la nube');
+    return true;
   } on TiendaCompartidaExistente catch (existente) {
     // El correo ya compartió su tienda desde otro celular: se usa esa.
     if (!context.mounted ||
@@ -245,11 +251,11 @@ Future<void> _compartir(BuildContext context, WidgetRef ref) async {
           context,
           mensajeReemplazarPorTiendaCompartida,
         )) {
-      return;
+      return false;
     }
     try {
       await tienda.descargarTienda(existente.tiendaId, reemplazarDatos: true);
-      if (!context.mounted) return;
+      if (!context.mounted) return false;
       avisar(context, 'Tienda recuperada. Entra con tu PIN.');
       Navigator.of(context).popUntil((ruta) => ruta.isFirst);
     } catch (error) {
@@ -262,6 +268,7 @@ Future<void> _compartir(BuildContext context, WidgetRef ref) async {
       avisar(context, mensajeErrorTienda(error), error: true);
     }
   }
+  return false;
 }
 
 /// Estado de la tienda compartida: reemplaza al respaldo por archivo.

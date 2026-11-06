@@ -1,4 +1,16 @@
+import 'package:app_ventas/respaldo/respaldo_provider.dart';
+import 'package:app_ventas/sincronizacion/nube_tienda.dart';
 import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
+
+/// Respaldo con una fase fija, para pantallas que solo la consultan.
+class RespaldoFijo extends RespaldoNotifier {
+  RespaldoFijo(this.fase);
+
+  final FaseRespaldo fase;
+
+  @override
+  EstadoRespaldo build() => EstadoRespaldo(fase: fase);
+}
 
 /// Sincronización falsa para pruebas de pantallas: estado fijo y registro de
 /// lo que se pidió.
@@ -11,6 +23,7 @@ class SincronizacionFalsa extends SincronizacionNotifier {
     this.errorAlDescargar,
     this.errorAlCompartir,
     this.errorAlGuardarPin,
+    this.celularesTienda = const [],
   });
 
   final EstadoTiendaCompartida inicial;
@@ -20,6 +33,10 @@ class SincronizacionFalsa extends SincronizacionNotifier {
   final Object? errorAlDescargar;
   final Object? errorAlCompartir;
   final Object? errorAlGuardarPin;
+
+  final List<CelularTienda> celularesTienda;
+  final respuestas = <(String, bool)>[];
+  final revocaciones = <String>[];
 
   final pinesGuardados = <({String idGlobal, String pin, int version})>[];
 
@@ -72,4 +89,28 @@ class SincronizacionFalsa extends SincronizacionNotifier {
     if (errorAlGuardarPin != null) throw errorAlGuardarPin!;
     pinesGuardados.add((idGlobal: idGlobal, pin: pin, version: version));
   }
+
+  @override
+  Future<String> codigoTienda() async => 'ABC234';
+
+  @override
+  Future<List<CelularTienda>> celulares() async => celularesTienda;
+
+  @override
+  Future<void> responderSolicitud(
+    CelularTienda solicitud, {
+    required bool aprobar,
+  }) async {
+    respuestas.add((solicitud.usuarioAuth, aprobar));
+    state = state.copiar(
+      solicitudes: [
+        for (final otra in state.solicitudes)
+          if (otra.usuarioAuth != solicitud.usuarioAuth) otra,
+      ],
+    );
+  }
+
+  @override
+  Future<void> revocarCelular(String usuarioAuth) async =>
+      revocaciones.add(usuarioAuth);
 }
