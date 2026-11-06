@@ -91,6 +91,16 @@ void main() {
     expect(salir, contains('Quitar acceso'));
   });
 
+  test('el vendedor sabe activar su huella desde su cuenta', () {
+    final respuesta = temasAyuda
+        .expand((t) => t.preguntas)
+        .firstWhere((p) => p.pregunta == '¿Cómo entro con la huella?')
+        .respuesta;
+
+    expect(respuesta, isNot(startsWith('Solo el administrador')));
+    expect(respuesta, contains('Toca tu inicial'));
+  });
+
   Future<void> montarPantalla(
     WidgetTester tester, {
     ThemeData? tema,

@@ -315,11 +315,11 @@ const temasAyuda = <TemaAyuda>[
     ),
     PreguntaFrecuente(
       '¿Cómo entro con la huella?',
-      '${_soloAdmin}si el celular tiene lector de huella, en "Ajustes" '
-          'enciende "Entrar con huella", toca '
-          '"Activar" y confirma con tu huella. Después, en la pantalla del PIN '
-          'toca "Entrar con huella". El PIN sigue sirviendo. Actívalo solo si '
-          'el celular es tuyo.',
+      'Toca tu inicial, arriba a la derecha, y elige "Entrar con huella" '
+          '(sale si el celular tiene lector de huella; el administrador '
+          'también lo tiene en "Ajustes"). Toca "Activar" y confirma con tu '
+          'huella. Después, en la pantalla del PIN toca "Entrar con huella". '
+          'El PIN sigue sirviendo. Actívalo solo si el celular es tuyo.',
     ),
     PreguntaFrecuente(
       '¿Cómo cierro la sesión?',

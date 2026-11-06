@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/configuracion_providers.dart';
+import '../../providers/huella_provider.dart';
 import '../../providers/recorrido_provider.dart';
 import '../../providers/sesion_provider.dart';
 import '../../ui/avatar_inicial.dart';
+import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
@@ -17,6 +19,7 @@ import '../../ui/tipografia.dart';
 import '../../ui/vibracion.dart';
 import '../../widgets/nombre_tienda.dart';
 import '../ayuda/preguntas_frecuentes_screen.dart';
+import '../configuracion/activar_huella.dart';
 import '../configuracion/ajustes_screen.dart';
 import '../configuracion/atender_solicitudes.dart';
 import '../configuracion/hoja_nombre_tienda.dart';
@@ -274,6 +277,8 @@ class _MenuCuenta extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hayLector = ref.watch(huellaDisponibleProvider).valueOrNull ?? false;
+    final conHuella = ref.watch(usuariosConHuellaProvider).contains(usuario.id);
     return PopupMenuButton<String>(
       key: const Key('menu_cuenta'),
       tooltip: 'Cuenta',
@@ -285,10 +290,22 @@ class _MenuCuenta extends ConsumerWidget {
             ? ColoresApp.of(context).sobreTarjetaPrincipal
             : null,
       ),
-      onSelected: (valor) {
+      onSelected: (valor) async {
         switch (valor) {
           case 'apariencia':
             mostrarHojaApariencia(context);
+          case 'huella':
+            if (conHuella) {
+              await ref
+                  .read(usuariosConHuellaProvider.notifier)
+                  .desactivar(usuario.id);
+              if (context.mounted) {
+                avisar(context, 'Ya no entras con huella en este celular');
+              }
+            } else if (await activarHuella(context, ref, usuario) &&
+                context.mounted) {
+              avisar(context, 'Listo: entras con tu huella en este celular');
+            }
           case 'preguntas':
             Navigator.of(context).push(
               MaterialPageRoute(
@@ -311,6 +328,23 @@ class _MenuCuenta extends ConsumerWidget {
             ],
           ),
         ),
+        // Cada quien activa su huella aquí; el vendedor no ve Ajustes.
+        if (hayLector)
+          PopupMenuItem<String>(
+            key: const Key('menu_huella'),
+            value: 'huella',
+            child: Row(
+              children: [
+                const Icon(Icons.fingerprint_rounded),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    conHuella ? 'Quitar la huella' : 'Entrar con huella',
+                  ),
+                ),
+              ],
+            ),
+          ),
         // El vendedor no ve Ajustes: este menú es su entrada a la ayuda.
         const PopupMenuItem<String>(
           key: Key('menu_preguntas_frecuentes'),

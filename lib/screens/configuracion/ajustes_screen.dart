@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/database.dart';
 import '../../providers/configuracion_providers.dart';
 import '../../providers/huella_provider.dart';
 import '../../providers/recorrido_provider.dart';
 import '../../providers/sesion_provider.dart';
 import '../../respaldo/respaldo_provider.dart';
-import '../../servicios/autenticacion_huella.dart';
 import '../../sincronizacion/sincronizacion_provider.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/colores_app.dart';
@@ -19,6 +17,7 @@ import '../ayuda/preguntas_frecuentes_screen.dart';
 import '../qr/configurar_qr_screen.dart';
 import '../respaldo/respaldo_screen.dart';
 import '../clientes/clientes_screen.dart';
+import 'activar_huella.dart';
 import 'celulares_tienda_screen.dart';
 import 'hoja_nombre_tienda.dart';
 import 'productos_screen.dart';
@@ -310,39 +309,6 @@ class _Opcion extends StatelessWidget {
 class _FilaHuella extends ConsumerWidget {
   const _FilaHuella();
 
-  Future<void> _activar(BuildContext context, WidgetRef ref, Usuario yo) async {
-    final acepta = await showDialog<bool>(
-      context: context,
-      builder: (contexto) => AlertDialog(
-        title: const Text('¿Entrar con huella?'),
-        content: const Text(
-          // El rostro también cuenta como biometría en muchos celulares.
-          'Cualquier huella o rostro registrado en este celular podrá abrir '
-          'tu usuario. Actívalo solo si el celular es tuyo.',
-        ),
-        actions: [
-          TextButton(
-            key: const Key('cancelar_huella'),
-            onPressed: () => Navigator.pop(contexto, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            key: const Key('activar_huella'),
-            onPressed: () => Navigator.pop(contexto, true),
-            child: const Text('Activar'),
-          ),
-        ],
-      ),
-    );
-    if (acepta != true) return;
-    // Solo se activa si quien está aquí confirma con su huella.
-    final resultado = await ref
-        .read(autenticacionHuellaProvider)
-        .confirmar('Confirma que eres ${yo.nombre}');
-    if (resultado != ResultadoHuella.aprobada) return;
-    await ref.read(usuariosConHuellaProvider.notifier).activar(yo.id);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final yo = ref.watch(sesionProvider).usuarioActivo;
@@ -359,7 +325,7 @@ class _FilaHuella extends ConsumerWidget {
       subtitle: const Text('Sin escribir el PIN, en este celular'),
       value: activa,
       onChanged: (encender) => encender
-          ? _activar(context, ref, yo)
+          ? activarHuella(context, ref, yo)
           : ref.read(usuariosConHuellaProvider.notifier).desactivar(yo.id),
     );
   }
