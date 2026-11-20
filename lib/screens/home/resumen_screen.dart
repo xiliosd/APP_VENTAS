@@ -44,13 +44,18 @@ class _ResumenScreenState extends ConsumerState<ResumenScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final resumenAsync = ref.watch(resumenDelDiaProvider(_dia));
-    final porVendedorAsync = ref.watch(resumenPorVendedorProvider(_dia));
-    final semana = ref.watch(ventasDiariasProvider(_dia)).valueOrNull;
-    final esAdmin = ref.watch(sesionProvider).esAdmin;
-    void abrirReportes() => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const ReportesScreen()),
-        );
+    final sesion = ref.watch(sesionProvider);
+    final esAdmin = sesion.esAdmin;
+    // Cada vendedor ve solo lo suyo; el administrador, toda la tienda.
+    final filtro = (
+      dia: _dia,
+      usuarioId: esAdmin ? null : sesion.usuarioActivo?.id,
+    );
+    final resumenAsync = ref.watch(resumenDelDiaProvider(filtro));
+    final semana = ref.watch(ventasDiariasProvider(filtro)).valueOrNull;
+    void abrirReportes() =>
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const ReportesScreen()));
 
     void verPorPedir() => widget.onVerPorPedir?.call();
 
@@ -58,83 +63,94 @@ class _ResumenScreenState extends ConsumerState<ResumenScreen> {
       children: [
         Expanded(
           child: ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: [
-        FranjaPorPedir(onVerPorPedir: verPorPedir),
-        IndicadorPorPedir(onVerPorPedir: verPorPedir),
-        SelectorFecha(
-          dia: _dia,
-          onCambio: (dia) => setState(() => _dia = inicioDelDia(dia)),
-        ),
-        const SizedBox(height: 8),
-        // Al recargar por un dato nuevo se mantienen las tarjetas (sin
-        // rueda): así el monto cuenta y la entrada no se repite.
-        resumenAsync.when(
-          skipLoadingOnReload: true,
-          data: (resumen) => _Tarjetas(
-            resumen: resumen,
-            dia: _dia,
-            esHoy: _dia == inicioDelDia(DateTime.now()),
-            semana: semana,
-            onVerFiado: widget.onVerFiado,
-            onVerReportes: esAdmin ? abrirReportes : null,
-          ),
-          loading: () => const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (_, _) => const ErrorCarga(compacto: true),
-        ),
-        const SizedBox(height: 24),
-        Card(
-          key: const Key('tarjeta_por_vendedor'),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Wrap: con letra grande el botón baja a otra línea en vez de desbordar.
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    const Text('Por vendedor',
-                        style:
-                            TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                    if (esAdmin)
-                      TextButton(
-                        key: const Key('boton_ver_reportes'),
-                        onPressed: abrirReportes,
-                        child: const Text('Ver reportes ›'),
-                      ),
-                  ],
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            children: [
+              FranjaPorPedir(onVerPorPedir: verPorPedir),
+              IndicadorPorPedir(onVerPorPedir: verPorPedir),
+              SelectorFecha(
+                dia: _dia,
+                onCambio: (dia) => setState(() => _dia = inicioDelDia(dia)),
+              ),
+              const SizedBox(height: 8),
+              // Al recargar por un dato nuevo se mantienen las tarjetas (sin
+              // rueda): así el monto cuenta y la entrada no se repite.
+              resumenAsync.when(
+                skipLoadingOnReload: true,
+                data: (resumen) => _Tarjetas(
+                  resumen: resumen,
+                  dia: _dia,
+                  esHoy: _dia == inicioDelDia(DateTime.now()),
+                  semana: semana,
+                  onVerFiado: widget.onVerFiado,
+                  onVerReportes: esAdmin ? abrirReportes : null,
                 ),
-                porVendedorAsync.when(
-                  skipLoadingOnReload: true,
-                  data: (mapa) => Column(
-                    children: [
-                      for (final entrada in mapa.entries)
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: AvatarInicial(
-                              id: entrada.key.id,
-                              nombre: entrada.key.nombre,
-                              radio: 16),
-                          title: Text(entrada.key.nombre),
-                          trailing:
-                              Monto(entrada.value.totalVendido, tamano: 16),
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (_, _) => const ErrorCarga(compacto: true),
+              ),
+              if (esAdmin) ...[
+                const SizedBox(height: 24),
+                Card(
+                  key: const Key('tarjeta_por_vendedor'),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Wrap: con letra grande el botón baja a otra línea en vez de desbordar.
+                        Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            const Text(
+                              'Por vendedor',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (esAdmin)
+                              TextButton(
+                                key: const Key('boton_ver_reportes'),
+                                onPressed: abrirReportes,
+                                child: const Text('Ver reportes ›'),
+                              ),
+                          ],
                         ),
-                    ],
+                        ref
+                            .watch(resumenPorVendedorProvider(_dia))
+                            .when(
+                              skipLoadingOnReload: true,
+                              data: (mapa) => Column(
+                                children: [
+                                  for (final entrada in mapa.entries)
+                                    ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: AvatarInicial(
+                                        id: entrada.key.id,
+                                        nombre: entrada.key.nombre,
+                                        radio: 16,
+                                      ),
+                                      title: Text(entrada.key.nombre),
+                                      trailing: Monto(
+                                        entrada.value.totalVendido,
+                                        tamano: 16,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              loading: () => const SizedBox.shrink(),
+                              error: (_, _) => const ErrorCarga(compacto: true),
+                            ),
+                      ],
+                    ),
                   ),
-                  loading: () => const SizedBox.shrink(),
-                  error: (_, _) => const ErrorCarga(compacto: true),
                 ),
               ],
-            ),
+            ],
           ),
-        ),
-      ],
-    ),
         ),
         const _BarraAcciones(),
       ],
@@ -282,12 +298,15 @@ class _Tarjetas extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ganancia = resumen.totalVendido - resumen.totalGastado;
-    final suave =
-        ColoresApp.of(context).sobreTarjetaPrincipal.withValues(alpha: 0.75);
+    final suave = ColoresApp.of(context).sobreTarjetaPrincipal
+        .withValues(alpha: 0.75);
     final comparacion = semana == null
         ? null
-        : comparacionVentas(semana!.last, semana![semana!.length - 2],
-            esHoy: esHoy);
+        : comparacionVentas(
+            semana!.last,
+            semana![semana!.length - 2],
+            esHoy: esHoy,
+          );
     return Column(
       children: [
         EntradaEscalonada(
@@ -295,51 +314,57 @@ class _Tarjetas extends StatelessWidget {
           child: ObjetivoRecorrido(
             id: 'tarjeta_ventas',
             child: Container(
-            key: const Key('tarjeta_ventas'),
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: ColoresApp.of(context).tarjetaPrincipal,
-              borderRadius: BorderRadius.circular(radioTarjetaPrincipal),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(esHoy ? 'Ventas de hoy' : 'Ventas del ${fechaCorta(dia)}',
-                    style: estiloTitulo(tamano: 14, color: suave)),
-                const SizedBox(height: 4),
-                Monto(resumen.totalVendido,
-                    tamano: 36, tono: TonoMonto.claro, animado: true),
-                if (comparacion != null) ...[
-                  const SizedBox(height: 6),
-                  _EtiquetaComparacion(comparacion),
-                ],
-                const SizedBox(height: 4),
-                Text(
-                  '${plural(resumen.cantidadVentas, 'venta', 'ventas')} · '
-                  '${plural(resumen.cantidadFiadas, 'fiada', 'fiadas')}',
-                  style: TextStyle(color: suave, fontSize: 12),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Recibido: efectivo ${formatoMoneda(resumen.recibidoEfectivo)}'
-                  ' · transferencias '
-                  '${formatoMoneda(resumen.recibidoTransferencia)}',
-                  key: const Key('texto_recibido'),
-                  style: TextStyle(color: suave, fontSize: 12),
-                ),
-                if (semana != null) ...[
-                  const SizedBox(height: 12),
-                  MiniGraficaSemana(
-                    key: const Key('mini_grafica'),
-                    valores: semana!,
-                    hasta: dia,
-                    onTap: onVerReportes,
+              key: const Key('tarjeta_ventas'),
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: ColoresApp.of(context).tarjetaPrincipal,
+                borderRadius: BorderRadius.circular(radioTarjetaPrincipal),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    esHoy ? 'Ventas de hoy' : 'Ventas del ${fechaCorta(dia)}',
+                    style: estiloTitulo(tamano: 14, color: suave),
                   ),
+                  const SizedBox(height: 4),
+                  Monto(
+                    resumen.totalVendido,
+                    tamano: 36,
+                    tono: TonoMonto.claro,
+                    animado: true,
+                  ),
+                  if (comparacion != null) ...[
+                    const SizedBox(height: 6),
+                    _EtiquetaComparacion(comparacion),
+                  ],
+                  const SizedBox(height: 4),
+                  Text(
+                    '${plural(resumen.cantidadVentas, 'venta', 'ventas')} · '
+                    '${plural(resumen.cantidadFiadas, 'fiada', 'fiadas')}',
+                    style: TextStyle(color: suave, fontSize: 12),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Recibido: efectivo ${formatoMoneda(resumen.recibidoEfectivo)}'
+                    ' · transferencias '
+                    '${formatoMoneda(resumen.recibidoTransferencia)}',
+                    key: const Key('texto_recibido'),
+                    style: TextStyle(color: suave, fontSize: 12),
+                  ),
+                  if (semana != null) ...[
+                    const SizedBox(height: 12),
+                    MiniGraficaSemana(
+                      key: const Key('mini_grafica'),
+                      valores: semana!,
+                      hasta: dia,
+                      onTap: onVerReportes,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
           ),
         ),
         const SizedBox(height: 12),
@@ -363,8 +388,9 @@ class _Tarjetas extends StatelessWidget {
                   etiqueta: 'Ganancia',
                   valor: ganancia,
                   tono: ganancia >= 0 ? TonoMonto.entra : TonoMonto.sale,
-                  colorBorde:
-                      ganancia >= 0 ? ColoresApp.of(context).entraSuave : ColoresApp.of(context).saleSuave,
+                  colorBorde: ganancia >= 0
+                      ? ColoresApp.of(context).entraSuave
+                      : ColoresApp.of(context).saleSuave,
                 ),
               ),
             ],

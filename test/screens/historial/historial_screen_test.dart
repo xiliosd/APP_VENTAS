@@ -3,6 +3,7 @@ import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/repositories/correccion_repository.dart';
 import 'package:app_ventas/repositories/gasto_repository.dart';
 import 'package:app_ventas/repositories/venta_repository.dart';
+import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/screens/historial/historial_screen.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -24,11 +25,19 @@ void main() {
     db = AppDatabase(NativeDatabase.memory());
     ventas = VentaRepository(db);
     gastos = GastoRepository(db);
-    ana = await db.into(db.usuarios).insert(
+    ana = await db
+        .into(db.usuarios)
+        .insert(
           UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
         );
-    beto = await db.into(db.usuarios).insert(
-          UsuariosCompanion.insert(nombre: 'Beto', rol: 'vendedor', pinHash: 'y'),
+    beto = await db
+        .into(db.usuarios)
+        .insert(
+          UsuariosCompanion.insert(
+            nombre: 'Beto',
+            rol: 'vendedor',
+            pinHash: 'y',
+          ),
         );
   });
 
@@ -45,20 +54,26 @@ void main() {
   }
 
   Finder enLista(String texto) => find.descendant(
-      of: find.byKey(const Key('lista_movimientos')), matching: find.text(texto));
+    of: find.byKey(const Key('lista_movimientos')),
+    matching: find.text(texto),
+  );
 
-  Finder enTotal(String clave, String texto) => find.descendant(
-      of: find.byKey(Key(clave)), matching: find.text(texto));
+  Finder enTotal(String clave, String texto) =>
+      find.descendant(of: find.byKey(Key(clave)), matching: find.text(texto));
 
   Future<void> cargarHoy() async {
     await ventas.registrarVenta(monto: 5000, esFiado: false, usuarioId: ana);
     await gastos.registrarGasto(
-        monto: 1000, descripcion: 'Hielo', usuarioId: beto);
+      monto: 1000,
+      descripcion: 'Hielo',
+      usuarioId: beto,
+    );
     await gastos.registrarGasto(monto: 500, usuarioId: ana);
   }
 
-  testWidgets('muestra ventas y gastos del día con usuario y totales',
-      (tester) async {
+  testWidgets('muestra ventas y gastos del día con usuario y totales', (
+    tester,
+  ) async {
     await cargarHoy();
     await montar(tester);
 
@@ -70,8 +85,9 @@ void main() {
     expect(enTotal('total_gastos', r'$1.500'), findsOneWidget);
   });
 
-  testWidgets('el filtro por usuario oculta los movimientos de otros',
-      (tester) async {
+  testWidgets('el filtro por usuario oculta los movimientos de otros', (
+    tester,
+  ) async {
     await cargarHoy();
     await montar(tester);
 
@@ -84,8 +100,9 @@ void main() {
     expect(enTotal('total_ventas', r'$0'), findsOneWidget);
   });
 
-  testWidgets('una venta registrada con la pantalla abierta aparece sola',
-      (tester) async {
+  testWidgets('una venta registrada con la pantalla abierta aparece sola', (
+    tester,
+  ) async {
     await montar(tester);
     expect(find.text('Sin movimientos este día'), findsOneWidget);
 
@@ -96,8 +113,9 @@ void main() {
     expect(enLista('Fiado · Ana'), findsOneWidget);
   });
 
-  testWidgets('el día anterior muestra solo los movimientos de ese día',
-      (tester) async {
+  testWidgets('el día anterior muestra solo los movimientos de ese día', (
+    tester,
+  ) async {
     final ahora = DateTime.now();
     await ventas.registrarVenta(monto: 5000, esFiado: false, usuarioId: ana);
     await ventas.registrarVenta(
@@ -115,13 +133,15 @@ void main() {
     expect(enLista(r'$5.000'), findsNothing);
   });
 
-  testWidgets('una venta por transferencia lleva la etiqueta QR',
-      (tester) async {
+  testWidgets('una venta por transferencia lleva la etiqueta QR', (
+    tester,
+  ) async {
     await ventas.registrarVenta(
-        monto: 4000,
-        esFiado: false,
-        usuarioId: ana,
-        medioPago: MedioPago.transferencia);
+      monto: 4000,
+      esFiado: false,
+      usuarioId: ana,
+      medioPago: MedioPago.transferencia,
+    );
     await ventas.registrarVenta(monto: 1000, esFiado: false, usuarioId: ana);
 
     await montar(tester);
@@ -133,38 +153,59 @@ void main() {
       (db.select(db.usuarios)..where((u) => u.id.equals(id))).getSingle();
 
   testWidgets(
-      'una venta anulada se ve tachada, dice quién la anuló y no suma',
-      (tester) async {
-    final anulada =
-        await ventas.registrarVenta(monto: 5000, esFiado: false, usuarioId: ana);
-    await ventas.registrarVenta(monto: 3000, esFiado: false, usuarioId: ana);
-    await CorreccionRepository(db).anularVenta(anulada, por: await usuario(ana));
-    await montar(tester);
+    'una venta anulada se ve tachada, dice quién la anuló y no suma',
+    (tester) async {
+      final anulada = await ventas.registrarVenta(
+        monto: 5000,
+        esFiado: false,
+        usuarioId: ana,
+      );
+      await ventas.registrarVenta(monto: 3000, esFiado: false, usuarioId: ana);
+      await CorreccionRepository(db)
+          .anularVenta(anulada, por: await usuario(ana));
+      await montar(tester);
 
-    expect(enTotal('total_ventas', r'$3.000'), findsOneWidget);
-    final monto = tester.widget<Monto>(find.descendant(
-        of: find.byKey(Key('movimiento_venta_$anulada')),
-        matching: find.byType(Monto)));
-    expect(monto.tachado, isTrue);
-    expect(find.textContaining('Anulada por Ana · '), findsOneWidget);
-  });
+      expect(enTotal('total_ventas', r'$3.000'), findsOneWidget);
+      final monto = tester.widget<Monto>(
+        find.descendant(
+          of: find.byKey(Key('movimiento_venta_$anulada')),
+          matching: find.byType(Monto),
+        ),
+      );
+      expect(monto.tachado, isTrue);
+      expect(find.textContaining('Anulada por Ana · '), findsOneWidget);
+    },
+  );
 
   testWidgets('un gasto corregido muestra el valor anterior', (tester) async {
     final id = await gastos.registrarGasto(
-        monto: 1000, descripcion: 'Hielo', usuarioId: ana);
-    await CorreccionRepository(db).corregirGasto(id,
-        monto: 1200, descripcion: 'Hielo', por: await usuario(ana));
+      monto: 1000,
+      descripcion: 'Hielo',
+      usuarioId: ana,
+    );
+    await CorreccionRepository(db).corregirGasto(
+      id,
+      monto: 1200,
+      descripcion: 'Hielo',
+      por: await usuario(ana),
+    );
     await montar(tester);
 
     expect(enTotal('total_gastos', r'$1.200'), findsOneWidget);
-    expect(find.text(r'Corregido por Ana · antes: $1.000 · Hielo'),
-        findsOneWidget);
+    expect(
+      find.text(r'Corregido por Ana · antes: $1.000 · Hielo'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('sin sesión, tocar un movimiento muestra solo su detalle',
-      (tester) async {
-    final id =
-        await ventas.registrarVenta(monto: 5000, esFiado: false, usuarioId: ana);
+  testWidgets('sin sesión, tocar un movimiento muestra solo su detalle', (
+    tester,
+  ) async {
+    final id = await ventas.registrarVenta(
+      monto: 5000,
+      esFiado: false,
+      usuarioId: ana,
+    );
     await montar(tester);
 
     await tester.tap(find.byKey(Key('movimiento_venta_$id')));
@@ -174,14 +215,19 @@ void main() {
     expect(find.byKey(const Key('boton_corregir')), findsNothing);
   });
 
-  testWidgets('anular desde el Historial descuenta la venta del total',
-      (tester) async {
+  testWidgets('anular desde el Historial descuenta la venta del total', (
+    tester,
+  ) async {
     final container = await containerConSesion(db, nombre: 'Caro');
     addTearDown(container.dispose);
-    final id =
-        await ventas.registrarVenta(monto: 5000, esFiado: false, usuarioId: ana);
+    final id = await ventas.registrarVenta(
+      monto: 5000,
+      esFiado: false,
+      usuarioId: ana,
+    );
     await tester.pumpWidget(
-        appDePrueba(container, inicio: const HistorialScreen()));
+      appDePrueba(container, inicio: const HistorialScreen()),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(Key('movimiento_venta_$id')));
@@ -195,8 +241,9 @@ void main() {
     expect(find.text('Venta anulada'), findsOneWidget);
   });
 
-  testWidgets('el filtro Gastos deja solo gastos y el resumen sin ventas',
-      (tester) async {
+  testWidgets('el filtro Gastos deja solo gastos y el resumen sin ventas', (
+    tester,
+  ) async {
     await cargarHoy();
     await montar(tester);
     await tester.tap(find.byKey(const Key('filtro_tipo_gastos')));
@@ -207,8 +254,9 @@ void main() {
     expect(enTotal('total_gastos', r'$1.500'), findsOneWidget);
   });
 
-  testWidgets('Gastos sin gastos en el día muestra el vacío del filtro',
-      (tester) async {
+  testWidgets('Gastos sin gastos en el día muestra el vacío del filtro', (
+    tester,
+  ) async {
     await ventas.registrarVenta(monto: 5000, esFiado: false, usuarioId: ana);
     await montar(tester);
     await tester.tap(find.byKey(const Key('filtro_tipo_gastos')));
@@ -217,21 +265,35 @@ void main() {
     expect(enTotal('total_gastos', r'$0'), findsOneWidget);
   });
 
-  testWidgets('agrupa por hora (recientes arriba) y cuenta los movimientos',
-      (tester) async {
+  testWidgets('agrupa por hora (recientes arriba) y cuenta los movimientos', (
+    tester,
+  ) async {
     final hoy = DateTime.now();
     DateTime a(int h, int m) => DateTime(hoy.year, hoy.month, hoy.day, h, m);
     await ventas.registrarVenta(
-        monto: 1000, esFiado: false, usuarioId: ana, fecha: a(18, 10));
+      monto: 1000,
+      esFiado: false,
+      usuarioId: ana,
+      fecha: a(18, 10),
+    );
     await ventas.registrarVenta(
-        monto: 2000, esFiado: false, usuarioId: ana, fecha: a(9, 5));
-    await db.into(db.gastos).insert(GastosCompanion.insert(
-        monto: 300, fecha: a(18, 40), usuarioId: ana));
+      monto: 2000,
+      esFiado: false,
+      usuarioId: ana,
+      fecha: a(9, 5),
+    );
+    await db
+        .into(db.gastos)
+        .insert(
+          GastosCompanion.insert(monto: 300, fecha: a(18, 40), usuarioId: ana),
+        );
     await montar(tester);
     expect(find.byKey(const Key('hora_18')), findsOneWidget);
     expect(find.byKey(const Key('hora_9')), findsOneWidget);
-    expect(tester.getTopLeft(find.byKey(const Key('hora_18'))).dy,
-        lessThan(tester.getTopLeft(find.byKey(const Key('hora_9'))).dy));
+    expect(
+      tester.getTopLeft(find.byKey(const Key('hora_18'))).dy,
+      lessThan(tester.getTopLeft(find.byKey(const Key('hora_9'))).dy),
+    );
     expect(find.text('3 movimientos'), findsOneWidget);
   });
 
@@ -239,36 +301,75 @@ void main() {
     final cliente = await db
         .into(db.clientes)
         .insert(ClientesCompanion.insert(nombre: 'Don Pedro'));
-    final contado =
-        await ventas.registrarVenta(monto: 1000, esFiado: false, usuarioId: ana);
+    final contado = await ventas.registrarVenta(
+      monto: 1000,
+      esFiado: false,
+      usuarioId: ana,
+    );
     final fiado = await ventas.registrarVenta(
-        monto: 2000, esFiado: true, clienteId: cliente, usuarioId: ana);
-    final gasto =
-        await gastos.registrarGasto(monto: 300, usuarioId: ana);
+      monto: 2000,
+      esFiado: true,
+      clienteId: cliente,
+      usuarioId: ana,
+    );
+    final gasto = await gastos.registrarGasto(monto: 300, usuarioId: ana);
     await montar(tester);
     Color color(String clave) =>
         (tester.widget<Container>(find.byKey(Key(clave))).decoration!
                 as BoxDecoration)
             .color!;
     final c = ColoresApp.claro;
-    expect(color('icono_movimiento_venta_$contado'),
-        c.entra.withValues(alpha: 0.15));
-    expect(color('icono_movimiento_venta_$fiado'),
-        c.fiado.withValues(alpha: 0.15));
-    expect(color('icono_movimiento_gasto_$gasto'),
-        c.sale.withValues(alpha: 0.15));
+    expect(
+      color('icono_movimiento_venta_$contado'),
+      c.entra.withValues(alpha: 0.15),
+    );
+    expect(
+      color('icono_movimiento_venta_$fiado'),
+      c.fiado.withValues(alpha: 0.15),
+    );
+    expect(
+      color('icono_movimiento_gasto_$gasto'),
+      c.sale.withValues(alpha: 0.15),
+    );
   });
 
-  testWidgets('con letra 2× en 360 dp un monto de millones no rompe la fila',
-      (tester) async {
+  testWidgets('con letra 2× en 360 dp un monto de millones no rompe la fila', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(720, 1560);
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
     tester.platformDispatcher.textScaleFactorTestValue = 2.0;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    await ventas.registrarVenta(
-        monto: 1250000, esFiado: false, usuarioId: ana);
+    await ventas.registrarVenta(monto: 1250000, esFiado: false, usuarioId: ana);
     await montar(tester);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('el vendedor solo ve sus movimientos y no ve los filtros de '
+      'usuario', (tester) async {
+    await cargarHoy();
+    final beto = await (db.select(
+      db.usuarios,
+    )..where((u) => u.nombre.equals('Beto'))).getSingle();
+    final container = ProviderContainer(
+      overrides: [databaseProvider.overrideWithValue(db)],
+    );
+    addTearDown(container.dispose);
+    container.read(sesionProvider.notifier).state = SesionState(
+      usuarioActivo: beto,
+    );
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: HistorialScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(enLista('Hielo · Beto'), findsOneWidget);
+    expect(enLista('Gasto · Ana'), findsNothing);
+    expect(enTotal('total_ventas', r'$0'), findsOneWidget);
+    expect(find.byKey(const Key('filtro_usuario_todos')), findsNothing);
   });
 }

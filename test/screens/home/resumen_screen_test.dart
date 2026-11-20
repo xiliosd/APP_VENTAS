@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
+import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/screens/home/resumen_screen.dart';
 import 'package:app_ventas/servicios/lector_codigo.dart';
 import 'package:app_ventas/screens/reportes/reportes_screen.dart';
@@ -44,7 +45,9 @@ void main() {
 
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
-    ana = await db.into(db.usuarios).insert(
+    ana = await db
+        .into(db.usuarios)
+        .insert(
           UsuariosCompanion.insert(nombre: 'Ana', rol: 'admin', pinHash: 'x'),
         );
   });
@@ -64,8 +67,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Finder enTarjeta(String clave, String texto) => find.descendant(
-      of: find.byKey(Key(clave)), matching: find.text(texto));
+  Finder enTarjeta(String clave, String texto) =>
+      find.descendant(of: find.byKey(Key(clave)), matching: find.text(texto));
 
   Future<void> vender(int monto, {bool fiado = false, DateTime? fecha}) async {
     int? clienteId;
@@ -74,21 +77,33 @@ void main() {
           .into(db.clientes)
           .insert(ClientesCompanion.insert(nombre: 'Cliente $monto'));
     }
-    await db.into(db.ventas).insert(VentasCompanion.insert(
-          monto: monto,
-          fecha: fecha ?? DateTime.now(),
-          esFiado: Value(fiado),
-          clienteId: Value(clienteId),
-          usuarioId: ana,
-        ));
+    await db
+        .into(db.ventas)
+        .insert(
+          VentasCompanion.insert(
+            monto: monto,
+            fecha: fecha ?? DateTime.now(),
+            esFiado: Value(fiado),
+            clienteId: Value(clienteId),
+            usuarioId: ana,
+          ),
+        );
   }
 
-  testWidgets('muestra ventas, gastos, ganancia y por cobrar del día',
-      (tester) async {
+  testWidgets('muestra ventas, gastos, ganancia y por cobrar del día', (
+    tester,
+  ) async {
     await vender(5000);
     await vender(2000, fiado: true);
-    await db.into(db.gastos).insert(GastosCompanion.insert(
-        monto: 1000, fecha: DateTime.now(), usuarioId: ana));
+    await db
+        .into(db.gastos)
+        .insert(
+          GastosCompanion.insert(
+            monto: 1000,
+            fecha: DateTime.now(),
+            usuarioId: ana,
+          ),
+        );
 
     await montar(tester);
 
@@ -100,8 +115,9 @@ void main() {
     expect(enTarjeta('tarjeta_por_cobrar', '1 cliente'), findsOneWidget);
   });
 
-  testWidgets('una venta nueva cuenta el total sin repetir la entrada',
-      (tester) async {
+  testWidgets('una venta nueva cuenta el total sin repetir la entrada', (
+    tester,
+  ) async {
     await vender(5000);
     await montar(tester);
 
@@ -110,38 +126,59 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(
-        find.descendant(
-            of: find.byKey(const Key('tarjeta_ventas')),
-            matching: find.byType(Opacity)),
-        findsNothing);
+      find.descendant(
+        of: find.byKey(const Key('tarjeta_ventas')),
+        matching: find.byType(Opacity),
+      ),
+      findsNothing,
+    );
     // Cuadro a cuadro: el monto pasa por valores intermedios.
     final vistos = <String>{};
     for (var i = 0; i < 60; i++) {
       await tester.runAsync(() => Future<void>.delayed(Duration.zero));
       await tester.pump(const Duration(milliseconds: 16));
-      vistos.addAll(tester
-          .widgetList<Text>(find.descendant(
-              of: find.byKey(const Key('tarjeta_ventas')),
-              matching: find.byType(Text)))
-          .map((t) => t.data ?? ''));
+      vistos.addAll(
+        tester
+            .widgetList<Text>(
+              find.descendant(
+                of: find.byKey(const Key('tarjeta_ventas')),
+                matching: find.byType(Text),
+              ),
+            )
+            .map((t) => t.data ?? ''),
+      );
     }
     expect(
-        vistos.where((t) =>
-            t.startsWith(r'$') && t != r'$5.000' && t != r'$15.000'),
-        isNotEmpty);
+      vistos.where(
+        (t) => t.startsWith(r'$') && t != r'$5.000' && t != r'$15.000',
+      ),
+      isNotEmpty,
+    );
     await tester.pumpAndSettle();
     expect(enTarjeta('tarjeta_ventas', r'$15.000'), findsOneWidget);
   });
 
   testWidgets('una ganancia negativa se muestra en rojo', (tester) async {
-    await db.into(db.gastos).insert(GastosCompanion.insert(
-        monto: 3000, fecha: DateTime.now(), usuarioId: ana));
+    await db
+        .into(db.gastos)
+        .insert(
+          GastosCompanion.insert(
+            monto: 3000,
+            fecha: DateTime.now(),
+            usuarioId: ana,
+          ),
+        );
 
     await montar(tester);
 
-    final monto = tester.widget<Monto>(find.descendant(
-        of: find.byKey(const Key('tarjeta_ganancia')),
-        matching: find.byType(Monto)).first);
+    final monto = tester.widget<Monto>(
+      find
+          .descendant(
+            of: find.byKey(const Key('tarjeta_ganancia')),
+            matching: find.byType(Monto),
+          )
+          .first,
+    );
     expect(monto.valor, -3000);
     expect(monto.tono, TonoMonto.sale);
   });
@@ -154,12 +191,15 @@ void main() {
     expect(llamado, isTrue);
   });
 
-  testWidgets('navegar al día anterior muestra las ventas de ese día',
-      (tester) async {
+  testWidgets('navegar al día anterior muestra las ventas de ese día', (
+    tester,
+  ) async {
     final ahora = DateTime.now();
     await vender(5000);
-    await vender(7000,
-        fecha: DateTime(ahora.year, ahora.month, ahora.day - 1, 12));
+    await vender(
+      7000,
+      fecha: DateTime(ahora.year, ahora.month, ahora.day - 1, 12),
+    );
 
     await montar(tester);
     expect(find.text('Hoy'), findsOneWidget);
@@ -175,8 +215,9 @@ void main() {
     expect(enTarjeta('tarjeta_ventas', r'$5.000'), findsOneWidget);
   });
 
-  testWidgets('cifras grandes no desbordan en un celular pequeño',
-      (tester) async {
+  testWidgets('cifras grandes no desbordan en un celular pequeño', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(720, 1560);
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
@@ -188,15 +229,20 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Gastos lleva borde rojo claro y Ganancia borde verde claro',
-      (tester) async {
+  testWidgets('Gastos lleva borde rojo claro y Ganancia borde verde claro', (
+    tester,
+  ) async {
     await montar(tester);
 
     Color borde(String clave) {
-      final material = tester.widget<Material>(find
-          .descendant(
-              of: find.byKey(Key(clave)), matching: find.byType(Material))
-          .first);
+      final material = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byKey(Key(clave)),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
       return (material.shape! as RoundedRectangleBorder).side.color;
     }
 
@@ -204,33 +250,44 @@ void main() {
     expect(borde('tarjeta_ganancia'), ColoresApp.claro.entraSuave);
   });
 
-  testWidgets('la etiqueta de la tarjeta principal va en Nunito',
-      (tester) async {
+  testWidgets('la etiqueta de la tarjeta principal va en Nunito', (
+    tester,
+  ) async {
     await montar(tester);
 
     final etiqueta = tester.widget<Text>(find.text('Ventas de hoy'));
     expect(etiqueta.style!.fontFamily, 'Nunito');
-    expect(etiqueta.style!.fontVariations,
-        contains(const FontVariation('wght', 800)));
+    expect(
+      etiqueta.style!.fontVariations,
+      contains(const FontVariation('wght', 800)),
+    );
   });
 
-  testWidgets('la tarjeta de ventas muestra lo recibido por medio de pago',
-      (tester) async {
+  testWidgets('la tarjeta de ventas muestra lo recibido por medio de pago', (
+    tester,
+  ) async {
     await vender(5000);
-    await db.into(db.ventas).insert(VentasCompanion.insert(
-          monto: 3000,
-          fecha: DateTime.now(),
-          usuarioId: ana,
-          medioPago: const Value(MedioPago.transferencia),
-        ));
+    await db
+        .into(db.ventas)
+        .insert(
+          VentasCompanion.insert(
+            monto: 3000,
+            fecha: DateTime.now(),
+            usuarioId: ana,
+            medioPago: const Value(MedioPago.transferencia),
+          ),
+        );
     await vender(9000, fiado: true);
 
     await montar(tester);
 
     expect(
-        enTarjeta('tarjeta_ventas',
-            r'Recibido: efectivo $5.000 · transferencias $3.000'),
-        findsOneWidget);
+      enTarjeta(
+        'tarjeta_ventas',
+        r'Recibido: efectivo $5.000 · transferencias $3.000',
+      ),
+      findsOneWidget,
+    );
   });
 
   Future<void> montarConSesion(WidgetTester tester, String rol) async {
@@ -239,8 +296,9 @@ void main() {
     addTearDown(tester.view.reset);
     final container = await containerConSesion(db, nombre: 'Caro', rol: rol);
     addTearDown(container.dispose);
-    await tester.pumpWidget(appDePrueba(container,
-        inicio: const Scaffold(body: ResumenScreen())));
+    await tester.pumpWidget(
+      appDePrueba(container, inicio: const Scaffold(body: ResumenScreen())),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -253,59 +311,81 @@ void main() {
     expect(find.byType(ReportesScreen), findsOneWidget);
   });
 
-  Future<void> montarConLector(WidgetTester tester, String rol,
-      {double escala = 1.0,
-      Size tamano = const Size(800, 2400),
-      LectorCodigo? lector}) async {
+  Future<void> montarConLector(
+    WidgetTester tester,
+    String rol, {
+    double escala = 1.0,
+    Size tamano = const Size(800, 2400),
+    LectorCodigo? lector,
+  }) async {
     tester.view.physicalSize = tamano;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await db.into(db.productos).insert(ProductosCompanion.insert(
-        nombre: 'Gaseosa', precio: 2500, codigoBarras: const Value('7702')));
-    final container = await containerConSesion(db,
-        nombre: 'Caro',
-        rol: rol,
-        overrides: [
-          lectorCodigoProvider.overrideWithValue(lector ?? LectorFalso(['7702'])),
-        ]);
+    await db
+        .into(db.productos)
+        .insert(
+          ProductosCompanion.insert(
+            nombre: 'Gaseosa',
+            precio: 2500,
+            codigoBarras: const Value('7702'),
+          ),
+        );
+    final container = await containerConSesion(
+      db,
+      nombre: 'Caro',
+      rol: rol,
+      overrides: [
+        lectorCodigoProvider.overrideWithValue(lector ?? LectorFalso(['7702'])),
+      ],
+    );
     addTearDown(container.dispose);
-    await tester.pumpWidget(UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp(
-        theme: temaClaro(),
-        builder: (contexto, hijo) => MediaQuery(
-          data: MediaQuery.of(contexto)
-              .copyWith(textScaler: TextScaler.linear(escala)),
-          child: hijo!,
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: temaClaro(),
+          builder: (contexto, hijo) => MediaQuery(
+            data: MediaQuery.of(contexto)
+                .copyWith(textScaler: TextScaler.linear(escala)),
+            child: hijo!,
+          ),
+          home: const Scaffold(body: ResumenScreen()),
         ),
-        home: const Scaffold(body: ResumenScreen()),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
   }
 
   for (final rol in ['admin', 'vendedor']) {
-    testWidgets('el Inicio muestra Consultar precio sobre la barra y lo abre ($rol)',
-        (tester) async {
-      await montarConLector(tester, rol);
-      final boton = find.byKey(const Key('boton_consultar_precio'));
-      expect(boton, findsOneWidget);
-      expect(find.descendant(of: boton, matching: find.text('Consultar precio')),
-          findsOneWidget);
-      expect(tester.getRect(boton).bottom,
+    testWidgets(
+      'el Inicio muestra Consultar precio sobre la barra y lo abre ($rol)',
+      (tester) async {
+        await montarConLector(tester, rol);
+        final boton = find.byKey(const Key('boton_consultar_precio'));
+        expect(boton, findsOneWidget);
+        expect(
+          find.descendant(of: boton, matching: find.text('Consultar precio')),
+          findsOneWidget,
+        );
+        expect(
+          tester.getRect(boton).bottom,
           lessThanOrEqualTo(
-              tester.getRect(find.byKey(const Key('boton_nueva_venta'))).top));
-      expect(tester.getSize(boton).height, greaterThanOrEqualTo(48));
+            tester.getRect(find.byKey(const Key('boton_nueva_venta'))).top,
+          ),
+        );
+        expect(tester.getSize(boton).height, greaterThanOrEqualTo(48));
 
-      await tester.tap(boton);
-      await tester.pumpAndSettle();
-      expect(find.text('Gaseosa'), findsOneWidget);
-      expect(find.text('Listo'), findsOneWidget);
-    });
+        await tester.tap(boton);
+        await tester.pumpAndSettle();
+        expect(find.text('Gaseosa'), findsOneWidget);
+        expect(find.text('Listo'), findsOneWidget);
+      },
+    );
   }
 
-  testWidgets('dos toques rápidos en Consultar precio abren un solo escáner',
-      (tester) async {
+  testWidgets('dos toques rápidos en Consultar precio abren un solo escáner', (
+    tester,
+  ) async {
     final lector = LectorPendiente();
     await montarConLector(tester, 'admin', lector: lector);
     final boton = find.byKey(const Key('boton_consultar_precio'));
@@ -323,24 +403,37 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('Inicio a letra 2,0× en 360 dp no desborda con el botón nuevo',
-      (tester) async {
-    await montarConLector(tester, 'admin',
-        escala: 2.0, tamano: const Size(360, 740));
+  testWidgets('Inicio a letra 2,0× en 360 dp no desborda con el botón nuevo', (
+    tester,
+  ) async {
+    await montarConLector(
+      tester,
+      'admin',
+      escala: 2.0,
+      tamano: const Size(360, 740),
+    );
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('boton_consultar_precio')), findsOneWidget);
   });
 
-  testWidgets('Inicio a letra 2,0× en 360×640 no desborda y deja ver el tablero',
-      (tester) async {
-    await montarConLector(tester, 'admin',
-        escala: 2.0, tamano: const Size(360, 640));
-    expect(tester.takeException(), isNull);
-    final barra = tester.getRect(find.byKey(const Key('barra_acciones_inicio')));
-    final tarjeta = tester.getRect(find.byKey(const Key('tarjeta_ventas')));
-    expect(tarjeta.top, lessThan(barra.top));
-    expect(barra.top, greaterThan(100));
-  });
+  testWidgets(
+    'Inicio a letra 2,0× en 360×640 no desborda y deja ver el tablero',
+    (tester) async {
+      await montarConLector(
+        tester,
+        'admin',
+        escala: 2.0,
+        tamano: const Size(360, 640),
+      );
+      expect(tester.takeException(), isNull);
+      final barra = tester.getRect(
+        find.byKey(const Key('barra_acciones_inicio')),
+      );
+      final tarjeta = tester.getRect(find.byKey(const Key('tarjeta_ventas')));
+      expect(tarjeta.top, lessThan(barra.top));
+      expect(barra.top, greaterThan(100));
+    },
+  );
 
   testWidgets('el vendedor no ve Ver reportes', (tester) async {
     await montarConSesion(tester, 'vendedor');
@@ -348,8 +441,9 @@ void main() {
     expect(find.byKey(const Key('boton_ver_reportes')), findsNothing);
   });
 
-  testWidgets('la tarjeta del día compara con ayer y muestra la mini gráfica',
-      (tester) async {
+  testWidgets('la tarjeta del día compara con ayer y muestra la mini gráfica', (
+    tester,
+  ) async {
     final hoy = DateTime.now();
     await vender(11200, fecha: hoy);
     await vender(10000, fecha: hoy.subtract(const Duration(days: 1)));
@@ -357,10 +451,12 @@ void main() {
     expect(find.text('Ventas de hoy'), findsOneWidget);
     expect(enTarjeta('tarjeta_ventas', '▲ 12 % vs. ayer'), findsOneWidget);
     expect(
-        find.descendant(
-            of: find.byKey(const Key('tarjeta_ventas')),
-            matching: find.byKey(const Key('mini_grafica'))),
-        findsOneWidget);
+      find.descendant(
+        of: find.byKey(const Key('tarjeta_ventas')),
+        matching: find.byKey(const Key('mini_grafica')),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('otro día: título con fecha y "el día anterior"', (tester) async {
@@ -370,43 +466,59 @@ void main() {
     await tester.tap(find.byKey(const Key('boton_dia_anterior')));
     await tester.pumpAndSettle();
     expect(find.textContaining('Ventas del '), findsOneWidget);
-    expect(enTarjeta('tarjeta_ventas', 'El día anterior no hubo ventas'),
-        findsOneWidget);
+    expect(
+      enTarjeta('tarjeta_ventas', 'El día anterior no hubo ventas'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('sin ventas ni ayer ni hoy no hay etiqueta de comparación',
-      (tester) async {
+  testWidgets('sin ventas ni ayer ni hoy no hay etiqueta de comparación', (
+    tester,
+  ) async {
     await montar(tester);
     expect(find.byKey(const Key('comparacion_ventas')), findsNothing);
   });
 
-  testWidgets('Venta y Gasto quedan fijos abajo, fuera de la lista',
-      (tester) async {
+  testWidgets('Venta y Gasto quedan fijos abajo, fuera de la lista', (
+    tester,
+  ) async {
     await montar(tester);
     final barra = find.byKey(const Key('barra_acciones_inicio'));
     expect(
-        find.descendant(
-            of: barra, matching: find.byKey(const Key('boton_nueva_venta'))),
-        findsOneWidget);
+      find.descendant(
+        of: barra,
+        matching: find.byKey(const Key('boton_nueva_venta')),
+      ),
+      findsOneWidget,
+    );
     expect(
-        find.descendant(
-            of: barra, matching: find.byKey(const Key('boton_nuevo_gasto'))),
-        findsOneWidget);
+      find.descendant(
+        of: barra,
+        matching: find.byKey(const Key('boton_nuevo_gasto')),
+      ),
+      findsOneWidget,
+    );
     expect(
-        find.descendant(
-            of: find.byType(ListView),
-            matching: find.byKey(const Key('boton_nueva_venta'))),
-        findsNothing);
+      find.descendant(
+        of: find.byType(ListView),
+        matching: find.byKey(const Key('boton_nueva_venta')),
+      ),
+      findsNothing,
+    );
   });
 
-  testWidgets('el admin ve Por vendedor con el enlace a reportes',
-      (tester) async {
+  testWidgets('el admin ve Por vendedor con el enlace a reportes', (
+    tester,
+  ) async {
     await montarConSesion(tester, 'admin');
     final tarjeta = find.byKey(const Key('tarjeta_por_vendedor'));
     expect(
-        find.descendant(
-            of: tarjeta, matching: find.byKey(const Key('boton_ver_reportes'))),
-        findsOneWidget);
+      find.descendant(
+        of: tarjeta,
+        matching: find.byKey(const Key('boton_ver_reportes')),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('el admin abre Reportes tocando la mini gráfica', (tester) async {
@@ -414,5 +526,59 @@ void main() {
     await tester.tap(find.byKey(const Key('mini_grafica')));
     await tester.pumpAndSettle();
     expect(find.byType(ReportesScreen), findsOneWidget);
+  });
+
+  group('el vendedor ve solo lo suyo', () {
+    Future<void> montarVendedor(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final container = await containerConSesion(
+        db,
+        nombre: 'Caro',
+        rol: 'vendedor',
+      );
+      addTearDown(container.dispose);
+      final caro = container.read(sesionProvider).usuarioActivo!.id;
+      final ahora = DateTime.now();
+      final ayer = DateTime(ahora.year, ahora.month, ahora.day - 1, 12);
+      for (final (monto, usuario, fecha) in [
+        (5000, ana, ahora),
+        (3000, caro, ahora),
+        (7000, ana, ayer),
+        (4000, caro, ayer),
+      ]) {
+        await db
+            .into(db.ventas)
+            .insert(
+              VentasCompanion.insert(
+                monto: monto,
+                fecha: fecha,
+                usuarioId: usuario,
+              ),
+            );
+      }
+      await tester.pumpWidget(
+        appDePrueba(container, inicio: const Scaffold(body: ResumenScreen())),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('el total del día es solo de sus ventas', (tester) async {
+      await montarVendedor(tester);
+      expect(enTarjeta('tarjeta_ventas', r'$3.000'), findsOneWidget);
+    });
+
+    testWidgets('no ve la tarjeta Por vendedor', (tester) async {
+      await montarVendedor(tester);
+      expect(find.byKey(const Key('tarjeta_por_vendedor')), findsNothing);
+    });
+
+    testWidgets('al cambiar de día sigue viendo solo lo suyo', (tester) async {
+      await montarVendedor(tester);
+      await tester.tap(find.byKey(const Key('boton_dia_anterior')));
+      await tester.pumpAndSettle();
+      expect(enTarjeta('tarjeta_ventas', r'$4.000'), findsOneWidget);
+    });
   });
 }

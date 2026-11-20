@@ -46,15 +46,25 @@ class ResumenRepository {
   final FiadoRepository _fiadoRepository;
 
   /// Total vendido (contado + fiado, sin anuladas) de cada uno de los [dias]
-  /// días que terminan en [hasta], del más antiguo al más reciente.
-  Future<List<int>> ventasDiarias(DateTime hasta, {int dias = 7}) async {
+  /// días que terminan en [hasta], del más antiguo al más reciente. Con
+  /// [usuarioId], solo lo que vendió esa persona.
+  Future<List<int>> ventasDiarias(
+    DateTime hasta, {
+    int dias = 7,
+    int? usuarioId,
+  }) async {
     final primerDia = inicioDelDia(hasta).subtract(Duration(days: dias - 1));
-    final ventas = await (_db.select(_db.ventas)
-          ..where((v) =>
-              v.fecha.isBiggerOrEqualValue(inicioDelDia(primerDia)) &
-              v.fecha.isSmallerOrEqualValue(finDelDia(hasta)) &
-              v.anulado.equals(false)))
-        .get();
+    final ventas =
+        await (_db.select(_db.ventas)..where(
+              (v) =>
+                  v.fecha.isBiggerOrEqualValue(inicioDelDia(primerDia)) &
+                  v.fecha.isSmallerOrEqualValue(finDelDia(hasta)) &
+                  v.anulado.equals(false) &
+                  (usuarioId == null
+                      ? const Constant(true)
+                      : v.usuarioId.equals(usuarioId)),
+            ))
+            .get();
     final totales = List<int>.filled(dias, 0);
     final inicio = inicioDelDia(primerDia);
     for (final v in ventas) {
@@ -65,11 +75,16 @@ class ResumenRepository {
   }
 
   Future<ResumenDia> resumenDelDia(DateTime dia, {int? usuarioId}) async {
-    final ventas = await _ventaRepository.ventasDelDia(dia, usuarioId: usuarioId);
-    final gastos = await _gastoRepository.gastosDelDia(dia, usuarioId: usuarioId);
+    final ventas = await _ventaRepository.ventasDelDia(
+      dia,
+      usuarioId: usuarioId,
+    );
+    final gastos = await _gastoRepository.gastosDelDia(
+      dia,
+      usuarioId: usuarioId,
+    );
 
-    final pagos =
-        await _fiadoRepository.pagosDelDia(dia, usuarioId: usuarioId);
+    final pagos = await _fiadoRepository.pagosDelDia(dia, usuarioId: usuarioId);
     int recibido(MedioPago medio) =>
         ventas
             .where((v) => !v.esFiado && v.medioPago == medio)

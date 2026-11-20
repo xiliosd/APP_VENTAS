@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/historial_providers.dart';
+import '../../providers/sesion_provider.dart';
 import '../../providers/usuarios_providers.dart';
 import '../../repositories/historial_repository.dart';
 import '../../ui/error_carga.dart';
@@ -50,8 +51,13 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
     final usuarios =
         ref.watch(listaUsuariosProvider).valueOrNull ?? const <Usuario>[];
     final nombres = {for (final u in usuarios) u.id: u.nombre};
-    final movimientosAsync =
-        ref.watch(historialProvider((dia: _dia, usuarioId: _usuarioId)));
+    final sesion = ref.watch(sesionProvider);
+    // Un vendedor ve solo lo suyo; sin sesión o como admin, se elige a quién.
+    final soloLoSuyo = sesion.haySesion && !sesion.esAdmin;
+    final usuarioId = soloLoSuyo ? sesion.usuarioActivo!.id : _usuarioId;
+    final movimientosAsync = ref.watch(
+      historialProvider((dia: _dia, usuarioId: usuarioId)),
+    );
 
     return Scaffold(
       body: Column(
@@ -82,34 +88,35 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
               ],
             ),
           ),
-          SizedBox(
-            height: 48,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    key: const Key('filtro_usuario_todos'),
-                    label: const Text('Todos'),
-                    selected: _usuarioId == null,
-                    onSelected: (_) => setState(() => _usuarioId = null),
-                  ),
-                ),
-                for (final u in usuarios)
+          if (!soloLoSuyo)
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
-                      key: Key('filtro_usuario_${u.id}'),
-                      label: Text(u.nombre),
-                      selected: _usuarioId == u.id,
-                      onSelected: (_) => setState(() => _usuarioId = u.id),
+                      key: const Key('filtro_usuario_todos'),
+                      label: const Text('Todos'),
+                      selected: _usuarioId == null,
+                      onSelected: (_) => setState(() => _usuarioId = null),
                     ),
                   ),
-              ],
+                  for (final u in usuarios)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        key: Key('filtro_usuario_${u.id}'),
+                        label: Text(u.nombre),
+                        selected: _usuarioId == u.id,
+                        onSelected: (_) => setState(() => _usuarioId = u.id),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
           Expanded(
             child: movimientosAsync.when(
               skipLoadingOnReload: true,
@@ -118,42 +125,53 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
                 final visibles = filtrarPorTipo(movimientos, _tipo)
                   ..sort((a, b) => b.fecha.compareTo(a.fecha));
                 final totalVentas = visibles
-                    .where((m) =>
-                        !m.anulado && m.tipo == TipoMovimientoHistorial.venta)
+                    .where(
+                      (m) =>
+                          !m.anulado && m.tipo == TipoMovimientoHistorial.venta,
+                    )
                     .fold<int>(0, (suma, m) => suma + m.monto);
                 final totalGastos = visibles
-                    .where((m) =>
-                        !m.anulado && m.tipo == TipoMovimientoHistorial.gasto)
+                    .where(
+                      (m) =>
+                          !m.anulado && m.tipo == TipoMovimientoHistorial.gasto,
+                    )
                     .fold<int>(0, (suma, m) => suma + m.monto);
                 final filas = <Widget>[];
                 int? horaActual;
                 for (final (i, m) in visibles.indexed) {
                   if (m.fecha.hour != horaActual) {
                     horaActual = m.fecha.hour;
-                    filas.add(Padding(
-                      key: Key('hora_$horaActual'),
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                      child: Text(
-                        etiquetaHora(horaActual),
-                        style: TextStyle(
+                    filas.add(
+                      Padding(
+                        key: Key('hora_$horaActual'),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: Text(
+                          etiquetaHora(horaActual),
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: c.textoSecundario),
+                            color: c.textoSecundario,
+                          ),
+                        ),
                       ),
-                    ));
+                    );
                   }
-                  filas.add(EntradaEscalonada(
-                    indice: i,
-                    child: _MovimientoTile(
-                      movimiento: m,
-                      nombres: nombres,
-                      onTap: () => abrirHojaMovimiento(
-                        context,
-                        MovimientoEditable.desdeHistorial(m,
-                            nombreCliente: m.nombreCliente),
+                  filas.add(
+                    EntradaEscalonada(
+                      indice: i,
+                      child: _MovimientoTile(
+                        movimiento: m,
+                        nombres: nombres,
+                        onTap: () => abrirHojaMovimiento(
+                          context,
+                          MovimientoEditable.desdeHistorial(
+                            m,
+                            nombreCliente: m.nombreCliente,
+                          ),
+                        ),
                       ),
                     ),
-                  ));
+                  );
                 }
                 return ListView(
                   padding: const EdgeInsets.all(16),
@@ -171,10 +189,12 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
                                 children: [
                                   const Expanded(child: Text('Ventas')),
                                   Flexible(
-                                    child: Monto(totalVentas,
-                                        tamano: 18,
-                                        tono: TonoMonto.entra,
-                                        animado: true),
+                                    child: Monto(
+                                      totalVentas,
+                                      tamano: 18,
+                                      tono: TonoMonto.entra,
+                                      animado: true,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -185,20 +205,27 @@ class _HistorialScreenState extends ConsumerState<HistorialScreen> {
                                 children: [
                                   const Expanded(child: Text('Gastos')),
                                   Flexible(
-                                    child: Monto(totalGastos,
-                                        tamano: 18,
-                                        tono: TonoMonto.sale,
-                                        animado: true),
+                                    child: Monto(
+                                      totalGastos,
+                                      tamano: 18,
+                                      tono: TonoMonto.sale,
+                                      animado: true,
+                                    ),
                                   ),
                                 ],
                               ),
                             const SizedBox(height: 4),
                             Text(
-                              plural(visibles.length, 'movimiento',
-                                  'movimientos'),
+                              plural(
+                                visibles.length,
+                                'movimiento',
+                                'movimientos',
+                              ),
                               key: const Key('texto_cantidad_movimientos'),
                               style: TextStyle(
-                                  fontSize: 12, color: c.textoSecundario),
+                                fontSize: 12,
+                                color: c.textoSecundario,
+                              ),
                             ),
                           ],
                         ),
@@ -251,8 +278,8 @@ class _MovimientoTile extends StatelessWidget {
     final (color, icono) = esGasto
         ? (c.sale, Icons.call_made_rounded)
         : movimiento.esFiado
-            ? (c.fiado, Icons.menu_book_rounded)
-            : (c.entra, Icons.shopping_cart_rounded);
+        ? (c.fiado, Icons.menu_book_rounded)
+        : (c.entra, Icons.shopping_cart_rounded);
     final colorIcono = movimiento.anulado ? c.textoSecundario : color;
     final descripcion = movimiento.descripcion?.trim() ?? '';
     final detalle = esGasto
@@ -277,11 +304,12 @@ class _MovimientoTile extends StatelessWidget {
       title: Row(
         children: [
           Flexible(
-            child: Text('$detalle · ${nombres[movimiento.usuarioId] ?? ''}',
-                overflow: TextOverflow.ellipsis),
+            child: Text(
+              '$detalle · ${nombres[movimiento.usuarioId] ?? ''}',
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-          if (!esGasto &&
-              movimiento.medioPago == MedioPago.transferencia) ...[
+          if (!esGasto && movimiento.medioPago == MedioPago.transferencia) ...[
             const SizedBox(width: 8),
             const EtiquetaQr(),
           ],
@@ -302,10 +330,12 @@ class _MovimientoTile extends StatelessWidget {
       // Con letra grande el monto se encoge en vez de ocupar toda la fila.
       trailing: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 120),
-        child: Monto(movimiento.monto,
-            tamano: 16,
-            tono: esGasto ? TonoMonto.sale : TonoMonto.neutro,
-            tachado: movimiento.anulado),
+        child: Monto(
+          movimiento.monto,
+          tamano: 16,
+          tono: esGasto ? TonoMonto.sale : TonoMonto.neutro,
+          tachado: movimiento.anulado,
+        ),
       ),
     );
   }

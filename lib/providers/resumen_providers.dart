@@ -13,25 +13,30 @@ final _cambiosResumenProvider = StreamProvider<void>((ref) {
   return ref.watch(databaseProvider).tableUpdates().map((_) {});
 });
 
-/// The key must be a day normalized with `inicioDelDia`, so that every read
-/// of the same day hits the same cached provider.
-final resumenDelDiaProvider =
-    FutureProvider.autoDispose.family<ResumenDia, DateTime>((ref, dia) {
-  ref.watch(_cambiosResumenProvider);
-  return ref.watch(resumenRepositoryProvider).resumenDelDia(dia);
-});
+/// Día (normalizado con `inicioDelDia`, para que cada lectura del mismo día
+/// use el mismo provider) y, para un vendedor, solo lo suyo.
+typedef FiltroResumen = ({DateTime dia, int? usuarioId});
 
-/// Totales de los 7 días que terminan en [dia] (mismo contrato de clave que
-/// [resumenDelDiaProvider]).
-final ventasDiariasProvider =
-    FutureProvider.autoDispose.family<List<int>, DateTime>((ref, dia) {
-  ref.watch(_cambiosResumenProvider);
-  return ref.watch(resumenRepositoryProvider).ventasDiarias(dia);
-});
+final resumenDelDiaProvider = FutureProvider.autoDispose
+    .family<ResumenDia, FiltroResumen>((ref, f) {
+      ref.watch(_cambiosResumenProvider);
+      return ref
+          .watch(resumenRepositoryProvider)
+          .resumenDelDia(f.dia, usuarioId: f.usuarioId);
+    });
 
-/// Same key contract as [resumenDelDiaProvider].
+/// Totales de los 7 días que terminan en el día del filtro.
+final ventasDiariasProvider = FutureProvider.autoDispose
+    .family<List<int>, FiltroResumen>((ref, f) {
+      ref.watch(_cambiosResumenProvider);
+      return ref
+          .watch(resumenRepositoryProvider)
+          .ventasDiarias(f.dia, usuarioId: f.usuarioId);
+    });
+
+/// Solo para el administrador; la clave es un día normalizado.
 final resumenPorVendedorProvider = FutureProvider.autoDispose
     .family<Map<Usuario, ResumenDia>, DateTime>((ref, dia) {
-  ref.watch(_cambiosResumenProvider);
-  return ref.watch(resumenRepositoryProvider).resumenPorVendedor(dia);
-});
+      ref.watch(_cambiosResumenProvider);
+      return ref.watch(resumenRepositoryProvider).resumenPorVendedor(dia);
+    });
