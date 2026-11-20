@@ -139,4 +139,52 @@ void main() {
 
     expect((await repo.verificarPin(id, '1234'))?.nombre, 'Beto');
   });
+
+  test('crearUsuario guarda el permiso de catálogo', () async {
+    final id = await repo.crearUsuario(
+      nombre: 'Beto',
+      rol: 'vendedor',
+      pin: '2222',
+      manejaCatalogo: true,
+    );
+
+    expect((await repo.buscar(id))!.manejaCatalogo, isTrue);
+  });
+
+  test('un usuario nuevo no maneja el catálogo', () async {
+    final id = await repo.crearUsuario(
+      nombre: 'Beto',
+      rol: 'vendedor',
+      pin: '2222',
+    );
+
+    expect((await repo.buscar(id))!.manejaCatalogo, isFalse);
+  });
+
+  test('cambiarManejaCatalogo lo activa y lo quita', () async {
+    final id = await repo.crearUsuario(
+      nombre: 'Beto',
+      rol: 'vendedor',
+      pin: '2222',
+    );
+
+    await repo.cambiarManejaCatalogo(id, true);
+    expect((await repo.buscar(id))!.manejaCatalogo, isTrue);
+    await repo.cambiarManejaCatalogo(id, false);
+    expect((await repo.buscar(id))!.manejaCatalogo, isFalse);
+  });
+
+  test('desactivar y activar conserva el permiso de catálogo', () async {
+    final id = await repo.crearUsuario(
+      nombre: 'Beto',
+      rol: 'vendedor',
+      pin: '2222',
+      manejaCatalogo: true,
+    );
+
+    await repo.desactivar(id);
+    await repo.activar(id);
+
+    expect((await repo.buscar(id))!.manejaCatalogo, isTrue);
+  });
 }

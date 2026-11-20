@@ -5,7 +5,8 @@ const idGlobalConfiguracion = 'unica';
 /// en un celular no se sube (la nube lo guarda aparte), así que cambiarlo no
 /// anota nada. Una columna nueva de `usuarios` que deba viajar va aquí.
 const columnasUsuarioCompartidas =
-    'id_global, nombre, rol, activo, numero_vendedor, version_pin';
+    'id_global, nombre, rol, activo, numero_vendedor, version_pin, '
+    'maneja_catalogo';
 
 /// Sentencias `CREATE TRIGGER` que anotan en `cambios_pendientes` cada alta,
 /// edición o borrado de [tablas] (y de `configuracion_tienda`).

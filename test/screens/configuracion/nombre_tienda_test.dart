@@ -49,6 +49,7 @@ void main() {
       pinHash: 'x',
       activo: true,
       versionPin: 0,
+      manejaCatalogo: false,
     );
     await montar(tester, const IngresarPinScreen(usuario: usuario));
     expect(find.text('La Esquina'), findsOneWidget);

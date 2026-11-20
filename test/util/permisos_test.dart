@@ -11,6 +11,7 @@ void main() {
     pinHash: 'x',
     activo: true,
     versionPin: 0,
+    manejaCatalogo: false,
   );
   const beto = Usuario(
     id: 2,
@@ -20,6 +21,7 @@ void main() {
     pinHash: 'y',
     activo: true,
     versionPin: 0,
+    manejaCatalogo: false,
   );
   final ahora = DateTime(2026, 10, 6, 15);
 

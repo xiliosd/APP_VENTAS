@@ -335,6 +335,34 @@ void main() {
       expect(datos!['nombre'], 'Ana');
     });
 
+    test('el permiso de catálogo viaja a otro celular', () async {
+      final idGlobal = await usuarioGlobalEnA();
+      await (a.update(a.usuarios)..where((u) => u.idGlobal.equals(idGlobal)))
+          .write(const UsuariosCompanion(manejaCatalogo: Value(true)));
+
+      await copiar('usuarios', idGlobal);
+
+      expect((await usuarioEnB(idGlobal)).manejaCatalogo, isTrue);
+    });
+
+    test(
+      'una fila de un celular sin el permiso de catálogo no lo borra aquí',
+      () async {
+        final idGlobal = await usuarioGlobalEnA();
+        await copiar('usuarios', idGlobal);
+        await (b.update(b.usuarios)..where((u) => u.idGlobal.equals(idGlobal)))
+            .write(const UsuariosCompanion(manejaCatalogo: Value(true)));
+        // Así sube la fila un celular con la versión anterior de la app.
+        final datos = Map<String, Object?>.of(
+          (await leerFila(a, 'usuarios', idGlobal))!,
+        )..remove('maneja_catalogo');
+
+        await aplicarFila(b, 'usuarios', datos);
+
+        expect((await usuarioEnB(idGlobal)).manejaCatalogo, isTrue);
+      },
+    );
+
     test('un usuario nuevo de la nube queda con PIN vacío', () async {
       final idGlobal = await usuarioGlobalEnA();
 

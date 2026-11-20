@@ -66,6 +66,11 @@ class Usuarios extends Table with ConIdGlobal {
   /// Sube cada vez que se cambia el PIN: otro celular con una versión menor
   /// sabe que su PIN guardado ya no sirve.
   IntColumn get versionPin => integer().withDefault(const Constant(0))();
+
+  /// Vendedor de confianza ("super vendedor"): maneja productos, proveedores
+  /// y cualquier pedido, sin ver reportes ni administrar la tienda.
+  BoolColumn get manejaCatalogo =>
+      boolean().withDefault(const Constant(false))();
 }
 
 @DataClassName('Producto')
@@ -388,7 +393,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor != null ? _wrapConnection(executor) : _openConnection());
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -473,6 +478,14 @@ class AppDatabase extends _$AppDatabase {
       await m.addColumn(usuarios, usuarios.numeroVendedor);
       await m.addColumn(usuarios, usuarios.versionPin);
       // El de usuarios ya no se dispara al guardar solo el PIN.
+      await customStatement(
+        'DROP TRIGGER IF EXISTS sincronizar_usuarios_edicion',
+      );
+      await _crearDisparadores();
+    }
+    if (desde < 14) {
+      await m.addColumn(usuarios, usuarios.manejaCatalogo);
+      // El disparador de edición de usuarios suma la columna nueva.
       await customStatement(
         'DROP TRIGGER IF EXISTS sincronizar_usuarios_edicion',
       );

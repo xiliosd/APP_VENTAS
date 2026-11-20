@@ -12,6 +12,7 @@ import '../support/esquema_v1.dart';
 import '../support/esquema_v10.dart';
 import '../support/esquema_v11.dart';
 import '../support/esquema_v12.dart';
+import '../support/esquema_v13.dart';
 import '../support/esquema_v2.dart';
 import '../support/esquema_v3.dart';
 import '../support/esquema_v4.dart';
@@ -77,7 +78,7 @@ void main() {
       1,
       2,
     ]);
-    expect(db.schemaVersion, 13);
+    expect(db.schemaVersion, 14);
   });
 
   test('una base v2 abre en v3 sin nada anulado y sin correcciones', () async {
@@ -623,6 +624,63 @@ void main() {
       addTearDown(nueva.close);
 
       expect(await columnasPorTabla(migrada), await columnasPorTabla(nueva));
+    },
+  );
+
+  test(
+    'una base v13 abre en v14 con usuarios sin permiso de catálogo',
+    () async {
+      final archivo = File('${carpeta.path}/v13u.sqlite');
+      crearBaseV13(archivo.path);
+      final db = AppDatabase(NativeDatabase(archivo));
+      addTearDown(db.close);
+
+      final usuarios = await db.select(db.usuarios).get();
+      expect(usuarios, isNotEmpty);
+      for (final usuario in usuarios) {
+        expect(usuario.manejaCatalogo, isFalse);
+      }
+    },
+  );
+
+  test(
+    'una base v13 migrada tiene las mismas columnas que una base nueva',
+    () async {
+      final archivo = File('${carpeta.path}/v13c.sqlite');
+      crearBaseV13(archivo.path);
+      final migrada = AppDatabase(NativeDatabase(archivo));
+      addTearDown(migrada.close);
+      final nueva = AppDatabase(NativeDatabase.memory());
+      addTearDown(nueva.close);
+
+      expect(await columnasPorTabla(migrada), await columnasPorTabla(nueva));
+    },
+  );
+
+  test(
+    'en una base v13 migrada cambiar el permiso de catálogo anota un cambio',
+    () async {
+      final archivo = File('${carpeta.path}/v13d.sqlite');
+      crearBaseV13(archivo.path);
+      final db = AppDatabase(NativeDatabase(archivo));
+      addTearDown(db.close);
+      await db.customStatement(
+        "INSERT INTO estado_sincronizacion (id, tienda_id) VALUES (1, 't')",
+      );
+      await db.customStatement('DELETE FROM cambios_pendientes');
+      final usuario = (await db.select(db.usuarios).get()).first;
+
+      await (db.update(db.usuarios)..where((u) => u.id.equals(usuario.id)))
+          .write(const UsuariosCompanion(manejaCatalogo: Value(true)));
+
+      final cambios = await db
+          .customSelect(
+            "SELECT id_global FROM cambios_pendientes WHERE tabla = 'usuarios'",
+          )
+          .get();
+      expect(cambios.map((c) => c.read<String>('id_global')), [
+        usuario.idGlobal,
+      ]);
     },
   );
 

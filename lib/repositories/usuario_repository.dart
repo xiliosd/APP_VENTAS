@@ -26,6 +26,7 @@ class UsuarioRepository {
     required String pin,
     int? numeroVendedor,
     String? idGlobal,
+    bool manejaCatalogo = false,
   }) {
     return _db
         .into(_db.usuarios)
@@ -36,6 +37,7 @@ class UsuarioRepository {
             pinHash: hashPin(pin),
             numeroVendedor: Value(numeroVendedor),
             idGlobal: idGlobal == null ? const Value.absent() : Value(idGlobal),
+            manejaCatalogo: Value(manejaCatalogo),
           ),
         );
   }
@@ -98,5 +100,10 @@ class UsuarioRepository {
   Future<void> activar(int usuarioId) =>
       (_db.update(_db.usuarios)..where((u) => u.id.equals(usuarioId))).write(
         const UsuariosCompanion(activo: Value(true)),
+      );
+
+  Future<void> cambiarManejaCatalogo(int usuarioId, bool valor) =>
+      (_db.update(_db.usuarios)..where((u) => u.id.equals(usuarioId))).write(
+        UsuariosCompanion(manejaCatalogo: Value(valor)),
       );
 }
