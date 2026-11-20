@@ -67,7 +67,7 @@ class DetalleInventarioScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(item.producto.nombre),
         actions: [
-          if (ref.watch(sesionProvider).esAdmin)
+          if (ref.watch(sesionProvider).puedeManejarCatalogo)
             IconButton(
               key: const Key('boton_editar_producto'),
               tooltip: 'Editar',
@@ -124,7 +124,10 @@ class DetalleInventarioScreen extends ConsumerWidget {
                     const SizedBox(height: 12),
                     BarraNivel(
                       fraccion: fraccionNivel(
-                          item.existencias, item.producto.minimo, pedirHasta),
+                        item.existencias,
+                        item.producto.minimo,
+                        pedirHasta,
+                      ),
                       nivel: nivel,
                     ),
                   ],
@@ -153,10 +156,12 @@ class DetalleInventarioScreen extends ConsumerWidget {
                         leading: m.tipo == TipoMovimientoInventario.entrada
                             ? IconoCuadrado(
                                 icono: Icons.call_received_rounded,
-                                color: c.entra)
+                                color: c.entra,
+                              )
                             : IconoCuadrado(
                                 icono: Icons.edit_rounded,
-                                color: c.textoSecundario),
+                                color: c.textoSecundario,
+                              ),
                         title: Text(_textoMovimiento(m)),
                         subtitle: Text(formatoFechaHora(m.fecha)),
                       ),

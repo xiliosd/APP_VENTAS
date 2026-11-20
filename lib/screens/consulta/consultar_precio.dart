@@ -20,7 +20,7 @@ enum AccionConsulta { otra, listo, agregar, editar }
 /// el ticket ni registra nada.
 Future<void> consultarPrecio(BuildContext context, WidgetRef ref) async {
   final repositorio = ref.read(productoRepositoryProvider);
-  final esAdmin = ref.read(sesionProvider).esAdmin;
+  final puedeEditar = ref.read(sesionProvider).puedeManejarCatalogo;
   while (true) {
     if (!context.mounted) return;
     final leido = await ref
@@ -38,7 +38,7 @@ Future<void> consultarPrecio(BuildContext context, WidgetRef ref) async {
         builder: (_) => HojaConsultaPrecio(
           codigo: codigo,
           producto: producto,
-          esAdmin: esAdmin,
+          puedeEditar: puedeEditar,
         ),
       );
       if (!context.mounted) return;
@@ -73,12 +73,12 @@ class HojaConsultaPrecio extends StatelessWidget {
     super.key,
     required this.codigo,
     required this.producto,
-    required this.esAdmin,
+    required this.puedeEditar,
   });
 
   final String codigo;
   final Producto? producto;
-  final bool esAdmin;
+  final bool puedeEditar;
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +153,7 @@ class HojaConsultaPrecio extends StatelessWidget {
               : VarianteBoton.primario,
           onPressed: () => Navigator.of(context).pop(AccionConsulta.otra),
         ),
-        if (actual != null && esAdmin)
+        if (actual != null && puedeEditar)
           TextButton(
             key: const Key('boton_editar_consulta'),
             onPressed: () => Navigator.of(context).pop(AccionConsulta.editar),

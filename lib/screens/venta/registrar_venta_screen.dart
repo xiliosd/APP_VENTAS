@@ -131,15 +131,17 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
     error: true,
   );
 
-  /// Aviso de producto agregado; el admin puede tocar "Editar" desde él.
+  /// Aviso de producto agregado; quien maneja el catálogo puede tocar
+  /// "Editar" desde él.
   void _avisarAgregado(Producto producto) {
     // La práctica no ofrece editar: no debe tocar productos reales.
-    final esAdmin = ref.read(sesionProvider).esAdmin && !widget.practica;
+    final puedeEditar =
+        ref.read(sesionProvider).puedeManejarCatalogo && !widget.practica;
     avisar(
       context,
       '${producto.nombre} agregado',
-      etiquetaAccion: esAdmin ? 'Editar' : null,
-      onAccion: esAdmin ? () => _editarProducto(producto) : null,
+      etiquetaAccion: puedeEditar ? 'Editar' : null,
+      onAccion: puedeEditar ? () => _editarProducto(producto) : null,
     );
   }
 
@@ -663,7 +665,7 @@ class _RegistrarVentaScreenState extends ConsumerState<RegistrarVentaScreen> {
                           onTap: () => notifier.agregarProducto(p),
                           onRestar: () => notifier.restar('p${p.id}'),
                           onLongPress:
-                              ref.watch(sesionProvider).esAdmin &&
+                              ref.watch(sesionProvider).puedeManejarCatalogo &&
                                   !widget.practica
                               ? () => _menuProducto(p)
                               : null,

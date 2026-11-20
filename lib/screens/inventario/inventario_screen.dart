@@ -98,9 +98,11 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
         ref.watch(pedidosPorLlegarProvider).valueOrNull ?? const [];
     final nPorPedir = grupos.fold<int>(0, (s, g) => s + g.productos.length);
     final agotados = controlados
-        .where((x) =>
-            nivelExistencias(x.existencias, x.producto.minimo) ==
-            NivelExistencias.agotado)
+        .where(
+          (x) =>
+              nivelExistencias(x.existencias, x.producto.minimo) ==
+              NivelExistencias.agotado,
+        )
         .length;
     final vista = _vista ?? (nPorPedir > 0 ? _Vista.porPedir : _Vista.todos);
 
@@ -117,18 +119,21 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                 child: Row(
                   children: [
                     _Cifra(
-                        clave: 'resumen_controlados',
-                        valor: controlados.length,
-                        rotulo: 'Controlados'),
+                      clave: 'resumen_controlados',
+                      valor: controlados.length,
+                      rotulo: 'Controlados',
+                    ),
                     _Cifra(
-                        clave: 'resumen_por_pedir',
-                        valor: nPorPedir,
-                        rotulo: 'Por pedir'),
+                      clave: 'resumen_por_pedir',
+                      valor: nPorPedir,
+                      rotulo: 'Por pedir',
+                    ),
                     _Cifra(
-                        clave: 'resumen_agotados',
-                        valor: agotados,
-                        rotulo: 'Agotados',
-                        color: agotados > 0 ? c.sale : null),
+                      clave: 'resumen_agotados',
+                      valor: agotados,
+                      rotulo: 'Agotados',
+                      color: agotados > 0 ? c.sale : null,
+                    ),
                   ],
                 ),
               ),
@@ -158,14 +163,19 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.schedule_rounded,
-                              size: 20, color: c.textoSecundario),
+                          Icon(
+                            Icons.schedule_rounded,
+                            size: 20,
+                            color: c.textoSecundario,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               r.proveedor.nombre,
                               style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w700),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ],
@@ -206,7 +216,7 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
           EstadoVacio(
             icono: Icons.inventory_2_outlined,
             titulo: 'Aún no controlas existencias',
-            mensaje: ref.watch(sesionProvider).esAdmin
+            mensaje: ref.watch(sesionProvider).puedeManejarCatalogo
                 ? 'Actívalo en Ajustes → Productos'
                 : 'Pídele al administrador que lo active',
           )
@@ -265,17 +275,22 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.local_shipping_rounded,
-                                  size: 18, color: c.textoSecundario),
+                              Icon(
+                                Icons.local_shipping_rounded,
+                                size: 18,
+                                color: c.textoSecundario,
+                              ),
                               const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
                                   '${g.proveedor?.nombre ?? 'Sin proveedor'} · '
                                   '${plural(g.productos.length, 'producto', 'productos')}',
                                   key: Key(
-                                      'grupo_por_pedir_${g.proveedor?.id ?? 'sin'}'),
+                                    'grupo_por_pedir_${g.proveedor?.id ?? 'sin'}',
+                                  ),
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.w700),
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ],
@@ -317,11 +332,14 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                               ),
                               trailing: EtiquetaNivel(
                                 nivel: nivelExistencias(
-                                    p.existencias, p.producto.minimo),
+                                  p.existencias,
+                                  p.producto.minimo,
+                                ),
                               ),
                               onTap: () => _abrir(
                                 DetalleInventarioScreen(
-                                    productoId: p.producto.id),
+                                  productoId: p.producto.id,
+                                ),
                               ),
                             ),
                         ],
@@ -348,11 +366,11 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                             .withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.local_shipping_rounded,
-                          size: 20,
-                          color: e.entrada.anulada
-                              ? c.textoSecundario
-                              : c.entra),
+                      child: Icon(
+                        Icons.local_shipping_rounded,
+                        size: 20,
+                        color: e.entrada.anulada ? c.textoSecundario : c.entra,
+                      ),
                     ),
                     title: Text(
                       e.proveedor,
@@ -366,8 +384,11 @@ class _InventarioScreenState extends ConsumerState<InventarioScreen> {
                     ),
                     trailing: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 120),
-                      child: Monto(e.entrada.total,
-                          tamano: 16, tachado: e.entrada.anulada),
+                      child: Monto(
+                        e.entrada.total,
+                        tamano: 16,
+                        tachado: e.entrada.anulada,
+                      ),
                     ),
                     onTap: () =>
                         _abrir(DetalleEntradaScreen(entradaId: e.entrada.id)),
@@ -452,16 +473,22 @@ class _FilaInventario extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(producto.nombre,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Text('mín. ${producto.minimo}',
-                      style: TextStyle(
-                          fontSize: 12, color: c.textoSecundario)),
+                  Text(
+                    producto.nombre,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    'mín. ${producto.minimo}',
+                    style: TextStyle(fontSize: 12, color: c.textoSecundario),
+                  ),
                   const SizedBox(height: 6),
                   BarraNivel(
                     key: Key('nivel_${producto.id}'),
                     fraccion: fraccionNivel(
-                        existencias, producto.minimo, producto.pedirHasta),
+                      existencias,
+                      producto.minimo,
+                      producto.pedirHasta,
+                    ),
                     nivel: nivel,
                   ),
                 ],
@@ -482,7 +509,9 @@ class _FilaInventario extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 EtiquetaNivel(
-                    key: Key('etiqueta_nivel_${producto.id}'), nivel: nivel),
+                  key: Key('etiqueta_nivel_${producto.id}'),
+                  nivel: nivel,
+                ),
               ],
             ),
           ],

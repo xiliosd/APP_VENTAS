@@ -181,7 +181,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         Icons.receipt_long_rounded,
         HistorialScreen(),
       ),
-      if (sesion.esAdmin)
+      if (sesion.puedeManejarCatalogo)
         const _Pestana(
           'Ajustes',
           Icons.settings_outlined,

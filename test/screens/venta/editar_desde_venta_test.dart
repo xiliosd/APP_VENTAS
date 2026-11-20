@@ -34,12 +34,14 @@ void main() {
   Future<void> abrir(
     WidgetTester tester, {
     String rol = 'admin',
+    bool manejaCatalogo = false,
     bool practica = false,
     List<String?> codigos = const [],
   }) async {
     container = await containerConSesion(
       db,
       rol: rol,
+      manejaCatalogo: manejaCatalogo,
       overrides: [lectorCodigoProvider.overrideWithValue(LectorFalso(codigos))],
     );
     tester.view.physicalSize = const Size(1080, 2400);
@@ -69,6 +71,28 @@ void main() {
     await tester.tap(find.byKey(const Key('menu_editar_producto')));
     await tester.pumpAndSettle();
     expect(find.byType(ProductoScreen), findsOneWidget);
+  });
+
+  testWidgets('super vendedor: mantener presionado abre Editar producto', (
+    tester,
+  ) async {
+    await abrir(tester, rol: 'vendedor', manejaCatalogo: true);
+    await mantener(tester);
+    expect(find.byKey(const Key('menu_editar_producto')), findsOneWidget);
+  });
+
+  testWidgets('super vendedor: al escanear el aviso trae Editar', (
+    tester,
+  ) async {
+    await abrir(
+      tester,
+      rol: 'vendedor',
+      manejaCatalogo: true,
+      codigos: ['7702'],
+    );
+    await tester.tap(find.byKey(const Key('boton_escanear_venta')));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar'), findsOneWidget);
   });
 
   testWidgets('vendedor: mantener presionado no muestra el menú', (
@@ -134,10 +158,8 @@ void main() {
 
   Future<void> enviarCodigoEnBuscador(WidgetTester tester) async {
     for (var i = 0; i < 7; i++) {
-      await ProductoRepository(db).guardarProducto(
-        nombre: 'Relleno $i',
-        precio: 1000,
-      );
+      await ProductoRepository(db)
+          .guardarProducto(nombre: 'Relleno $i', precio: 1000);
     }
     await tester.pumpAndSettle();
     final campo = find.byType(TextField).first;

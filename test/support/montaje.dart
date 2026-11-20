@@ -3,6 +3,7 @@ import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:app_ventas/ui/tema_app.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,6 +22,7 @@ Future<ProviderContainer> containerConSesion(
   AppDatabase db, {
   String nombre = 'Ana',
   String rol = 'admin',
+  bool manejaCatalogo = false,
   List<Override> overrides = const [],
   SharedPreferences? preferencias,
 }) async {
@@ -30,7 +32,14 @@ Future<ProviderContainer> containerConSesion(
   }
   final id = await db
       .into(db.usuarios)
-      .insert(UsuariosCompanion.insert(nombre: nombre, rol: rol, pinHash: 'x'));
+      .insert(
+        UsuariosCompanion.insert(
+          nombre: nombre,
+          rol: rol,
+          pinHash: 'x',
+          manejaCatalogo: Value(manejaCatalogo),
+        ),
+      );
   final usuario = await (db.select(
     db.usuarios,
   )..where((u) => u.id.equals(id))).getSingle();

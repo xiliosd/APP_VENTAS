@@ -21,12 +21,19 @@ void main() {
 
   Future<void> montar(
     WidgetTester tester, {
+    String rol = 'admin',
+    bool manejaCatalogo = false,
     List<Override> overrides = const [],
   }) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
-    final container = await containerConSesion(db, overrides: overrides);
+    final container = await containerConSesion(
+      db,
+      rol: rol,
+      manejaCatalogo: manejaCatalogo,
+      overrides: overrides,
+    );
     addTearDown(container.dispose);
     await tester.pumpWidget(
       appDePrueba(container, inicio: const Scaffold(body: AjustesScreen())),
@@ -144,5 +151,27 @@ void main() {
     await montar(tester);
 
     expect(find.byKey(const Key('tile_celulares_tienda')), findsNothing);
+  });
+
+  testWidgets('el super vendedor ve Ajustes con solo productos y proveedores', (
+    tester,
+  ) async {
+    await montar(tester, rol: 'vendedor', manejaCatalogo: true);
+
+    expect(find.byKey(const Key('menu_productos')), findsOneWidget);
+    expect(find.byKey(const Key('menu_proveedores')), findsOneWidget);
+    for (final clave in [
+      'cabecera_ajustes',
+      'menu_nombre_tienda',
+      'menu_clientes',
+      'menu_usuarios',
+      'menu_cobro_qr',
+      'menu_respaldo',
+      'boton_repetir_recorrido',
+      'boton_preguntas_frecuentes',
+    ]) {
+      expect(find.byKey(Key(clave)), findsNothing, reason: clave);
+    }
+    expect(find.text('Celulares de la tienda'), findsNothing);
   });
 }

@@ -19,9 +19,16 @@ void main() {
   });
   tearDown(() => db.close());
 
-  Future<ProviderContainer> montar(WidgetTester tester,
-      {String rol = 'admin'}) async {
-    final container = await containerConSesion(db, rol: rol);
+  Future<ProviderContainer> montar(
+    WidgetTester tester, {
+    String rol = 'admin',
+    bool manejaCatalogo = false,
+  }) async {
+    final container = await containerConSesion(
+      db,
+      rol: rol,
+      manejaCatalogo: manejaCatalogo,
+    );
     addTearDown(container.dispose);
     await tester.pumpWidget(appDePrueba(container, inicio: const HomeScreen()));
     await tester.pumpAndSettle();
@@ -34,23 +41,34 @@ void main() {
     expect(find.text('Config'), findsNothing);
   });
 
+  testWidgets('el super vendedor ve la pestaña Ajustes', (tester) async {
+    await montar(tester, rol: 'vendedor', manejaCatalogo: true);
+    expect(find.text('Ajustes'), findsOneWidget);
+  });
+
   testWidgets('el vendedor no ve la pestaña Ajustes', (tester) async {
     await montar(tester, rol: 'vendedor');
     expect(find.text('Ajustes'), findsNothing);
   });
 
-  testWidgets('en Inicio saluda y en otra pestaña muestra su título',
-      (tester) async {
+  testWidgets('en Inicio saluda y en otra pestaña muestra su título', (
+    tester,
+  ) async {
     await montar(tester);
-    expect(find.descendant(
-            of: find.byType(AppBar), matching: find.text('Hola, Ana')),
-        findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Hola, Ana'),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Ajustes'));
     await tester.pumpAndSettle();
-    expect(find.descendant(
-            of: find.byType(AppBar), matching: find.text('Ajustes')),
-        findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Ajustes')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('cerrar sesión desde el menú de la cuenta', (tester) async {
@@ -64,43 +82,55 @@ void main() {
     expect(container.read(sesionProvider).haySesion, isFalse);
   });
 
-  testWidgets('Ajustes tiene Productos, Usuarios y Cerrar sesión',
-      (tester) async {
+  testWidgets('Ajustes tiene Productos, Usuarios y Cerrar sesión', (
+    tester,
+  ) async {
     final container = await montar(tester);
 
     await tester.tap(find.text('Ajustes'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('menu_productos')), findsOneWidget);
     expect(find.byKey(const Key('menu_usuarios')), findsOneWidget);
-    await tester.scrollUntilVisible(find.byKey(const Key('menu_respaldo')), 100);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('menu_respaldo')),
+      100,
+    );
     expect(find.byKey(const Key('menu_respaldo')), findsOneWidget);
 
     // La lista de Ajustes es larga: se desplaza hasta "Cerrar sesión".
     await tester.scrollUntilVisible(
-        find.byKey(const Key('ajustes_cerrar_sesion')), 200);
+      find.byKey(const Key('ajustes_cerrar_sesion')),
+      200,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('ajustes_cerrar_sesion')));
     await tester.pumpAndSettle();
     expect(container.read(sesionProvider).haySesion, isFalse);
   });
 
-  testWidgets('los íconos de las pestañas se ven oscuros sobre la barra clara',
-      (tester) async {
-    await montar(tester);
+  testWidgets(
+    'los íconos de las pestañas se ven oscuros sobre la barra clara',
+    (tester) async {
+      await montar(tester);
 
-    for (final icono in [
-      Icons.people_outline_rounded,
-      Icons.receipt_long_outlined,
-      Icons.settings_outlined,
-    ]) {
-      final elemento = tester.element(find.byIcon(icono));
-      expect(IconTheme.of(elemento).color!.computeLuminance(), lessThan(0.5),
-          reason: 'el ícono $icono debe verse sobre el fondo de la barra');
-    }
-  });
+      for (final icono in [
+        Icons.people_outline_rounded,
+        Icons.receipt_long_outlined,
+        Icons.settings_outlined,
+      ]) {
+        final elemento = tester.element(find.byIcon(icono));
+        expect(
+          IconTheme.of(elemento).color!.computeLuminance(),
+          lessThan(0.5),
+          reason: 'el ícono $icono debe verse sobre el fondo de la barra',
+        );
+      }
+    },
+  );
 
-  testWidgets('tocar Por cobrar en Inicio abre la pestaña Fiado',
-      (tester) async {
+  testWidgets('tocar Por cobrar en Inicio abre la pestaña Fiado', (
+    tester,
+  ) async {
     await montar(tester);
 
     await tester.ensureVisible(find.byKey(const Key('tarjeta_por_cobrar')));
@@ -108,9 +138,10 @@ void main() {
     await tester.tap(find.byKey(const Key('tarjeta_por_cobrar')));
     await tester.pumpAndSettle();
 
-    expect(find.descendant(
-            of: find.byType(AppBar), matching: find.text('Fiado')),
-        findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Fiado')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('el Inicio tiene la barra azul con la insignia; las demás '
@@ -132,8 +163,10 @@ void main() {
     tester.view.physicalSize = const Size(720, 1560);
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
-    final container = await containerConSesion(db,
-        nombre: 'María Fernanda de los Ángeles Rodríguez');
+    final container = await containerConSesion(
+      db,
+      nombre: 'María Fernanda de los Ángeles Rodríguez',
+    );
     addTearDown(container.dispose);
 
     await tester.pumpWidget(appDePrueba(container, inicio: const HomeScreen()));
@@ -142,12 +175,14 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('en la barra azul el avatar de la cuenta lleva anillo blanco',
-      (tester) async {
+  testWidgets('en la barra azul el avatar de la cuenta lleva anillo blanco', (
+    tester,
+  ) async {
     await montar(tester);
     Finder anillo() => find.descendant(
-        of: find.byKey(const Key('menu_cuenta')),
-        matching: find.byKey(const Key('anillo_avatar')));
+      of: find.byKey(const Key('menu_cuenta')),
+      matching: find.byKey(const Key('anillo_avatar')),
+    );
 
     final caja = tester.widget<Container>(anillo());
     final borde = (caja.decoration! as BoxDecoration).border! as Border;
@@ -158,8 +193,9 @@ void main() {
     expect(anillo(), findsNothing);
   });
 
-  testWidgets('con letra grande la barra azul crece y no desborda',
-      (tester) async {
+  testWidgets('con letra grande la barra azul crece y no desborda', (
+    tester,
+  ) async {
     tester.platformDispatcher.textScaleFactorTestValue = 2;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await montar(tester);

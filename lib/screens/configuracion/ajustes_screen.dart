@@ -42,6 +42,34 @@ class AjustesScreen extends ConsumerWidget {
     void abrir(Widget pantalla) =>
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => pantalla));
 
+    final catalogo = [
+      _Opcion(
+        key: const Key('menu_productos'),
+        icono: Icons.inventory_2_outlined,
+        color: c.primario,
+        titulo: 'Productos',
+        subtitulo: 'Catálogo y precios',
+        onTap: () => abrir(const ProductosScreen()),
+      ),
+      _Opcion(
+        key: const Key('menu_proveedores'),
+        icono: Icons.local_shipping_outlined,
+        color: c.fiado,
+        titulo: 'Proveedores',
+        subtitulo: 'A quién le compras',
+        onTap: () => abrir(const ProveedoresScreen()),
+      ),
+    ];
+
+    // El super vendedor solo maneja el catálogo: nada de administrar la
+    // tienda. Ayuda y cerrar sesión ya los tiene en el menú de Inicio.
+    if (!ref.watch(sesionProvider).esAdmin) {
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [_Grupo(titulo: 'TIENDA', opciones: catalogo)],
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -99,22 +127,7 @@ class AjustesScreen extends ConsumerWidget {
           child: _Grupo(
             titulo: 'TIENDA',
             opciones: [
-              _Opcion(
-                key: const Key('menu_productos'),
-                icono: Icons.inventory_2_outlined,
-                color: c.primario,
-                titulo: 'Productos',
-                subtitulo: 'Catálogo y precios',
-                onTap: () => abrir(const ProductosScreen()),
-              ),
-              _Opcion(
-                key: const Key('menu_proveedores'),
-                icono: Icons.local_shipping_outlined,
-                color: c.fiado,
-                titulo: 'Proveedores',
-                subtitulo: 'A quién le compras',
-                onTap: () => abrir(const ProveedoresScreen()),
-              ),
+              ...catalogo,
               _Opcion(
                 key: const Key('menu_clientes'),
                 icono: Icons.people_outline_rounded,
