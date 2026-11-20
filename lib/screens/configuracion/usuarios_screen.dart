@@ -110,15 +110,16 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
       titulo: 'Editar usuario',
       builder: (_) => EditarUsuarioSheet(usuario: usuario),
     );
-    if (!mounted) return;
+    if (!mounted || resultado == null) return;
+    ref.invalidate(listaUsuariosProvider);
     switch (resultado) {
       case ResultadoEdicionUsuario.guardado:
-        ref.invalidate(listaUsuariosProvider);
         avisar(context, 'Usuario guardado');
       case ResultadoEdicionUsuario.cambiarPin:
-        await _resetearPin(usuario);
-      case null:
-        break;
+        final editado = await ref
+            .read(usuarioRepositoryProvider)
+            .buscar(usuario.id);
+        if (mounted) await _resetearPin(editado ?? usuario);
     }
   }
 

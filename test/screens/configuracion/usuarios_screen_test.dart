@@ -593,6 +593,39 @@ void main() {
       expect(find.text('Usuario guardado'), findsOneWidget);
     });
 
+    testWidgets('Cambiar PIN guarda antes lo que se editó', (tester) async {
+      final repo = UsuarioRepository(db);
+      final id = await repo.crearUsuario(
+        nombre: 'Beto',
+        rol: 'vendedor',
+        pin: '1111',
+      );
+      await montar(tester);
+
+      await tester.tap(find.byKey(Key('usuario_item_$id')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('campo_nombre_editar')),
+        'Beto Pérez',
+      );
+      await tester.tap(find.byKey(const Key('interruptor_maneja_catalogo')));
+      await tester.tap(find.byKey(const Key('boton_cambiar_pin')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Resetear PIN de Beto Pérez'), findsOneWidget);
+      final beto = (await repo.buscar(id))!;
+      expect(beto.nombre, 'Beto Pérez');
+      expect(beto.manejaCatalogo, isTrue);
+    });
+
+    testWidgets('el interruptor dice que no ve los reportes de la tienda', (
+      tester,
+    ) async {
+      await montar(tester);
+      await abrirFormulario(tester);
+      expect(find.text('No ve los reportes de la tienda'), findsOneWidget);
+    });
+
     testWidgets('quitar el permiso lo deja como vendedor', (tester) async {
       final repo = UsuarioRepository(db);
       final id = await repo.crearUsuario(

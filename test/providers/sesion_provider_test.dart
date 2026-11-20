@@ -251,26 +251,45 @@ void main() {
     expect(const SesionState().puedeManejarCatalogo, isFalse);
   });
 
-  test('refrescarUsuario cambia el usuario activo solo si es el mismo', () {
-    const ana = Usuario(
-      id: 1,
-      idGlobal: 'usuario-1',
-      nombre: 'Ana',
-      rol: 'admin',
-      pinHash: 'x',
-      activo: true,
-      versionPin: 0,
-      manejaCatalogo: false,
-    );
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-    final notifier = container.read(sesionProvider.notifier)
-      ..state = const SesionState(usuarioActivo: ana);
+  test(
+    'quitar el permiso desde otro celular llega a la sesión abierta',
+    () async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final id = await db
+          .into(db.usuarios)
+          .insert(
+            UsuariosCompanion.insert(
+              nombre: 'Beto',
+              rol: 'vendedor',
+              pinHash: 'x',
+              manejaCatalogo: const Value(true),
+            ),
+          );
+      final beto = await (db.select(
+        db.usuarios,
+      )..where((u) => u.id.equals(id))).getSingle();
+      final container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)],
+      );
+      addTearDown(container.dispose);
+      container.read(sesionProvider.notifier).state = SesionState(
+        usuarioActivo: beto,
+      );
+      expect(container.read(sesionProvider).puedeManejarCatalogo, isTrue);
 
-    notifier.refrescarUsuario(ana.copyWith(id: 2, nombre: 'Beto'));
-    expect(container.read(sesionProvider).usuarioActivo!.nombre, 'Ana');
+      // Así llega la fila sincronizada desde el celular del administrador.
+      await (db.update(db.usuarios)..where((u) => u.id.equals(id))).write(
+        const UsuariosCompanion(
+          manejaCatalogo: Value(false),
+          nombre: Value('Beto P.'),
+        ),
+      );
+      await pumpEventQueue();
 
-    notifier.refrescarUsuario(ana.copyWith(nombre: 'Ana María'));
-    expect(container.read(sesionProvider).usuarioActivo!.nombre, 'Ana María');
-  });
+      final sesion = container.read(sesionProvider);
+      expect(sesion.puedeManejarCatalogo, isFalse);
+      expect(sesion.usuarioActivo!.nombre, 'Beto P.');
+    },
+  );
 }

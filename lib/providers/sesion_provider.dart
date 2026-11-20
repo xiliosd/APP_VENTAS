@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/database.dart';
 import '../sincronizacion/nube_tienda.dart';
 import '../sincronizacion/sincronizacion_provider.dart';
 import '../util/permisos.dart' as permisos;
+import 'database_provider.dart';
 import 'huella_provider.dart';
 import 'repository_providers.dart';
 
@@ -26,8 +29,36 @@ class SesionState {
 }
 
 class SesionNotifier extends Notifier<SesionState> {
+  StreamSubscription<Usuario?>? _vigilancia;
+  int? _vigilado;
+
   @override
-  SesionState build() => const SesionState();
+  SesionState build() {
+    ref.onDispose(() => _vigilancia?.cancel());
+    listenSelf((_, sesion) => _vigilarUsuario(sesion.usuarioActivo?.id));
+    return const SesionState();
+  }
+
+  /// Lo que cambie del usuario con sesión en otro celular (su permiso de
+  /// catálogo, su nombre) llega a esta sesión sin volver a entrar: quitarle
+  /// la confianza a un super vendedor surte efecto de una vez.
+  void _vigilarUsuario(int? usuarioId) {
+    if (usuarioId == _vigilado) return;
+    _vigilado = usuarioId;
+    unawaited(_vigilancia?.cancel());
+    _vigilancia = null;
+    if (usuarioId == null) return;
+    final db = ref.read(databaseProvider);
+    _vigilancia = (db.select(db.usuarios)..where((u) => u.id.equals(usuarioId)))
+        .watchSingleOrNull()
+        .listen((usuario) {
+          // Desactivar o borrar al usuario ya lo resuelven sus propios flujos.
+          if (usuario == null || state.usuarioActivo?.id != usuarioId) return;
+          if (usuario != state.usuarioActivo) {
+            state = SesionState(usuarioActivo: usuario);
+          }
+        });
+  }
 
   /// Revisa el PIN en este celular. Un usuario que llegó de la tienda
   /// compartida y nunca entró aquí no tiene PIN guardado: se revisa en la
@@ -90,13 +121,6 @@ class SesionNotifier extends Notifier<SesionState> {
 
   void cerrarSesion() {
     state = const SesionState();
-  }
-
-  /// Al editar al usuario que tiene la sesión, la sesión ve sus datos nuevos.
-  void refrescarUsuario(Usuario usuario) {
-    if (state.usuarioActivo?.id == usuario.id) {
-      state = SesionState(usuarioActivo: usuario);
-    }
   }
 }
 

@@ -113,7 +113,7 @@ void main() {
       respuesta,
       contains('Puede manejar productos, proveedores y pedidos'),
     );
-    expect(respuesta, contains('reportes'));
+    expect(respuesta, contains('No ve los reportes de la tienda'));
   });
 
   test('el PIN olvidado se cambia desde Editar usuario', () {

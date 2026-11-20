@@ -321,7 +321,7 @@ const temasAyuda = <TemaAyuda>[
           'proveedores y puede cambiar o anular cualquier pedido. '
           '${_soloAdmin}en "Ajustes" → "Usuarios" toca su nombre, activa '
           '"Puede manejar productos, proveedores y pedidos" y toca "Guardar". '
-          'No ve los reportes ni las ganancias de la tienda.',
+          'No ve los reportes de la tienda.',
     ),
     PreguntaFrecuente(
       '¿Cómo entro con la huella?',

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/repository_providers.dart';
-import '../../providers/sesion_provider.dart';
 import '../../ui/boton_principal.dart';
 
 /// Lo que pasó en la hoja "Editar usuario".
@@ -28,7 +27,7 @@ class InterruptorPermisoCatalogo extends StatelessWidget {
     key: const Key('interruptor_maneja_catalogo'),
     contentPadding: EdgeInsets.zero,
     title: const Text(textoPermisoCatalogo),
-    subtitle: const Text('No ve reportes ni ganancias'),
+    subtitle: const Text('No ve los reportes de la tienda'),
     value: valor,
     onChanged: onCambio,
   );
@@ -58,7 +57,8 @@ class _EditarUsuarioSheetState extends ConsumerState<EditarUsuarioSheet> {
     super.dispose();
   }
 
-  Future<void> _guardar() async {
+  /// Guarda y cierra la hoja con [resultado]; con el nombre vacío no cierra.
+  Future<void> _guardarYCerrar(ResultadoEdicionUsuario resultado) async {
     if (_guardando) return;
     final nombre = _nombreController.text.trim();
     if (nombre.isEmpty) {
@@ -73,11 +73,7 @@ class _EditarUsuarioSheetState extends ConsumerState<EditarUsuarioSheet> {
         nombre: nombre,
         manejaCatalogo: _manejaCatalogo,
       );
-      final actualizado = await repo.buscar(widget.usuario.id);
-      if (actualizado != null) {
-        ref.read(sesionProvider.notifier).refrescarUsuario(actualizado);
-      }
-      if (mounted) Navigator.of(context).pop(ResultadoEdicionUsuario.guardado);
+      if (mounted) Navigator.of(context).pop(resultado);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -109,13 +105,17 @@ class _EditarUsuarioSheetState extends ConsumerState<EditarUsuarioSheet> {
         BotonPrincipal(
           key: const Key('boton_guardar_usuario'),
           texto: 'Guardar',
-          onPressed: _guardando ? null : _guardar,
+          onPressed: _guardando
+              ? null
+              : () => _guardarYCerrar(ResultadoEdicionUsuario.guardado),
         ),
         const SizedBox(height: 8),
         TextButton.icon(
           key: const Key('boton_cambiar_pin'),
-          onPressed: () =>
-              Navigator.of(context).pop(ResultadoEdicionUsuario.cambiarPin),
+          // Lo editado no se pierde al ir a cambiar el PIN.
+          onPressed: _guardando
+              ? null
+              : () => _guardarYCerrar(ResultadoEdicionUsuario.cambiarPin),
           icon: const Icon(Icons.lock_reset_rounded),
           label: const Text('Cambiar PIN'),
         ),
