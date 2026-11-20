@@ -67,6 +67,20 @@ Pasos (se salta cada paso ya cumplido):
      **Aprobar** ahí mismo (en lugar de solo el aviso global de `AtenderSolicitudes`) →
      "¡Listo! <nombre> ya puede vender desde su celular".
 
+**Cambiar su celular (decisión del usuario):** en el paso 2 también aparecen los vendedores
+que ya tienen celular aprobado, con la etiqueta "Cambiar su celular". Al aprobar en el paso 3
+el celular nuevo de ese vendedor, el asistente le quita el acceso al celular anterior
+(`revocar_celular` sobre la membresía aprobada con el mismo `usuario_id_global`); ese celular
+entrega lo pendiente y se vacía como hoy. El aviso lo dice antes de aprobar: "Su celular
+anterior dejará de tener los datos de la tienda".
+
+**Soy yo, en otro celular (decisión del usuario):** el paso 2 tiene la opción "Soy yo, en otro
+celular". El dueño entra con su correo, no con QR (su cuenta es la del correo y la nube ya lo
+reconoce como administrador), así que el asistente muestra en letra grande los pasos para el
+celular nuevo: instalar la app → "Ya tengo una tienda" → escribir **este correo** (se muestra) →
+código que llega al correo. No hay QR ni aprobación en este camino. En la Bienvenida, el botón
+"Ya tengo una tienda: restaurar respaldo" pasa a decir "Ya tengo una tienda (soy el dueño)".
+
 Si el dueño elige un vendedor creado antes de la tienda compartida (sin PIN en la nube), el
 asistente lo resuelve como hoy lo hace `pines_faltantes` / `guardar_pin_legado`.
 
