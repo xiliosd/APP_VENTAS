@@ -249,6 +249,23 @@ void main() {
         EstadoPedido.anulado,
       );
     });
+
+    test('un super vendedor edita y anula el pedido de otro', () async {
+      final id = await repo.guardarPedido(
+        proveedorId: postobon,
+        lineas: [linea(coca, 24)],
+        por: beto,
+      );
+      final caroSuper = caro.copyWith(manejaCatalogo: true);
+
+      await repo.editarPedido(id, [linea(coca, 12)], por: caroSuper);
+      await repo.anularPedido(id, por: caroSuper);
+
+      expect(
+        (await db.select(db.pedidos).getSingle()).estado,
+        EstadoPedido.anulado,
+      );
+    });
   });
 
   group('detallePedido', () {

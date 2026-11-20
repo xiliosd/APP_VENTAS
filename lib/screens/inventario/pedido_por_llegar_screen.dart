@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
+import '../../util/permisos.dart';
 import '../../providers/inventario_providers.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/sesion_provider.dart';
@@ -160,7 +161,7 @@ class _PedidoPorLlegarScreenState extends ConsumerState<PedidoPorLlegarScreen> {
     final puedeEditar =
         usuario != null &&
         pedido.estado == EstadoPedido.porLlegar &&
-        (usuario.rol == 'admin' || usuario.id == pedido.usuarioId);
+        puedeCambiarPedido(usuario, autorId: pedido.usuarioId);
     final c = ColoresApp.of(context);
     final total = lineas.fold<int>(
       0,

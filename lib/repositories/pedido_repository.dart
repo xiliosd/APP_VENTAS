@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../data/database.dart';
+import '../util/permisos.dart';
 import 'correccion_repository.dart';
 
 /// Un producto para guardar en un pedido.
@@ -169,7 +170,8 @@ class PedidoRepository {
     }
   }
 
-  /// El pedido, si sigue por llegar y [por] puede cambiarlo (autor o admin).
+  /// El pedido, si sigue por llegar y [por] puede cambiarlo (autor, admin o
+  /// super vendedor).
   Future<Pedido> _porLlegarDe(int pedidoId, Usuario por) async {
     final pedido = await (_db.select(
       _db.pedidos,
@@ -177,7 +179,7 @@ class PedidoRepository {
     if (pedido.estado != EstadoPedido.porLlegar) {
       throw ArgumentError('El pedido ya no está por llegar');
     }
-    if (por.rol != 'admin' && pedido.usuarioId != por.id) {
+    if (!puedeCambiarPedido(por, autorId: pedido.usuarioId)) {
       throw const PermisoDenegado();
     }
     return pedido;

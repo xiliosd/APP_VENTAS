@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database.dart';
 import '../sincronizacion/nube_tienda.dart';
 import '../sincronizacion/sincronizacion_provider.dart';
+import '../util/permisos.dart' as permisos;
 import 'huella_provider.dart';
 import 'repository_providers.dart';
 
@@ -21,6 +22,7 @@ class SesionState {
 
   bool get haySesion => usuarioActivo != null;
   bool get esAdmin => usuarioActivo?.rol == 'admin';
+  bool get puedeManejarCatalogo => permisos.puedeManejarCatalogo(usuarioActivo);
 }
 
 class SesionNotifier extends Notifier<SesionState> {

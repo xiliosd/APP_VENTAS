@@ -226,4 +226,28 @@ void main() {
       ResultadoIngreso.pinIncorrecto,
     );
   });
+
+  test('la sesión de un vendedor con permiso maneja el catálogo', () {
+    const vendedor = Usuario(
+      id: 2,
+      idGlobal: 'usuario-2',
+      nombre: 'Beto',
+      rol: 'vendedor',
+      pinHash: 'x',
+      activo: true,
+      versionPin: 0,
+      manejaCatalogo: true,
+    );
+
+    expect(
+      const SesionState(usuarioActivo: vendedor).puedeManejarCatalogo,
+      isTrue,
+    );
+    expect(
+      SesionState(usuarioActivo: vendedor.copyWith(manejaCatalogo: false))
+          .puedeManejarCatalogo,
+      isFalse,
+    );
+    expect(const SesionState().puedeManejarCatalogo, isFalse);
+  });
 }

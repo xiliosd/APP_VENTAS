@@ -48,4 +48,38 @@ void main() {
   test('el vendedor no puede con lo de otro aunque sea de hoy', () {
     expect(puede(beto, 1, DateTime(2026, 10, 6, 9)), isFalse);
   });
+
+  group('puedeManejarCatalogo', () {
+    test('el administrador siempre, aunque no tenga el permiso', () {
+      expect(puedeManejarCatalogo(ana), isTrue);
+    });
+
+    test('el vendedor sin permiso no', () {
+      expect(puedeManejarCatalogo(beto), isFalse);
+    });
+
+    test('el vendedor con permiso sí', () {
+      expect(puedeManejarCatalogo(beto.copyWith(manejaCatalogo: true)), isTrue);
+    });
+
+    test('sin usuario no', () {
+      expect(puedeManejarCatalogo(null), isFalse);
+    });
+  });
+
+  group('puedeCambiarPedido', () {
+    test('el vendedor cambia su pedido pero no el de otro', () {
+      expect(puedeCambiarPedido(beto, autorId: 2), isTrue);
+      expect(puedeCambiarPedido(beto, autorId: 1), isFalse);
+    });
+
+    test('el super vendedor cambia el pedido de otro', () {
+      final superBeto = beto.copyWith(manejaCatalogo: true);
+      expect(puedeCambiarPedido(superBeto, autorId: 1), isTrue);
+    });
+
+    test('el administrador cambia cualquier pedido', () {
+      expect(puedeCambiarPedido(ana, autorId: 2), isTrue);
+    });
+  });
 }

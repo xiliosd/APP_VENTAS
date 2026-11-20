@@ -14,3 +14,12 @@ bool puedeCorregir({
   return duenoId == usuario.id &&
       inicioDelDia(fechaMovimiento) == inicioDelDia(ahora);
 }
+
+/// true si [usuario] maneja productos, proveedores y pedidos: el
+/// administrador, o un vendedor de confianza con el permiso de catálogo.
+bool puedeManejarCatalogo(Usuario? usuario) =>
+    usuario != null && (usuario.rol == 'admin' || usuario.manejaCatalogo);
+
+/// true si [usuario] puede editar o anular un pedido hecho por [autorId].
+bool puedeCambiarPedido(Usuario usuario, {required int autorId}) =>
+    puedeManejarCatalogo(usuario) || usuario.id == autorId;
