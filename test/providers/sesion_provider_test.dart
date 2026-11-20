@@ -250,4 +250,27 @@ void main() {
     );
     expect(const SesionState().puedeManejarCatalogo, isFalse);
   });
+
+  test('refrescarUsuario cambia el usuario activo solo si es el mismo', () {
+    const ana = Usuario(
+      id: 1,
+      idGlobal: 'usuario-1',
+      nombre: 'Ana',
+      rol: 'admin',
+      pinHash: 'x',
+      activo: true,
+      versionPin: 0,
+      manejaCatalogo: false,
+    );
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final notifier = container.read(sesionProvider.notifier)
+      ..state = const SesionState(usuarioActivo: ana);
+
+    notifier.refrescarUsuario(ana.copyWith(id: 2, nombre: 'Beto'));
+    expect(container.read(sesionProvider).usuarioActivo!.nombre, 'Ana');
+
+    notifier.refrescarUsuario(ana.copyWith(nombre: 'Ana María'));
+    expect(container.read(sesionProvider).usuarioActivo!.nombre, 'Ana María');
+  });
 }

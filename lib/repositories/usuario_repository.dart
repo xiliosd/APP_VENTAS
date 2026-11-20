@@ -106,4 +106,15 @@ class UsuarioRepository {
       (_db.update(_db.usuarios)..where((u) => u.id.equals(usuarioId))).write(
         UsuariosCompanion(manejaCatalogo: Value(valor)),
       );
+
+  Future<void> editarUsuario(
+    int usuarioId, {
+    required String nombre,
+    required bool manejaCatalogo,
+  }) => (_db.update(_db.usuarios)..where((u) => u.id.equals(usuarioId))).write(
+    UsuariosCompanion(
+      nombre: Value(nombre),
+      manejaCatalogo: Value(manejaCatalogo),
+    ),
+  );
 }

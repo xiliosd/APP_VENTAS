@@ -187,4 +187,19 @@ void main() {
 
     expect((await repo.buscar(id))!.manejaCatalogo, isTrue);
   });
+
+  test('editarUsuario cambia nombre y permiso sin tocar el PIN', () async {
+    final id = await repo.crearUsuario(
+      nombre: 'Beto',
+      rol: 'vendedor',
+      pin: '2222',
+    );
+
+    await repo.editarUsuario(id, nombre: 'Beto Pérez', manejaCatalogo: true);
+
+    final beto = (await repo.buscar(id))!;
+    expect(beto.nombre, 'Beto Pérez');
+    expect(beto.manejaCatalogo, isTrue);
+    expect(await repo.verificarPin(id, '2222'), isNotNull);
+  });
 }

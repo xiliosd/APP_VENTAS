@@ -101,6 +101,35 @@ void main() {
     expect(respuesta, contains('Toca tu inicial'));
   });
 
+  String respuestaA(String pregunta) => temasAyuda
+      .expand((t) => t.preguntas)
+      .firstWhere((p) => p.pregunta == pregunta)
+      .respuesta;
+
+  test('Usuarios explica el super vendedor', () {
+    final respuesta = respuestaA('¿Qué es un super vendedor?');
+
+    expect(
+      respuesta,
+      contains('Puede manejar productos, proveedores y pedidos'),
+    );
+    expect(respuesta, contains('reportes'));
+  });
+
+  test('el PIN olvidado se cambia desde Editar usuario', () {
+    expect(
+      respuestaA('Se me olvidó el PIN, ¿qué hago?'),
+      contains('"Cambiar PIN"'),
+    );
+  });
+
+  test('el vendedor sabe que solo ve sus ventas', () {
+    expect(
+      respuestaA('¿Qué puede hacer un vendedor?'),
+      contains('solo sus propias ventas'),
+    );
+  });
+
   Future<void> montarPantalla(
     WidgetTester tester, {
     ThemeData? tema,

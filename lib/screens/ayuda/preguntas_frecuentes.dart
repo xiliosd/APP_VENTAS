@@ -243,8 +243,9 @@ const temasAyuda = <TemaAyuda>[
       '¿Cómo veo las ventas de otro día o de un vendedor?',
       '1. Ve a la pestaña "Historial".\n'
           '2. Cambia el día con las flechas o tocando la fecha.\n'
-          '3. Filtra por "Contado", "Fiado" o "Gastos" y por el nombre de '
-          'quien vendió.',
+          '3. Filtra por "Contado", "Fiado" o "Gastos". El administrador '
+          'también filtra por el nombre de quien vendió; cada vendedor ve solo '
+          'lo suyo.',
     ),
   ]),
   TemaAyuda('Productos y escáner', [
@@ -298,8 +299,8 @@ const temasAyuda = <TemaAyuda>[
     PreguntaFrecuente(
       'Se me olvidó el PIN, ¿qué hago?',
       'Pídele al administrador que te ponga uno nuevo: en "Ajustes" → '
-          '"Usuarios" toca tu nombre, escribe el nuevo PIN y toca "Guardar". '
-          'La app no puede mostrar el PIN anterior.',
+          '"Usuarios" toca tu nombre, toca "Cambiar PIN", escribe el nuevo y '
+          'toca "Guardar". La app no puede mostrar el PIN anterior.',
     ),
     PreguntaFrecuente(
       '¿Cómo agrego a un vendedor?',
@@ -310,8 +311,17 @@ const temasAyuda = <TemaAyuda>[
     PreguntaFrecuente(
       '¿Qué puede hacer un vendedor?',
       'Vender, fiar, recibir abonos, registrar gastos, consultar precios, '
-          'usar el Inventario y ver el Historial. Solo corrige o anula lo suyo '
-          'del mismo día. No ve "Ajustes" ni los reportes.',
+          'usar el Inventario y hacer pedidos. En "Inicio" y en "Historial" ve '
+          'solo sus propias ventas. Solo corrige o anula lo suyo del mismo '
+          'día. No ve "Ajustes" ni los reportes.',
+    ),
+    PreguntaFrecuente(
+      '¿Qué es un super vendedor?',
+      'Un vendedor de confianza que además agrega y edita productos y '
+          'proveedores y puede cambiar o anular cualquier pedido. '
+          '${_soloAdmin}en "Ajustes" → "Usuarios" toca su nombre, activa '
+          '"Puede manejar productos, proveedores y pedidos" y toca "Guardar". '
+          'No ve los reportes ni las ganancias de la tienda.',
     ),
     PreguntaFrecuente(
       '¿Cómo entro con la huella?',

@@ -18,6 +18,7 @@ import '../../sincronizacion/sincronizacion_provider.dart';
 import '../../util/id_global.dart';
 import '../../util/pin_hash.dart';
 import 'conectar_vendedor_sheet.dart';
+import 'editar_usuario_sheet.dart';
 import 'resetear_pin_dialog.dart';
 
 class UsuariosScreen extends ConsumerStatefulWidget {
@@ -103,6 +104,24 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
     avisar(context, '${usuario.nombre} puede entrar otra vez');
   }
 
+  Future<void> _editar(Usuario usuario) async {
+    final resultado = await mostrarHojaInferior<ResultadoEdicionUsuario>(
+      context,
+      titulo: 'Editar usuario',
+      builder: (_) => EditarUsuarioSheet(usuario: usuario),
+    );
+    if (!mounted) return;
+    switch (resultado) {
+      case ResultadoEdicionUsuario.guardado:
+        ref.invalidate(listaUsuariosProvider);
+        avisar(context, 'Usuario guardado');
+      case ResultadoEdicionUsuario.cambiarPin:
+        await _resetearPin(usuario);
+      case null:
+        break;
+    }
+  }
+
   Future<void> _resetearPin(Usuario usuario) async {
     final actualizado = await showDialog<bool>(
       context: context,
@@ -147,11 +166,7 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
                             children: [
                               Pildora(
                                 key: Key('rol_${u.id}'),
-                                texto:
-                                    u.rol == 'vendedor' &&
-                                        u.numeroVendedor != null
-                                    ? 'Vendedor ${u.numeroVendedor}'
-                                    : etiquetaRol(u.rol),
+                                texto: _etiquetaUsuario(u),
                                 color: u.rol == 'admin'
                                     ? ColoresApp.of(context).primario
                                     : ColoresApp.of(context).marcaVerde,
@@ -189,12 +204,12 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
                                 child: const Text('Activar'),
                               ),
                             const Icon(
-                              Icons.lock_reset_rounded,
-                              semanticLabel: 'Cambiar PIN',
+                              Icons.edit_outlined,
+                              semanticLabel: 'Editar',
                             ),
                           ],
                         ),
-                        onTap: () => _resetearPin(u),
+                        onTap: () => _editar(u),
                       ),
                   ],
                 ),
@@ -208,6 +223,13 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
   }
 }
 
+/// "Vendedor 3", "Super vendedor 3" o "Administrador".
+String _etiquetaUsuario(Usuario u) {
+  if (u.rol != 'vendedor') return etiquetaRol(u.rol);
+  final base = u.manejaCatalogo ? 'Super vendedor' : 'Vendedor';
+  return u.numeroVendedor == null ? base : '$base ${u.numeroVendedor}';
+}
+
 class _FormularioUsuario extends ConsumerStatefulWidget {
   const _FormularioUsuario();
 
@@ -219,6 +241,7 @@ class _FormularioUsuarioState extends ConsumerState<_FormularioUsuario> {
   final _nombreController = TextEditingController();
   final _pinController = TextEditingController();
   String _rol = 'vendedor';
+  bool _manejaCatalogo = false;
   String? _errorNombre;
   String? _errorPin;
   String? _errorGeneral;
@@ -271,6 +294,7 @@ class _FormularioUsuarioState extends ConsumerState<_FormularioUsuario> {
         nombre: nombre,
         rol: _rol,
         pin: pin,
+        manejaCatalogo: _rol == 'vendedor' && _manejaCatalogo,
         numeroVendedor: numero,
         idGlobal: idGlobal,
       );
@@ -313,6 +337,11 @@ class _FormularioUsuarioState extends ConsumerState<_FormularioUsuario> {
           valor: _rol,
           onCambio: (rol) => setState(() => _rol = rol),
         ),
+        if (_rol == 'vendedor')
+          InterruptorPermisoCatalogo(
+            valor: _manejaCatalogo,
+            onCambio: (valor) => setState(() => _manejaCatalogo = valor),
+          ),
         if (_errorGeneral != null) ...[
           const SizedBox(height: 12),
           Text(

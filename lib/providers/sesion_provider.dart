@@ -91,6 +91,13 @@ class SesionNotifier extends Notifier<SesionState> {
   void cerrarSesion() {
     state = const SesionState();
   }
+
+  /// Al editar al usuario que tiene la sesión, la sesión ve sus datos nuevos.
+  void refrescarUsuario(Usuario usuario) {
+    if (state.usuarioActivo?.id == usuario.id) {
+      state = SesionState(usuarioActivo: usuario);
+    }
+  }
 }
 
 final sesionProvider = NotifierProvider<SesionNotifier, SesionState>(

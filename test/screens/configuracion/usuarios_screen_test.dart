@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/database_provider.dart';
 import 'package:app_ventas/providers/repository_providers.dart';
+import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/repositories/usuario_repository.dart';
 import 'package:app_ventas/respaldo/respaldo_provider.dart';
 import 'package:app_ventas/screens/configuracion/usuarios_screen.dart';
@@ -29,6 +30,13 @@ void main() {
         child: const MaterialApp(home: UsuariosScreen()),
       ),
     );
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> abrirCambioPin(WidgetTester tester, int id) async {
+    await tester.tap(find.byKey(Key('usuario_item_$id')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('boton_cambiar_pin')));
     await tester.pumpAndSettle();
   }
 
@@ -114,8 +122,7 @@ void main() {
     );
     await montar(tester);
 
-    await tester.tap(find.byKey(Key('usuario_item_$id')));
-    await tester.pumpAndSettle();
+    await abrirCambioPin(tester, id);
     expect(find.text('Resetear PIN de Beto'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('campo_nuevo_pin')), '9999');
@@ -139,8 +146,7 @@ void main() {
       );
       await montar(tester);
 
-      await tester.tap(find.byKey(Key('usuario_item_$id')));
-      await tester.pumpAndSettle();
+      await abrirCambioPin(tester, id);
       await tester.enterText(find.byKey(const Key('campo_nuevo_pin')), '12a4');
       await tester.tap(find.byKey(const Key('boton_guardar_pin')));
       await tester.pumpAndSettle();
@@ -174,8 +180,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(Key('usuario_item_$id')));
-    await tester.pumpAndSettle();
+    await abrirCambioPin(tester, id);
     await tester.enterText(find.byKey(const Key('campo_nuevo_pin')), '9999');
     await tester.tap(find.byKey(const Key('boton_guardar_pin')));
     await tester.pump();
@@ -292,8 +297,7 @@ void main() {
         errorAlGuardarPin: const ErrorSinConexion(),
       );
 
-      await tester.tap(find.byKey(Key('usuario_item_$id')));
-      await tester.pumpAndSettle();
+      await abrirCambioPin(tester, id);
       await tester.enterText(find.byKey(const Key('campo_nuevo_pin')), '9999');
       await tester.tap(find.byKey(const Key('boton_guardar_pin')));
       await tester.pumpAndSettle();
@@ -312,8 +316,7 @@ void main() {
           .crearUsuario(nombre: 'Ana', rol: 'admin', pin: '1234');
       final sincronizacion = await montarCompartida(tester);
 
-      await tester.tap(find.byKey(Key('usuario_item_$id')));
-      await tester.pumpAndSettle();
+      await abrirCambioPin(tester, id);
       await tester.enterText(find.byKey(const Key('campo_nuevo_pin')), '9999');
       await tester.tap(find.byKey(const Key('boton_guardar_pin')));
       await tester.pumpAndSettle();
@@ -516,6 +519,159 @@ void main() {
       expect(usuario!.activo, isTrue);
       expect(sincronizacion.pinesGuardados.single.pin, '5678');
       expect(await UsuarioRepository(db).verificarPin(id, '5678'), isNotNull);
+    });
+  });
+
+  group('super vendedor', () {
+    testWidgets('crear un vendedor con el interruptor lo deja como super '
+        'vendedor', (tester) async {
+      await montar(tester);
+      await abrirFormulario(tester);
+      await tester.enterText(
+        find.byKey(const Key('campo_nombre_usuario')),
+        'Beto',
+      );
+      await tester.enterText(
+        find.byKey(const Key('campo_pin_usuario')),
+        '4321',
+      );
+      await tester.tap(find.byKey(const Key('interruptor_maneja_catalogo')));
+      await tester.tap(find.byKey(const Key('boton_crear_usuario')));
+      await tester.pumpAndSettle();
+
+      expect((await db.select(db.usuarios).getSingle()).manejaCatalogo, isTrue);
+      expect(find.text('Super vendedor 1'), findsOneWidget);
+    });
+
+    testWidgets('el interruptor no aparece al elegir Administrador', (
+      tester,
+    ) async {
+      await montar(tester);
+      await abrirFormulario(tester);
+      expect(
+        find.byKey(const Key('interruptor_maneja_catalogo')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Administrador'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('interruptor_maneja_catalogo')),
+        findsNothing,
+      );
+    });
+  });
+
+  group('editar usuario', () {
+    testWidgets('cambia el nombre y el permiso de un vendedor', (tester) async {
+      final repo = UsuarioRepository(db);
+      final id = await repo.crearUsuario(
+        nombre: 'Beto',
+        rol: 'vendedor',
+        pin: '1111',
+        numeroVendedor: 1,
+      );
+      await montar(tester);
+
+      await tester.tap(find.byKey(Key('usuario_item_$id')));
+      await tester.pumpAndSettle();
+      expect(find.text('Editar usuario'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('campo_nombre_editar')),
+        'Beto Pérez',
+      );
+      await tester.tap(find.byKey(const Key('interruptor_maneja_catalogo')));
+      await tester.tap(find.byKey(const Key('boton_guardar_usuario')));
+      await tester.pumpAndSettle();
+
+      final beto = (await repo.buscar(id))!;
+      expect(beto.nombre, 'Beto Pérez');
+      expect(beto.manejaCatalogo, isTrue);
+      expect(find.text('Beto Pérez'), findsOneWidget);
+      expect(find.text('Super vendedor 1'), findsOneWidget);
+      expect(find.text('Usuario guardado'), findsOneWidget);
+    });
+
+    testWidgets('quitar el permiso lo deja como vendedor', (tester) async {
+      final repo = UsuarioRepository(db);
+      final id = await repo.crearUsuario(
+        nombre: 'Beto',
+        rol: 'vendedor',
+        pin: '1111',
+        numeroVendedor: 1,
+        manejaCatalogo: true,
+      );
+      await montar(tester);
+
+      await tester.tap(find.byKey(Key('usuario_item_$id')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('interruptor_maneja_catalogo')));
+      await tester.tap(find.byKey(const Key('boton_guardar_usuario')));
+      await tester.pumpAndSettle();
+
+      expect((await repo.buscar(id))!.manejaCatalogo, isFalse);
+      expect(find.text('Vendedor 1'), findsOneWidget);
+    });
+
+    testWidgets('un nombre vacío no se guarda', (tester) async {
+      final repo = UsuarioRepository(db);
+      final id = await repo.crearUsuario(
+        nombre: 'Beto',
+        rol: 'vendedor',
+        pin: '1111',
+      );
+      await montar(tester);
+
+      await tester.tap(find.byKey(Key('usuario_item_$id')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('campo_nombre_editar')), ' ');
+      await tester.tap(find.byKey(const Key('boton_guardar_usuario')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Escribe un nombre'), findsOneWidget);
+      expect((await repo.buscar(id))!.nombre, 'Beto');
+    });
+
+    testWidgets('a un administrador no le muestra el interruptor', (
+      tester,
+    ) async {
+      final id = await UsuarioRepository(db)
+          .crearUsuario(nombre: 'Ana', rol: 'admin', pin: '1111');
+      await montar(tester);
+
+      await tester.tap(find.byKey(Key('usuario_item_$id')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('campo_nombre_editar')), findsOneWidget);
+      expect(
+        find.byKey(const Key('interruptor_maneja_catalogo')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('cambiar mi propio nombre lo cambia en la sesión', (
+      tester,
+    ) async {
+      final container = await containerConSesion(db);
+      addTearDown(container.dispose);
+      final ana = container.read(sesionProvider).usuarioActivo!;
+      await tester.pumpWidget(
+        appDePrueba(container, inicio: const UsuariosScreen()),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(Key('usuario_item_${ana.id}')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('campo_nombre_editar')),
+        'Ana María',
+      );
+      await tester.tap(find.byKey(const Key('boton_guardar_usuario')));
+      await tester.pumpAndSettle();
+
+      expect(container.read(sesionProvider).usuarioActivo!.nombre, 'Ana María');
+      expect(find.text('Ana María (tú)'), findsOneWidget);
     });
   });
 }
