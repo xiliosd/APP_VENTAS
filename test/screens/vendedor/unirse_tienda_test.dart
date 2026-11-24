@@ -6,10 +6,14 @@ import 'package:app_ventas/providers/recorrido_provider.dart';
 import 'package:app_ventas/screens/login/bienvenida_screen.dart';
 import 'package:app_ventas/screens/login/seleccionar_usuario_screen.dart';
 import 'package:app_ventas/screens/vendedor/esperando_aprobacion_screen.dart';
+import 'package:app_ventas/servicios/lector_codigo.dart';
 import 'package:app_ventas/sincronizacion/nube_tienda.dart';
 import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
 import 'package:app_ventas/sincronizacion/sincronizador.dart';
 import 'package:app_ventas/sincronizacion/supabase_nube_tienda.dart';
+import 'package:app_ventas/ui/tema_app.dart';
+import 'package:app_ventas/screens/vendedor/unirse_tienda_screen.dart';
+import 'package:app_ventas/util/codigo_unirse.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +21,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../support/lector_falso.dart';
 import '../../support/nube_tienda_falsa.dart';
 
 void main() {
@@ -59,6 +64,7 @@ void main() {
   Future<SharedPreferences> abrir(
     WidgetTester tester, {
     Map<String, Object> valores = const {},
+    LectorCodigo? lector,
   }) async {
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
@@ -75,6 +81,7 @@ void main() {
           preferenciasProvider.overrideWithValue(prefs),
           nubeTiendaProvider.overrideWithValue(celular),
           nombreCelularProvider.overrideWithValue('Redmi Note 13'),
+          if (lector != null) lectorCodigoProvider.overrideWithValue(lector),
         ],
         child: const AppVentas(),
       ),
@@ -90,6 +97,8 @@ void main() {
     String pin = '1234',
   }) async {
     await tester.tap(find.byKey(const Key('boton_unirse_tienda')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('escribir_a_mano')));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('campo_codigo_tienda')),
@@ -109,6 +118,111 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
   }
+
+  Future<void> abrirUnirse(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('boton_unirse_tienda')));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('escanear un QR válido deja solo el PIN', (tester) async {
+    await abrir(
+      tester,
+      lector: LectorFalso([textoCodigoUnirse(codigo: codigo, numero: 3)]),
+    );
+    await abrirUnirse(tester);
+
+    await tester.tap(find.byKey(const Key('boton_escanear_dueno')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('tienda_encontrada')), findsOneWidget);
+    expect(find.textContaining('Eres el vendedor N.º 3'), findsOneWidget);
+    expect(find.byKey(const Key('campo_codigo_tienda')), findsNothing);
+    expect(find.byKey(const Key('campo_numero_vendedor')), findsNothing);
+    expect(find.byKey(const Key('campo_pin_vendedor')), findsOneWidget);
+  });
+
+  testWidgets('escanear y escribir el PIN pide entrada con el código y el '
+      'número del QR', (tester) async {
+    await abrir(
+      tester,
+      lector: LectorFalso([textoCodigoUnirse(codigo: codigo, numero: 1)]),
+    );
+    await abrirUnirse(tester);
+    await tester.tap(find.byKey(const Key('boton_escanear_dueno')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('campo_pin_vendedor')), '1234');
+    await tester.tap(find.byKey(const Key('boton_pedir_entrada')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EsperandoAprobacionScreen), findsOneWidget);
+    expect(
+      (await admin.solicitudes(tienda)).single.nombreCelular,
+      'Redmi Note 13',
+    );
+  });
+
+  testWidgets(
+    'un QR que no es de VeciTienda lo dice y deja volver a escanear',
+    (tester) async {
+      final lector = LectorFalso(['7701234567890']);
+      await abrir(tester, lector: lector);
+      await abrirUnirse(tester);
+
+      await tester.tap(find.byKey(const Key('boton_escanear_dueno')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Ese código no es de una tienda VeciTienda'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('tienda_encontrada')), findsNothing);
+      expect(find.byKey(const Key('boton_escanear_dueno')), findsOneWidget);
+      expect(lector.usos, [UsoEscaner.unirse]);
+    },
+  );
+
+  testWidgets('escribir a mano muestra los tres campos con sus etiquetas', (
+    tester,
+  ) async {
+    await abrir(tester);
+    await abrirUnirse(tester);
+
+    await tester.tap(find.byKey(const Key('escribir_a_mano')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Código de la tienda'), findsOneWidget);
+    expect(find.text('Número de vendedor'), findsOneWidget);
+    expect(find.text('Tu PIN de 4 dígitos'), findsOneWidget);
+    expect(find.text('Ej.: K7M2QX'), findsOneWidget);
+    expect(find.text('Ej.: 3'), findsOneWidget);
+  });
+
+  testWidgets('a letra 2,0× en 360 dp no desborda', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final lector = LectorFalso([textoCodigoUnirse(codigo: codigo, numero: 3)]);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [lectorCodigoProvider.overrideWithValue(lector)],
+        child: MaterialApp(
+          theme: temaClaro(),
+          builder: (contexto, hijo) => MediaQuery(
+            data: MediaQuery.of(contexto)
+                .copyWith(textScaler: const TextScaler.linear(2.0)),
+            child: hijo!,
+          ),
+          home: const UnirseTiendaScreen(),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('boton_escanear_dueno')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('tienda_encontrada')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('el formulario revisa los campos antes de pedir entrada', (
     tester,

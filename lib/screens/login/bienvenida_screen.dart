@@ -47,7 +47,7 @@ class BienvenidaScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               BotonPrincipal(
                 key: const Key('boton_restaurar_tienda'),
-                texto: 'Ya tengo una tienda: restaurar respaldo',
+                texto: 'Ya tengo una tienda (soy el dueño)',
                 variante: VarianteBoton.contorno,
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(

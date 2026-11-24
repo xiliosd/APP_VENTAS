@@ -369,7 +369,7 @@ const temasAyuda = <TemaAyuda>[
     PreguntaFrecuente(
       'Cambié de celular, ¿cómo recupero mis datos?',
       '1. Instala la app en el celular nuevo.\n'
-          '2. Toca "Ya tengo una tienda: restaurar respaldo".\n'
+          '2. Toca "Ya tengo una tienda (soy el dueño)".\n'
           '3. Escribe el mismo correo de la tienda, toca "Enviarme el '
           'código", escribe el código que llega al correo y toca '
           '"Verificar".\n'
@@ -385,7 +385,7 @@ const temasAyuda = <TemaAyuda>[
           'app, unos segundos después de cada cambio y cada minuto. Sin '
           'internet se sigue vendiendo y los cambios suben cuando vuelva la '
           'conexión. En otro celular tuyo, instala la app, toca "Ya tengo una '
-          'tienda: restaurar respaldo" y entra con el mismo correo.',
+          'tienda (soy el dueño)" y entra con el mismo correo.',
     ),
     PreguntaFrecuente(
       '¿Cómo entra un vendedor desde su celular?',

@@ -76,14 +76,16 @@ class EscanerScreen extends StatefulWidget {
 }
 
 class _EscanerScreenState extends State<EscanerScreen> {
-  final _controlador = MobileScannerController(
-    formats: const [
-      BarcodeFormat.ean13,
-      BarcodeFormat.ean8,
-      BarcodeFormat.upcA,
-      BarcodeFormat.upcE,
-      BarcodeFormat.code128,
-    ],
+  late final _controlador = MobileScannerController(
+    formats: widget.uso == UsoEscaner.unirse
+        ? const [BarcodeFormat.qrCode]
+        : const [
+            BarcodeFormat.ean13,
+            BarcodeFormat.ean8,
+            BarcodeFormat.upcA,
+            BarcodeFormat.upcE,
+            BarcodeFormat.code128,
+          ],
   );
   bool _leido = false;
   bool _escribiendo = false;
@@ -216,7 +218,9 @@ class PieEscaner extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Apunta al código de barras',
+              uso == UsoEscaner.unirse
+                  ? 'Apunta al código QR'
+                  : 'Apunta al código de barras',
               textAlign: TextAlign.center,
               style: TextStyle(color: ColoresApp.blancoMarca, fontSize: 16),
             ),

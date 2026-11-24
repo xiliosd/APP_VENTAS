@@ -53,4 +53,12 @@ void main() {
     );
     expect(pantalla.modo, ModoVerificacion.restaurar);
   });
+
+  testWidgets('el botón del dueño dice Ya tengo una tienda (soy el dueño)', (
+    tester,
+  ) async {
+    await abrir(tester, NubeRespaldoFalsa());
+
+    expect(find.text('Ya tengo una tienda (soy el dueño)'), findsOneWidget);
+  });
 }
