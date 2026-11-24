@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../providers/repository_providers.dart';
 import '../../sincronizacion/nube_tienda.dart';
+import '../../util/codigo_unirse.dart';
 import '../../sincronizacion/sincronizacion_provider.dart';
 import '../../ui/avatar_inicial.dart';
 import '../../ui/avisos.dart';
@@ -53,13 +54,25 @@ class _PasoQuienState extends ConsumerState<PasoQuien> {
     );
   }
 
-  bool _tieneCelular(Usuario vendedor, List<CelularTienda> celulares) =>
-      celulares.any(
-        (celular) =>
-            celular.rol == 'vendedor' &&
-            celular.estado == EstadoMiembro.aprobado &&
-            celular.usuarioIdGlobal == vendedor.idGlobal,
-      );
+  /// Deja el número del vendedor en la nube antes de mostrarle qué hacer. Si
+  /// falla, la lista se refresca para que el vendedor recién creado aparezca
+  /// y se pueda reintentar tocándolo, sin crearlo otra vez.
+  Future<void> _continuar(Usuario vendedor, bool cambiaCelular) async {
+    try {
+      await asegurarNumeroVendedorEnNube(ref, vendedor, sincronizar: true);
+      final conNumero = await ref
+          .read(usuarioRepositoryProvider)
+          .buscar(vendedor.id);
+      if (!mounted) return;
+      widget.alElegirVendedor(conNumero ?? vendedor, cambiaCelular);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _datos = _cargar();
+      });
+      avisar(context, mensajeErrorTienda(error), error: true);
+    }
+  }
 
   Future<void> _otraPersona() async {
     final id = await mostrarHojaInferior<int>(
@@ -68,18 +81,9 @@ class _PasoQuienState extends ConsumerState<PasoQuien> {
       builder: (_) => const FormularioUsuario(soloVendedor: true),
     );
     if (id == null || !mounted) return;
-    try {
-      final vendedor = await ref.read(usuarioRepositoryProvider).buscar(id);
-      if (vendedor == null) return;
-      // El vendedor nuevo y su número deben estar en la nube antes de que
-      // los escriba en su celular.
-      await asegurarNumeroVendedorEnNube(ref, vendedor, sincronizar: true);
-      final conNumero = await ref.read(usuarioRepositoryProvider).buscar(id);
-      if (!mounted) return;
-      widget.alElegirVendedor(conNumero ?? vendedor, false);
-    } catch (error) {
-      if (mounted) avisar(context, mensajeErrorTienda(error), error: true);
-    }
+    final vendedor = await ref.read(usuarioRepositoryProvider).buscar(id);
+    if (vendedor == null || !mounted) return;
+    await _continuar(vendedor, false);
   }
 
   @override
@@ -137,12 +141,19 @@ class _PasoQuienState extends ConsumerState<PasoQuien> {
                         vendedor.nombre,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      subtitle: _tieneCelular(vendedor, datos.celulares)
+                      subtitle:
+                          tieneCelularAprobado(
+                            datos.celulares,
+                            vendedor.idGlobal,
+                          )
                           ? const Text('Cambiar su celular')
                           : null,
-                      onTap: () => widget.alElegirVendedor(
+                      onTap: () => _continuar(
                         vendedor,
-                        _tieneCelular(vendedor, datos.celulares),
+                        tieneCelularAprobado(
+                          datos.celulares,
+                          vendedor.idGlobal,
+                        ),
                       ),
                     ),
                   ),

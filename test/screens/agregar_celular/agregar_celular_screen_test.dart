@@ -28,6 +28,20 @@ class _SincronizacionSinInternet extends SincronizacionFalsa {
   }
 }
 
+/// La primera sincronización falla, como sin internet.
+class _SincronizacionQueFallaAlSubir extends SincronizacionFalsa {
+  _SincronizacionQueFallaAlSubir() : super(inicial: _alDia);
+
+  @override
+  Future<void> sincronizarAhora() async {
+    if (sincronizaciones == 0) {
+      sincronizaciones++;
+      throw const ErrorSinConexion();
+    }
+    await super.sincronizarAhora();
+  }
+}
+
 const _alDia = EstadoTiendaCompartida(fase: FaseSincronizacion.alDia);
 
 void main() {
@@ -144,6 +158,36 @@ void main() {
     expect(usuario.rol, 'vendedor');
     expect(sincronizacion.sincronizaciones, 1);
     // El respaldo programa una copia 30 s después de un cambio en los datos.
+    await tester.pump(const Duration(seconds: 31));
+  });
+
+  testWidgets('Otra persona sin internet deja al vendedor en la lista', (
+    tester,
+  ) async {
+    await montar(tester, sincronizacion: _SincronizacionQueFallaAlSubir());
+    await tester.tap(find.byKey(const Key('quien_otra_persona')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('campo_nombre_usuario')),
+      'Dora',
+    );
+    await tester.enterText(find.byKey(const Key('campo_pin_usuario')), '4321');
+    await tester.tap(find.byKey(const Key('boton_crear_usuario')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Sin internet. Inténtalo cuando tengas conexión.'),
+      findsOneWidget,
+    );
+    expect(find.byType(PasoMostrar), findsNothing);
+    expect(find.text('Dora'), findsOneWidget);
+    expect(await db.select(db.usuarios).get(), hasLength(1));
+
+    // Tocarlo reintenta la subida sin crear otro vendedor.
+    await tester.tap(find.text('Dora'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PasoMostrar), findsOneWidget);
+    expect(await db.select(db.usuarios).get(), hasLength(1));
     await tester.pump(const Duration(seconds: 31));
   });
 

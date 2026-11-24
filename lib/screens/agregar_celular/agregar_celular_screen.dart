@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../respaldo/respaldo_provider.dart';
-import '../../sincronizacion/nube_tienda.dart';
 import '../../sincronizacion/sincronizacion_provider.dart';
 import '../../ui/boton_principal.dart';
+import '../../util/codigo_unirse.dart';
 import '../respaldo/respaldo_screen.dart';
 import '../respaldo/verificar_correo_screen.dart';
 import 'paso_mostrar.dart';
@@ -64,12 +64,7 @@ class _AgregarCelularScreenState extends ConsumerState<AgregarCelularScreen> {
       final celulares = await ref
           .read(sincronizacionProvider.notifier)
           .celulares();
-      return celulares.any(
-        (celular) =>
-            celular.rol == 'vendedor' &&
-            celular.estado == EstadoMiembro.aprobado &&
-            celular.usuarioIdGlobal == vendedor.idGlobal,
-      );
+      return tieneCelularAprobado(celulares, vendedor.idGlobal);
     } catch (_) {
       return false;
     }

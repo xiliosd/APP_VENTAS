@@ -75,4 +75,35 @@ void main() {
       );
     });
   });
+
+  group('tieneCelularAprobado', () {
+    CelularTienda celular({
+      String rol = 'vendedor',
+      EstadoMiembro estado = EstadoMiembro.aprobado,
+      String? idGlobal = 'beto',
+    }) => CelularTienda(
+      usuarioAuth: 'a',
+      rol: rol,
+      estado: estado,
+      solicitadoEn: DateTime(2026, 11, 20),
+      usuarioIdGlobal: idGlobal,
+    );
+
+    test('es verdadero solo con un celular aprobado del mismo vendedor', () {
+      expect(tieneCelularAprobado([celular()], 'beto'), isTrue);
+      expect(tieneCelularAprobado([celular()], 'caro'), isFalse);
+      expect(
+        tieneCelularAprobado([
+          celular(estado: EstadoMiembro.pendiente),
+        ], 'beto'),
+        isFalse,
+      );
+      expect(tieneCelularAprobado([celular(rol: 'admin')], 'beto'), isFalse);
+    });
+
+    test('sin celulares o sin idGlobal es falso', () {
+      expect(tieneCelularAprobado(const [], 'beto'), isFalse);
+      expect(tieneCelularAprobado([celular(idGlobal: null)], null), isFalse);
+    });
+  });
 }

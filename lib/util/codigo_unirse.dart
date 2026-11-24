@@ -25,6 +25,17 @@ DatosUnirse? leerCodigoUnirse(String texto) {
   return (codigo: codigo, numero: numero);
 }
 
+/// Si [celular] es un celular aprobado del vendedor con [idGlobal].
+bool esCelularAprobadoDe(CelularTienda celular, String? idGlobal) =>
+    celular.rol == 'vendedor' &&
+    celular.estado == EstadoMiembro.aprobado &&
+    idGlobal != null &&
+    celular.usuarioIdGlobal == idGlobal;
+
+/// Si el vendedor con [idGlobal] ya tiene un celular aprobado.
+bool tieneCelularAprobado(List<CelularTienda> celulares, String? idGlobal) =>
+    celulares.any((celular) => esCelularAprobadoDe(celular, idGlobal));
+
 /// Al aprobar el celular nuevo de un vendedor, los que tenía antes y dejan
 /// de servir: solo los aprobados de ese mismo vendedor.
 List<CelularTienda> celularesAReemplazar(
@@ -33,9 +44,7 @@ List<CelularTienda> celularesAReemplazar(
   required String usuarioAuthNuevo,
 }) => [
   for (final celular in celulares)
-    if (celular.rol == 'vendedor' &&
-        celular.estado == EstadoMiembro.aprobado &&
-        celular.usuarioIdGlobal == idGlobal &&
+    if (esCelularAprobadoDe(celular, idGlobal) &&
         celular.usuarioAuth != usuarioAuthNuevo)
       celular,
 ];
