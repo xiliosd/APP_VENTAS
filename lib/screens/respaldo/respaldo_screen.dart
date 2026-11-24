@@ -209,33 +209,37 @@ class _Activo extends ConsumerWidget {
 }
 
 /// Pide confirmación y deja la tienda compartida. Devuelve true si este
-/// celular quedó con su tienda en la nube.
+/// celular quedó con su tienda en la nube. Con [preguntar] en false no muestra
+/// la primera pregunta (el asistente ya dejó claro lo que se va a hacer).
 Future<bool> compartirTiendaConConfirmacion(
   BuildContext context,
-  WidgetRef ref,
-) async {
-  final confirmado = await showDialog<bool>(
-    context: context,
-    builder: (contexto) => AlertDialog(
-      title: const Text('¿Usar la tienda en varios celulares?'),
-      content: const Text(
-        'Los datos de la tienda se guardarán en la nube y se mantendrán al '
-        'día en cada celular de la tienda. El respaldo por archivo se '
-        'reemplaza por esto.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(contexto, false),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          key: const Key('confirmar_compartir'),
-          onPressed: () => Navigator.pop(contexto, true),
-          child: const Text('Continuar'),
-        ),
-      ],
-    ),
-  );
+  WidgetRef ref, {
+  bool preguntar = true,
+}) async {
+  final confirmado = !preguntar
+      ? true
+      : await showDialog<bool>(
+          context: context,
+          builder: (contexto) => AlertDialog(
+            title: const Text('¿Usar la tienda en varios celulares?'),
+            content: const Text(
+              'Los datos de la tienda se guardarán en la nube y se mantendrán al '
+              'día en cada celular de la tienda. El respaldo por archivo se '
+              'reemplaza por esto.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(contexto, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                key: const Key('confirmar_compartir'),
+                onPressed: () => Navigator.pop(contexto, true),
+                child: const Text('Continuar'),
+              ),
+            ],
+          ),
+        );
   if (confirmado != true) return false;
   final tienda = ref.read(sincronizacionProvider.notifier);
   try {

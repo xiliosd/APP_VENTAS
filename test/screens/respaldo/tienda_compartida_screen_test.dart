@@ -139,6 +139,44 @@ void main() {
     expect(sincronizacion.compartidas, 0);
   });
 
+  testWidgets('compartir sin preguntar no muestra el diálogo y comparte', (
+    tester,
+  ) async {
+    final sincronizacion = SincronizacionFalsa();
+    final container = await containerRespaldo(
+      db,
+      NubeRespaldoFalsa(conSesion: true, correo: 'tienda@gmail.com'),
+      sincronizacion: () => sincronizacion,
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: temaClaro(),
+          home: Scaffold(
+            body: Consumer(
+              builder: (context, ref, _) => TextButton(
+                key: const Key('compartir_directo'),
+                onPressed: () => compartirTiendaConConfirmacion(
+                  context,
+                  ref,
+                  preguntar: false,
+                ),
+                child: const Text('Compartir'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('compartir_directo')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('confirmar_compartir')), findsNothing);
+    expect(sincronizacion.compartidas, 1);
+  });
+
   final textos = {
     FaseSincronizacion.alDia: 'Al día',
     FaseSincronizacion.sincronizando: 'Sincronizando…',

@@ -5,7 +5,7 @@ import '../../data/database.dart';
 import '../../providers/repository_providers.dart';
 import '../../sincronizacion/sincronizacion_provider.dart';
 import '../../util/pin_hash.dart';
-import 'usuarios_screen.dart' show mensajeErrorPin;
+import 'formulario_usuario.dart' show mensajeErrorPin;
 
 /// Pide un PIN nuevo para [usuario]. Se cierra con `true` si lo guardó.
 class ResetearPinDialog extends ConsumerStatefulWidget {

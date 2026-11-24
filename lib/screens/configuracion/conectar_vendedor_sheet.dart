@@ -50,14 +50,10 @@ Future<void> conectarCelularVendedor(
     }
     if (!await compartirTiendaConConfirmacion(context, ref)) return;
   }
-  final repo = ref.read(usuarioRepositoryProvider);
-  final teniaNumero = vendedor.numeroVendedor != null;
-  final numero = await repo.asegurarNumeroVendedor(vendedor.id);
-  ref.invalidate(listaUsuariosProvider);
+  final int numero;
   final String codigo;
   try {
-    // El número recién dado debe llegar a la nube antes de que lo escriba.
-    if (!teniaNumero) await sincronizacion.sincronizarAhora();
+    numero = await asegurarNumeroVendedorEnNube(ref, vendedor);
     codigo = await sincronizacion.codigoTienda();
   } catch (error) {
     if (context.mounted) {
@@ -71,6 +67,26 @@ Future<void> conectarCelularVendedor(
     titulo: titulo,
     builder: (contexto) => _Instrucciones(codigo: codigo, numero: numero),
   );
+}
+
+/// Le da a [vendedor] su número si no lo tenía y lo sube a la nube: el número
+/// recién dado debe llegar allá antes de que el vendedor lo escriba. Con
+/// [sincronizar] sube aunque ya lo tuviera (p. ej. un vendedor recién creado).
+/// Lanza el error de la nube si no llega.
+Future<int> asegurarNumeroVendedorEnNube(
+  WidgetRef ref,
+  Usuario vendedor, {
+  bool sincronizar = false,
+}) async {
+  final teniaNumero = vendedor.numeroVendedor != null;
+  final numero = await ref
+      .read(usuarioRepositoryProvider)
+      .asegurarNumeroVendedor(vendedor.id);
+  ref.invalidate(listaUsuariosProvider);
+  if (!teniaNumero || sincronizar) {
+    await ref.read(sincronizacionProvider.notifier).sincronizarAhora();
+  }
+  return numero;
 }
 
 class _Instrucciones extends StatelessWidget {
