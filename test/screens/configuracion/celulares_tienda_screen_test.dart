@@ -1,3 +1,4 @@
+import 'package:app_ventas/screens/agregar_celular/agregar_celular_screen.dart';
 import 'package:app_ventas/screens/configuracion/celulares_tienda_screen.dart';
 import 'package:app_ventas/sincronizacion/nube_tienda.dart';
 import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
@@ -80,5 +81,57 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(sincronizacion.respuestas, [('c1', true)]);
+  });
+
+  testWidgets('el botón Agregar un celular abre el asistente', (tester) async {
+    await montar(tester);
+
+    await tester.tap(find.byKey(const Key('boton_agregar_celular')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AgregarCelularScreen), findsOneWidget);
+  });
+
+  testWidgets('sin tienda compartida ofrece Agregar un celular, no el error', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sincronizacionProvider.overrideWith(() => SincronizacionFalsa()),
+        ],
+        child: const MaterialApp(home: CelularesTiendaScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Aún no hay otros celulares.'), findsOneWidget);
+    expect(find.byKey(const Key('boton_agregar_celular')), findsOneWidget);
+    expect(find.byKey(const Key('codigo_tienda')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('cabe con la letra al máximo en 360 dp', (tester) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sincronizacionProvider.overrideWith(() => SincronizacionFalsa()),
+        ],
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(2.0)),
+            child: child!,
+          ),
+          home: const CelularesTiendaScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
   });
 }

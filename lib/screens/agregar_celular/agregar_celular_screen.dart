@@ -4,15 +4,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../respaldo/respaldo_provider.dart';
 import '../../sincronizacion/sincronizacion_provider.dart';
+import '../../providers/repository_providers.dart';
 import '../../ui/boton_principal.dart';
+import '../../ui/colores_app.dart';
 import '../../util/codigo_unirse.dart';
 import '../respaldo/respaldo_screen.dart';
 import '../respaldo/verificar_correo_screen.dart';
+import 'asegurar_numero_vendedor.dart';
 import 'paso_mostrar.dart';
 import 'paso_quien.dart';
 import 'paso_soy_yo.dart';
 
-enum _Paso { cargando, correo, quien, soyYo, mostrar }
+enum _Paso { cargando, errorAbrir, correo, quien, soyYo, mostrar }
 
 /// Asistente del dueño para dejar listo el celular de alguien: confirma el
 /// correo y la tienda compartida, elige quién lo usará y le muestra qué hacer.
@@ -31,6 +34,7 @@ class _AgregarCelularScreenState extends ConsumerState<AgregarCelularScreen> {
   _Paso _paso = _Paso.cargando;
   Usuario? _vendedor;
   bool _cambiaCelular = false;
+  String? _errorAbrir;
 
   @override
   void initState() {
@@ -45,28 +49,40 @@ class _AgregarCelularScreenState extends ConsumerState<AgregarCelularScreen> {
 
   Future<void> _decidirPasoInicial() async {
     final vendedor = widget.vendedor;
-    if (vendedor != null) {
-      final cambia = await _tieneCelular(vendedor);
-      if (!mounted) return;
-      setState(() {
-        _cambiaCelular = cambia;
-        _paso = _Paso.mostrar;
-      });
-      return;
-    }
+    if (vendedor != null) return _abrirConVendedor(vendedor);
     final lista = await _tiendaLista();
     if (mounted) setState(() => _paso = lista ? _Paso.quien : _Paso.correo);
   }
 
-  /// Si no se puede saber (sin internet), se asume que no tiene celular.
-  Future<bool> _tieneCelular(Usuario vendedor) async {
+  /// Abierto desde Usuarios: deja la tienda lista y el número del vendedor en
+  /// la nube antes de mostrar el QR. Sin internet no se adivina: se avisa y se
+  /// puede reintentar.
+  Future<void> _abrirConVendedor(Usuario vendedor) async {
+    setState(() => _paso = _Paso.cargando);
     try {
+      if (!await _tiendaLista()) {
+        if (mounted) setState(() => _paso = _Paso.correo);
+        return;
+      }
+      await asegurarNumeroVendedorEnNube(ref, vendedor, sincronizar: true);
+      final conNumero = await ref
+          .read(usuarioRepositoryProvider)
+          .buscar(vendedor.id);
       final celulares = await ref
           .read(sincronizacionProvider.notifier)
           .celulares();
-      return tieneCelularAprobado(celulares, vendedor.idGlobal);
-    } catch (_) {
-      return false;
+      if (!mounted) return;
+      setState(() {
+        _vendedor = conNumero ?? vendedor;
+        _cambiaCelular = tieneCelularAprobado(celulares, vendedor.idGlobal);
+        _paso = _Paso.mostrar;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorAbrir = mensajeErrorTienda(error);
+        _paso = _Paso.errorAbrir;
+      });
     }
   }
 
@@ -85,7 +101,10 @@ class _AgregarCelularScreenState extends ConsumerState<AgregarCelularScreen> {
       await compartirTiendaConConfirmacion(context, ref, preguntar: false);
     }
     if (!mounted) return;
-    if (await _tiendaLista() && mounted) setState(() => _paso = _Paso.quien);
+    if (!await _tiendaLista() || !mounted) return;
+    final vendedor = widget.vendedor;
+    if (vendedor != null) return _abrirConVendedor(vendedor);
+    setState(() => _paso = _Paso.quien);
   }
 
   void _elegirVendedor(Usuario vendedor, bool cambiaCelular) => setState(() {
@@ -100,6 +119,10 @@ class _AgregarCelularScreenState extends ConsumerState<AgregarCelularScreen> {
       appBar: AppBar(title: const Text('Agregar un celular')),
       body: switch (_paso) {
         _Paso.cargando => const Center(child: CircularProgressIndicator()),
+        _Paso.errorAbrir => _ErrorAbrir(
+          mensaje: _errorAbrir ?? '',
+          alReintentar: () => _abrirConVendedor(widget.vendedor!),
+        ),
         _Paso.correo => _PasoCorreo(alConfirmar: _confirmarCorreo),
         _Paso.quien => PasoQuien(
           alElegirVendedor: _elegirVendedor,
@@ -140,6 +163,38 @@ class _PasoCorreo extends StatelessWidget {
           key: const Key('boton_confirmar_correo'),
           texto: 'Confirmar mi correo',
           onPressed: alConfirmar,
+        ),
+      ],
+    );
+  }
+}
+
+class _ErrorAbrir extends StatelessWidget {
+  const _ErrorAbrir({required this.mensaje, required this.alReintentar});
+
+  final String mensaje;
+  final VoidCallback alReintentar;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          mensaje,
+          key: const Key('error_abrir'),
+          style: TextStyle(
+            fontSize: 18,
+            height: 1.4,
+            color: ColoresApp.of(context).sale,
+          ),
+        ),
+        const SizedBox(height: 16),
+        BotonPrincipal(
+          key: const Key('reintentar_abrir'),
+          texto: 'Reintentar',
+          variante: VarianteBoton.contorno,
+          onPressed: alReintentar,
         ),
       ],
     );

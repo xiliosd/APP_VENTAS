@@ -14,6 +14,7 @@ import '../../ui/icono_cuadrado.dart';
 import '../../ui/tema_app.dart';
 import '../../ui/titulo_seccion.dart';
 import '../ayuda/preguntas_frecuentes_screen.dart';
+import '../agregar_celular/agregar_celular_screen.dart';
 import '../qr/configurar_qr_screen.dart';
 import '../respaldo/respaldo_screen.dart';
 import '../clientes/clientes_screen.dart';
@@ -143,6 +144,14 @@ class AjustesScreen extends ConsumerWidget {
                 titulo: 'Usuarios',
                 subtitulo: 'Administradores, vendedores y PIN',
                 onTap: () => abrir(const UsuariosScreen()),
+              ),
+              _Opcion(
+                key: const Key('menu_agregar_celular'),
+                icono: Icons.add_to_home_screen_rounded,
+                color: c.primario,
+                titulo: 'Agregar un celular',
+                subtitulo: 'Para un vendedor o para ti',
+                onTap: () => abrir(const AgregarCelularScreen()),
               ),
               if (compartida)
                 _Opcion(

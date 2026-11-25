@@ -42,6 +42,20 @@ class _SincronizacionQueFallaAlSubir extends SincronizacionFalsa {
   }
 }
 
+/// Falla al subir la primera vez y al listar celulares, como sin internet.
+class _SincronizacionSinInternetAlAbrir extends SincronizacionFalsa {
+  _SincronizacionSinInternetAlAbrir() : super(inicial: _alDia);
+
+  int intentos = 0;
+
+  @override
+  Future<List<CelularTienda>> celulares() async {
+    intentos++;
+    if (intentos == 1) throw const ErrorSinConexion();
+    return const [];
+  }
+}
+
 const _alDia = EstadoTiendaCompartida(fase: FaseSincronizacion.alDia);
 
 void main() {
@@ -67,6 +81,7 @@ void main() {
     bool respaldoActivo = true,
     SincronizacionFalsa? sincronizacion,
     double letra = 1.0,
+    Usuario? vendedor,
   }) async {
     final container = await containerRespaldo(
       db,
@@ -89,7 +104,7 @@ void main() {
                 .copyWith(textScaler: TextScaler.linear(letra)),
             child: child!,
           ),
-          home: const AgregarCelularScreen(),
+          home: AgregarCelularScreen(vendedor: vendedor),
         ),
       ),
     );
@@ -239,5 +254,72 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Beto'), findsOneWidget);
     expect(find.text('Reintentar'), findsNothing);
+  });
+
+  group('abierto con un vendedor (desde Usuarios)', () {
+    Future<Usuario> vendedorSinNumero() async {
+      final id = await db
+          .into(db.usuarios)
+          .insert(
+            UsuariosCompanion.insert(
+              nombre: 'Beto',
+              rol: 'vendedor',
+              pinHash: 'x',
+            ),
+          );
+      return (db.select(
+        db.usuarios,
+      )..where((u) => u.id.equals(id))).getSingle();
+    }
+
+    testWidgets('deja su número en la nube antes del paso 3', (tester) async {
+      final vendedor = await vendedorSinNumero();
+      final sincronizacion = SincronizacionFalsa(inicial: _alDia);
+      await montar(tester, vendedor: vendedor, sincronizacion: sincronizacion);
+
+      expect(find.byType(PasoMostrar), findsOneWidget);
+      expect(sincronizacion.sincronizaciones, 1);
+      final guardado = await (db.select(
+        db.usuarios,
+      )..where((u) => u.id.equals(vendedor.id))).getSingle();
+      expect(guardado.numeroVendedor, 1);
+      await tester.pump(const Duration(seconds: 31));
+    });
+
+    testWidgets('sin internet muestra el mensaje y Reintentar', (tester) async {
+      final vendedor = await vendedorSinNumero();
+      await montar(
+        tester,
+        vendedor: vendedor,
+        sincronizacion: _SincronizacionSinInternetAlAbrir(),
+      );
+
+      expect(
+        find.text('Sin internet. Inténtalo cuando tengas conexión.'),
+        findsOneWidget,
+      );
+      expect(find.byType(PasoMostrar), findsNothing);
+
+      await tester.tap(find.byKey(const Key('reintentar_abrir')));
+      await tester.pumpAndSettle();
+      expect(find.byType(PasoMostrar), findsOneWidget);
+      await tester.pump(const Duration(seconds: 31));
+    });
+
+    testWidgets('el error cabe con la letra al máximo en 360 dp', (
+      tester,
+    ) async {
+      final vendedor = await vendedorSinNumero();
+      await montar(
+        tester,
+        vendedor: vendedor,
+        letra: 2.0,
+        sincronizacion: _SincronizacionSinInternetAlAbrir(),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('reintentar_abrir')), findsOneWidget);
+      await tester.pump(const Duration(seconds: 31));
+    });
   });
 }

@@ -18,21 +18,27 @@ void main() {
   setUp(() => db = AppDatabase(NativeDatabase.memory()));
   tearDown(() => db.close());
 
-  Future<void> montar(WidgetTester tester, SelectorImagen selector,
-      {Widget inicio = const ConfigurarQrScreen()}) async {
-    final container = await containerConSesion(db,
-        overrides: [selectorImagenProvider.overrideWithValue(selector)]);
+  Future<void> montar(
+    WidgetTester tester,
+    SelectorImagen selector, {
+    Widget inicio = const ConfigurarQrScreen(),
+  }) async {
+    final container = await containerConSesion(
+      db,
+      overrides: [selectorImagenProvider.overrideWithValue(selector)],
+    );
     addTearDown(container.dispose);
     await tester.pumpWidget(appDePrueba(container, inicio: inicio));
     await tester.pumpAndSettle();
   }
 
-  testWidgets('sin QR muestra la ayuda y Cargar QR lo guarda',
-      (tester) async {
+  testWidgets('sin QR muestra la ayuda y Cargar QR lo guarda', (tester) async {
     await montar(tester, SelectorImagenFalso(bytes: pngDePrueba));
     expect(find.byKey(const Key('pasos_qr')), findsOneWidget);
-    expect(find.text('Descarga tu QR de Nequi, Daviplata o tu banco'),
-        findsOneWidget);
+    expect(
+      find.text('Descarga tu QR de Nequi, Daviplata o tu banco'),
+      findsOneWidget,
+    );
     expect(find.text('Cárgalo aquí'), findsOneWidget);
     expect(find.text('Cobra mostrándolo en la venta'), findsOneWidget);
     expect(find.text('Aún no has cargado tu QR'), findsOneWidget);
@@ -44,10 +50,12 @@ void main() {
     expect(find.byKey(const Key('vista_qr')), findsOneWidget);
     expect(find.text('Cambiar QR'), findsOneWidget);
     expect(
-        find.ancestor(
-            of: find.byKey(const Key('vista_qr')),
-            matching: find.byKey(const Key('tarjeta_qr_configurado'))),
-        findsOneWidget);
+      find.ancestor(
+        of: find.byKey(const Key('vista_qr')),
+        matching: find.byKey(const Key('tarjeta_qr_configurado')),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('si no se elige imagen no cambia nada', (tester) async {
@@ -61,8 +69,10 @@ void main() {
     await montar(tester, SelectorImagenFalso(error: Exception('x')));
     await tester.tap(find.byKey(const Key('boton_cargar_qr')));
     await tester.pumpAndSettle();
-    expect(find.text('No se pudo cargar la imagen, prueba con otra'),
-        findsOneWidget);
+    expect(
+      find.text('No se pudo cargar la imagen, prueba con otra'),
+      findsOneWidget,
+    );
     expect(await ConfiguracionRepository(db).imagenQr(), isNull);
   });
 
@@ -93,53 +103,72 @@ void main() {
     expect(find.byKey(const Key('vista_qr')), findsOneWidget);
   });
 
-  testWidgets('al abrir guarda una imagen que quedó pendiente',
-      (tester) async {
+  testWidgets('al abrir guarda una imagen que quedó pendiente', (tester) async {
     await montar(tester, SelectorImagenFalso(perdida: pngDePrueba));
     expect(await ConfiguracionRepository(db).imagenQr(), pngDePrueba);
     expect(find.text('QR guardado'), findsOneWidget);
     expect(find.byKey(const Key('vista_qr')), findsOneWidget);
   });
 
-  testWidgets('una imagen pendiente que no se puede leer no se guarda',
-      (tester) async {
-    final container = await containerConSesion(db, overrides: [
-      selectorImagenProvider.overrideWithValue(
-          SelectorImagenFalso(perdida: Uint8List.fromList([1, 2, 3])))
-    ]);
+  testWidgets('una imagen pendiente que no se puede leer no se guarda', (
+    tester,
+  ) async {
+    final container = await containerConSesion(
+      db,
+      overrides: [
+        selectorImagenProvider.overrideWithValue(
+          SelectorImagenFalso(perdida: Uint8List.fromList([1, 2, 3])),
+        ),
+      ],
+    );
     addTearDown(container.dispose);
     await tester.runAsync(() async {
       await tester.pumpWidget(
-          appDePrueba(container, inicio: const ConfigurarQrScreen()));
+        appDePrueba(container, inicio: const ConfigurarQrScreen()),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 300));
     });
     await tester.pumpAndSettle();
 
-    expect(find.text('No se pudo cargar la imagen, prueba con otra'),
-        findsOneWidget);
+    expect(
+      find.text('No se pudo cargar la imagen, prueba con otra'),
+      findsOneWidget,
+    );
     expect(await ConfiguracionRepository(db).imagenQr(), isNull);
   });
 
   testWidgets('Ajustes tiene la entrada Cobro por QR', (tester) async {
-    await montar(tester, SelectorImagenFalso(),
-        inicio: const Scaffold(body: AjustesScreen()));
-    await tester.tap(find.byKey(const Key('menu_cobro_qr')));
+    await montar(
+      tester,
+      SelectorImagenFalso(),
+      inicio: const Scaffold(body: AjustesScreen()),
+    );
+    final entrada = find.byKey(const Key('menu_cobro_qr'));
+    await tester.scrollUntilVisible(entrada, 100);
+    await tester.ensureVisible(entrada);
+    await tester.pumpAndSettle();
+    await tester.tap(entrada);
     await tester.pumpAndSettle();
     expect(find.byType(ConfigurarQrScreen), findsOneWidget);
   });
 
-  testWidgets('una imagen que no se puede leer avisa y no se guarda',
-      (tester) async {
+  testWidgets('una imagen que no se puede leer avisa y no se guarda', (
+    tester,
+  ) async {
     await montar(
-        tester, SelectorImagenFalso(bytes: Uint8List.fromList([1, 2, 3])));
+      tester,
+      SelectorImagenFalso(bytes: Uint8List.fromList([1, 2, 3])),
+    );
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const Key('boton_cargar_qr')));
       await Future<void>.delayed(const Duration(milliseconds: 300));
     });
     await tester.pumpAndSettle();
 
-    expect(find.text('No se pudo cargar la imagen, prueba con otra'),
-        findsOneWidget);
+    expect(
+      find.text('No se pudo cargar la imagen, prueba con otra'),
+      findsOneWidget,
+    );
     expect(find.text('QR guardado'), findsNothing);
     expect(await ConfiguracionRepository(db).imagenQr(), isNull);
   });

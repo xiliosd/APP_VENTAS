@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../sincronizacion/nube_tienda.dart';
 import '../../sincronizacion/sincronizacion_provider.dart';
 import '../../ui/avisos.dart';
+import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/pildora.dart';
+import '../agregar_celular/agregar_celular_screen.dart';
 import 'atender_solicitudes.dart';
 
 /// Quién entra a la tienda compartida desde su celular: el admin aprueba,
@@ -19,11 +21,21 @@ class CelularesTiendaScreen extends ConsumerStatefulWidget {
 }
 
 class _CelularesTiendaScreenState extends ConsumerState<CelularesTiendaScreen> {
-  late Future<(String, List<CelularTienda>)> _datos = _cargar();
+  late Future<(String?, List<CelularTienda>)> _datos = _cargar();
 
-  Future<(String, List<CelularTienda>)> _cargar() async {
+  /// Sin tienda compartida no hay código ni celulares: no es un error.
+  Future<(String?, List<CelularTienda>)> _cargar() async {
     final tienda = ref.read(sincronizacionProvider.notifier);
+    if (!await tienda.esCompartida()) return (null, <CelularTienda>[]);
     return (await tienda.codigoTienda(), await tienda.celulares());
+  }
+
+  Future<void> _agregarCelular() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => const AgregarCelularScreen()),
+    );
+    // El asistente puede haber compartido la tienda o aprobado un celular.
+    if (mounted) _recargar();
   }
 
   void _recargar() {
@@ -169,28 +181,43 @@ class _CelularesTiendaScreenState extends ConsumerState<CelularesTiendaScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Text(
-                  'Código de la tienda: $codigo',
-                  key: const Key('codigo_tienda'),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'El vendedor lo escribe en su celular, con su número y su '
-                  'PIN.',
-                  style: TextStyle(
-                    color: ColoresApp.of(context).textoSecundario,
-                  ),
+                BotonPrincipal(
+                  key: const Key('boton_agregar_celular'),
+                  texto: 'Agregar un celular',
+                  onPressed: _agregarCelular,
                 ),
                 const SizedBox(height: 16),
-                Card(
-                  child: Column(
-                    children: [for (final celular in celulares) _fila(celular)],
+                if (codigo == null)
+                  const Text(
+                    'Aún no hay otros celulares.',
+                    style: TextStyle(fontSize: 18),
+                  )
+                else ...[
+                  Text(
+                    'Código de la tienda: $codigo',
+                    key: const Key('codigo_tienda'),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Es el código de tu tienda. Para sumar un celular usa '
+                    '"Agregar un celular".',
+                    style: TextStyle(
+                      color: ColoresApp.of(context).textoSecundario,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Card(
+                    child: Column(
+                      children: [
+                        for (final celular in celulares) _fila(celular),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           );

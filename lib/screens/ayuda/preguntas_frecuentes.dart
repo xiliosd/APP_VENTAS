@@ -389,14 +389,21 @@ const temasAyuda = <TemaAyuda>[
     ),
     PreguntaFrecuente(
       '¿Cómo entra un vendedor desde su celular?',
-      '${_soloAdmin}en "Ajustes" → "Usuarios", toca el celular junto al '
-          'vendedor ("Conectar su celular"). Si la tienda aún no está en '
-          'varios celulares, la app te pide compartirla primero. Verás el '
-          'código de la tienda y su número de vendedor. En el celular del '
-          'vendedor: instala la app, toca "Unirme a una tienda" y escribe el '
-          'código, su número y su PIN. En tu celular sale un aviso: toca '
-          '"Aprobar" solo si es su celular. La primera vez necesita internet; '
-          'después vende sin internet como siempre.',
+      '${_soloAdmin}en "Ajustes" toca "Agregar un celular" (o, en '
+          '"Ajustes" → "Usuarios", el celular junto al vendedor). Si la '
+          'tienda aún no está en varios celulares, la app te guía para '
+          'compartirla. Elige al vendedor y verás un código QR. En el '
+          'celular del vendedor: instala la app, toca "Unirme a una tienda", '
+          'escanea el QR de tu pantalla y escribe solo su PIN. En tu celular '
+          'sale un aviso: toca "Aprobar" solo si es su celular. La primera '
+          'vez necesita internet; después vende sin internet como siempre.',
+    ),
+    PreguntaFrecuente(
+      '¿Cómo uso la tienda en otro celular mío?',
+      '${_soloAdmin}en "Ajustes" toca "Agregar un celular" y elige "Soy yo, '
+          'en otro celular". Sigue los pasos que te muestra: instala la app '
+          'en el otro celular, toca "Ya tengo una tienda (soy el dueño)" y '
+          'entra con el mismo correo de la tienda.',
     ),
     PreguntaFrecuente(
       '¿Cómo le quito el acceso a un vendedor?',

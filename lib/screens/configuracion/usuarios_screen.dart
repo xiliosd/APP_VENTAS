@@ -13,7 +13,7 @@ import '../../ui/hoja_inferior.dart';
 import '../../ui/pildora.dart';
 import '../../sincronizacion/nube_tienda.dart';
 import '../../sincronizacion/sincronizacion_provider.dart';
-import 'conectar_vendedor_sheet.dart';
+import '../agregar_celular/agregar_celular_screen.dart';
 import 'editar_usuario_sheet.dart';
 import 'formulario_usuario.dart';
 import 'resetear_pin_dialog.dart';
@@ -183,10 +183,14 @@ class _UsuariosScreenState extends ConsumerState<UsuariosScreen> {
                             if (u.rol == 'vendedor' && u.activo) ...[
                               IconButton(
                                 key: Key('conectar_celular_${u.id}'),
-                                tooltip: 'Conectar su celular',
+                                tooltip: 'Agregar su celular',
                                 icon: const Icon(Icons.smartphone_rounded),
-                                onPressed: () =>
-                                    conectarCelularVendedor(context, ref, u),
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) =>
+                                        AgregarCelularScreen(vendedor: u),
+                                  ),
+                                ),
                               ),
                               IconButton(
                                 key: Key('desactivar_${u.id}'),

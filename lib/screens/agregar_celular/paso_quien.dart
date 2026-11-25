@@ -11,8 +11,8 @@ import '../../ui/avisos.dart';
 import '../../ui/boton_principal.dart';
 import '../../ui/colores_app.dart';
 import '../../ui/hoja_inferior.dart';
-import '../configuracion/conectar_vendedor_sheet.dart';
 import '../configuracion/formulario_usuario.dart';
+import 'asegurar_numero_vendedor.dart';
 
 /// Los vendedores activos y los celulares aprobados de la tienda.
 typedef _DatosQuien = ({

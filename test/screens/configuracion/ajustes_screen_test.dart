@@ -1,6 +1,7 @@
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/providers/sesion_provider.dart';
 import 'package:app_ventas/repositories/configuracion_repository.dart';
+import 'package:app_ventas/screens/agregar_celular/agregar_celular_screen.dart';
 import 'package:app_ventas/screens/configuracion/ajustes_screen.dart';
 import 'package:app_ventas/screens/configuracion/celulares_tienda_screen.dart';
 import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
@@ -79,6 +80,7 @@ void main() {
       'menu_proveedores',
       'menu_clientes',
       'menu_usuarios',
+      'menu_agregar_celular',
       'menu_cobro_qr',
       'menu_respaldo',
       'boton_repetir_recorrido',
@@ -143,6 +145,47 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CelularesTiendaScreen), findsOneWidget);
+  });
+
+  testWidgets('Ajustes tiene Agregar un celular y lo abre', (tester) async {
+    await montar(tester);
+
+    final opcion = find.byKey(const Key('menu_agregar_celular'));
+    expect(
+      find.descendant(of: opcion, matching: find.text('Agregar un celular')),
+      findsOneWidget,
+    );
+    expect(find.text('Para un vendedor o para ti'), findsOneWidget);
+    // Va arriba de "Celulares de la tienda" aunque la tienda no sea compartida.
+    expect(find.byKey(const Key('tile_celulares_tienda')), findsNothing);
+
+    await tester.tap(opcion);
+    await tester.pumpAndSettle();
+    expect(find.byType(AgregarCelularScreen), findsOneWidget);
+  });
+
+  testWidgets('Agregar un celular va arriba de Celulares de la tienda', (
+    tester,
+  ) async {
+    await montar(
+      tester,
+      overrides: [
+        sincronizacionProvider.overrideWith(
+          () => SincronizacionFalsa(
+            inicial: const EstadoTiendaCompartida(
+              fase: FaseSincronizacion.alDia,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    expect(
+      tester.getRect(find.byKey(const Key('menu_agregar_celular'))).top,
+      lessThan(
+        tester.getRect(find.byKey(const Key('tile_celulares_tienda'))).top,
+      ),
+    );
   });
 
   testWidgets('sin tienda compartida no muestra Celulares de la tienda', (

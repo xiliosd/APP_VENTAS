@@ -83,12 +83,25 @@ void main() {
         tema.preguntas.firstWhere((p) => p.pregunta == pregunta).respuesta;
 
     final entrar = respuesta('¿Cómo entra un vendedor desde su celular?');
-    expect(entrar, contains('Conectar su celular'));
-    expect(entrar, contains('Unirme a una tienda'));
+    expect(entrar, contains('Agregar un celular'));
+    expect(entrar, contains('escanea'));
     expect(entrar, contains('Aprobar'));
+    expect(entrar, isNot(contains('Conectar su celular')));
     final salir = respuesta('¿Cómo le quito el acceso a un vendedor?');
     expect(salir, contains('Desactivar'));
     expect(salir, contains('Quitar acceso'));
+  });
+
+  test('Respaldo explica cómo usar la tienda en otro celular del dueño', () {
+    final respuesta = temasAyuda
+        .expand((t) => t.preguntas)
+        .firstWhere(
+          (p) => p.pregunta == '¿Cómo uso la tienda en otro celular mío?',
+        )
+        .respuesta;
+
+    expect(respuesta, contains('Agregar un celular'));
+    expect(respuesta, contains('Ya tengo una tienda (soy el dueño)'));
   });
 
   test('el vendedor sabe activar su huella desde su cuenta', () {
