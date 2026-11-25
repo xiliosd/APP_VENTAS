@@ -5,6 +5,7 @@ import '../../sincronizacion/nube_tienda.dart';
 import '../../sincronizacion/sincronizacion_provider.dart';
 import '../../ui/avisos.dart';
 import '../../ui/colores_app.dart';
+import '../agregar_celular/paso_mostrar.dart';
 
 /// En el celular del admin: cuando un celular de vendedor pide entrar,
 /// muestra un aviso para aprobarlo o rechazarlo (una vez por solicitud).
@@ -31,7 +32,10 @@ class _AtenderSolicitudesState extends ConsumerState<AtenderSolicitudes> {
       '${solicitud.usuarioAuth}/${solicitud.solicitadoEn.toIso8601String()}';
 
   Future<void> _atenderSiguiente() async {
-    if (_mostrando || !mounted) return;
+    // Con el asistente de agregar celular abierto, la aprobación se hace allí.
+    if (_mostrando || !mounted || ref.read(asistenteCelularAbiertoProvider)) {
+      return;
+    }
     final solicitud = ref
         .read(sincronizacionProvider)
         .solicitudes
@@ -86,12 +90,17 @@ class _AtenderSolicitudesState extends ConsumerState<AtenderSolicitudes> {
       sincronizacionProvider,
       (_, _) => _atenderSiguiente(),
     );
+    // Al cerrar el asistente se atiende lo que quedó sin responder.
+    ref.listen<bool>(asistenteCelularAbiertoProvider, (_, abierto) {
+      if (!abierto) _atenderSiguiente();
+    });
     return widget.child;
   }
 }
 
-/// Aprueba o rechaza [solicitud] y lo confirma con un aviso.
-Future<void> responderSolicitudConAviso(
+/// Aprueba o rechaza [solicitud] y lo confirma con un aviso. Devuelve true si
+/// la nube respondió bien.
+Future<bool> responderSolicitudConAviso(
   BuildContext context,
   WidgetRef ref,
   CelularTienda solicitud, {
@@ -104,9 +113,11 @@ Future<void> responderSolicitudConAviso(
     if (context.mounted) {
       avisar(context, aprobar ? 'Celular aprobado' : 'Celular rechazado');
     }
+    return true;
   } catch (error) {
     if (context.mounted) {
       avisar(context, mensajeErrorTienda(error), error: true);
     }
+    return false;
   }
 }
