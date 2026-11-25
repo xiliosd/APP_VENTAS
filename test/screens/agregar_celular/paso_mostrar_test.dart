@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/screens/agregar_celular/paso_mostrar.dart';
 import 'package:app_ventas/screens/configuracion/atender_solicitudes.dart';
@@ -17,6 +19,23 @@ class _SincronizacionSinCodigo extends SincronizacionFalsa {
 
   @override
   Future<String> codigoTienda() async => throw const ErrorSinConexion();
+}
+
+/// Responde a la solicitud solo cuando el test lo decide.
+class _SincronizacionLenta extends SincronizacionFalsa {
+  _SincronizacionLenta({super.celularesTienda = const []})
+    : super(inicial: _alDia);
+
+  final respuesta = Completer<void>();
+
+  @override
+  Future<void> responderSolicitud(
+    CelularTienda solicitud, {
+    required bool aprobar,
+  }) async {
+    await respuesta.future;
+    await super.responderSolicitud(solicitud, aprobar: aprobar);
+  }
 }
 
 const _alDia = EstadoTiendaCompartida(fase: FaseSincronizacion.alDia);
@@ -238,6 +257,47 @@ void main() {
     sincronizacion.ponerSolicitudes([_pendiente('auth-nuevo')]);
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.byKey(const Key('aprobar_aqui')), 200);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('no se puede volver mientras se aprueba', (tester) async {
+    final sincronizacion = _SincronizacionLenta();
+    await montar(tester, sincronizacion, conAviso: true);
+    await tester.tap(find.text('Abrir'));
+    await tester.pumpAndSettle();
+    sincronizacion.ponerSolicitudes([_pendiente('auth-nuevo')]);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('aprobar_aqui')));
+    await tester.pump();
+
+    await Navigator.of(tester.element(find.byType(PasoMostrar))).maybePop();
+    await tester.pump();
+    expect(find.byType(PasoMostrar), findsOneWidget);
+
+    sincronizacion.respuesta.complete();
+    await tester.pumpAndSettle();
+    expect(find.textContaining('¡Listo!'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('si se cierra a medio aprobar igual revoca el anterior', (
+    tester,
+  ) async {
+    final sincronizacion = _SincronizacionLenta(
+      celularesTienda: [_celular('auth-viejo'), _celular('auth-nuevo')],
+    );
+    await montar(tester, sincronizacion, cambiaCelular: true);
+    sincronizacion.ponerSolicitudes([_pendiente('auth-nuevo')]);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('aprobar_aqui')));
+    await tester.pump();
+
+    // Se desmonta todo, como si la pantalla se cerrara a la fuerza.
+    await tester.pumpWidget(const SizedBox());
+    sincronizacion.respuesta.complete();
+    await tester.pumpAndSettle();
+
+    expect(sincronizacion.revocaciones, ['auth-viejo']);
     expect(tester.takeException(), isNull);
   });
 }

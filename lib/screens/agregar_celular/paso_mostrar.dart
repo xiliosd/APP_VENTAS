@@ -94,6 +94,9 @@ class _PasoMostrarState extends ConsumerState<PasoMostrar> {
   }
 
   Future<void> _aprobar(CelularTienda solicitud) async {
+    // Se captura antes de esperar: si el asistente se cierra a medio camino,
+    // el celular anterior se revoca igual y solo se omite el aviso en pantalla.
+    final notificador = ref.read(sincronizacionProvider.notifier);
     setState(() => _aprobando = true);
     final aprobada = await responderSolicitudConAviso(
       context,
@@ -101,9 +104,8 @@ class _PasoMostrarState extends ConsumerState<PasoMostrar> {
       solicitud,
       aprobar: true,
     );
-    if (!mounted) return;
     // Solo con la aprobación hecha deja de servir el celular anterior.
-    if (aprobada) await _revocarAnterior(solicitud);
+    if (aprobada) await _revocarAnterior(notificador, solicitud);
     if (!mounted) return;
     setState(() {
       _aprobando = false;
@@ -111,9 +113,11 @@ class _PasoMostrarState extends ConsumerState<PasoMostrar> {
     });
   }
 
-  Future<void> _revocarAnterior(CelularTienda solicitud) async {
+  Future<void> _revocarAnterior(
+    SincronizacionNotifier notificador,
+    CelularTienda solicitud,
+  ) async {
     if (!widget.cambiaCelular) return;
-    final notificador = ref.read(sincronizacionProvider.notifier);
     try {
       final celulares = await notificador.celulares();
       final anteriores = celularesAReemplazar(
@@ -141,35 +145,38 @@ class _PasoMostrarState extends ConsumerState<PasoMostrar> {
     final solicitud = _solicitudDelVendedor(
       ref.watch(sincronizacionProvider.select((estado) => estado.solicitudes)),
     );
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        if (_listo)
-          _Listo(nombre: widget.vendedor.nombre)
-        else ...[
-          // Arriba, para que Aprobar se vea sin bajar hasta el final.
-          if (solicitud == null)
-            Text(
-              'Esperando que ${widget.vendedor.nombre} escanee…',
-              key: const Key('esperando_vendedor'),
-              style: const TextStyle(fontSize: 18, height: 1.4),
-            )
-          else
-            _Solicitud(
+    return PopScope(
+      canPop: !_aprobando,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (_listo)
+            _Listo(nombre: widget.vendedor.nombre)
+          else ...[
+            // Arriba, para que Aprobar se vea sin bajar hasta el final.
+            if (solicitud == null)
+              Text(
+                'Esperando que ${widget.vendedor.nombre} escanee…',
+                key: const Key('esperando_vendedor'),
+                style: const TextStyle(fontSize: 18, height: 1.4),
+              )
+            else
+              _Solicitud(
+                vendedor: widget.vendedor,
+                solicitud: solicitud,
+                cambiaCelular: widget.cambiaCelular,
+                aprobando: _aprobando,
+                alAprobar: () => _aprobar(solicitud),
+              ),
+            const SizedBox(height: 24),
+            _Codigo(
               vendedor: widget.vendedor,
-              solicitud: solicitud,
-              cambiaCelular: widget.cambiaCelular,
-              aprobando: _aprobando,
-              alAprobar: () => _aprobar(solicitud),
+              codigo: _codigo,
+              alReintentar: _reintentar,
             ),
-          const SizedBox(height: 24),
-          _Codigo(
-            vendedor: widget.vendedor,
-            codigo: _codigo,
-            alReintentar: _reintentar,
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
