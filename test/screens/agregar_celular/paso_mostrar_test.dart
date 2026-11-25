@@ -44,18 +44,27 @@ CelularTienda _celular(
   String auth, {
   String idGlobal = 'g-beto',
   EstadoMiembro estado = EstadoMiembro.aprobado,
+  DateTime? solicitadoEn,
 }) => CelularTienda(
   usuarioAuth: auth,
   rol: 'vendedor',
   estado: estado,
-  solicitadoEn: DateTime(2026, 11, 20),
+  solicitadoEn: solicitadoEn ?? DateTime(2026, 11, 20),
   nombreVendedor: 'Beto',
   nombreCelular: 'Redmi Note 13',
   usuarioIdGlobal: idGlobal,
 );
 
-CelularTienda _pendiente(String auth, {String idGlobal = 'g-beto'}) =>
-    _celular(auth, idGlobal: idGlobal, estado: EstadoMiembro.pendiente);
+CelularTienda _pendiente(
+  String auth, {
+  String idGlobal = 'g-beto',
+  DateTime? solicitadoEn,
+}) => _celular(
+  auth,
+  idGlobal: idGlobal,
+  estado: EstadoMiembro.pendiente,
+  solicitadoEn: solicitadoEn,
+);
 
 void main() {
   const vendedor = Usuario(
@@ -154,6 +163,22 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Terminar'), findsOneWidget);
+  });
+
+  testWidgets('con dos solicitudes del mismo vendedor aprueba la última', (
+    tester,
+  ) async {
+    final sincronizacion = SincronizacionFalsa(inicial: _alDia);
+    await montar(tester, sincronizacion);
+    sincronizacion.ponerSolicitudes([
+      _pendiente('auth-reciente', solicitadoEn: DateTime(2026, 11, 22)),
+      _pendiente('auth-vieja', solicitadoEn: DateTime(2026, 11, 20)),
+    ]);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('aprobar_aqui')));
+    await tester.pumpAndSettle();
+
+    expect(sincronizacion.respuestas, [('auth-reciente', true)]);
   });
 
   testWidgets('si la aprobación falla no revoca el celular anterior', (

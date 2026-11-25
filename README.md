@@ -184,7 +184,7 @@ Todavía no hay capturas en el repositorio. El logo y la marca están en
 - Estado: Riverpod 2.
 - Datos: Drift sobre SQLite (`sqlite3_flutter_libs`).
 - Respaldo: `supabase_flutter`.
-- Cámara y códigos: `mobile_scanner`.
+- Cámara y códigos: `mobile_scanner` (leer) y `qr_flutter` 4.1.0 (mostrar el QR).
 - Huella: `local_auth`.
 - Imágenes del QR: `image_picker`.
 - Dictado: reconocimiento de voz nativo de Android (`DictadoLocal.kt`).

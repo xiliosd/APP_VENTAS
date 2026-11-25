@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../providers/repository_providers.dart';
 import '../../providers/usuarios_providers.dart';
+import '../../sincronizacion/nube_tienda.dart';
 import '../../sincronizacion/sincronizacion_provider.dart';
 
 /// Le da a [vendedor] su número si no lo tenía y lo sube a la nube: el número
 /// recién dado debe llegar allá antes de que el vendedor lo escriba. Con
 /// [sincronizar] sube aunque ya lo tuviera (p. ej. un vendedor recién creado).
-/// Lanza el error de la nube si no llega.
+/// Lanza [ErrorSinConexion], [ErrorSesionTienda] o un [StateError] si el ciclo
+/// de sincronización terminó sin dejar la tienda al día.
 Future<int> asegurarNumeroVendedorEnNube(
   WidgetRef ref,
   Usuario vendedor, {
@@ -20,7 +22,21 @@ Future<int> asegurarNumeroVendedorEnNube(
       .asegurarNumeroVendedor(vendedor.id);
   ref.invalidate(listaUsuariosProvider);
   if (!teniaNumero || sincronizar) {
-    await ref.read(sincronizacionProvider.notifier).sincronizarAhora();
+    final notificador = ref.read(sincronizacionProvider.notifier);
+    await notificador.sincronizarAhora();
+    // sincronizarAhora no lanza: deja el resultado en la fase del estado.
+    switch (ref.read(sincronizacionProvider).fase) {
+      case FaseSincronizacion.sinConexion:
+        throw const ErrorSinConexion();
+      case FaseSincronizacion.requiereReconexion:
+        throw const ErrorSesionTienda();
+      case FaseSincronizacion.error ||
+          FaseSincronizacion.actualizarApp ||
+          FaseSincronizacion.noCompartida:
+        throw StateError('No se pudo subir el número del vendedor');
+      case FaseSincronizacion.alDia || FaseSincronizacion.sincronizando:
+        break;
+    }
   }
   return numero;
 }

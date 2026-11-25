@@ -28,7 +28,7 @@ class _UnirseTiendaScreenState extends ConsumerState<UnirseTiendaScreen> {
   String? _errorNumero;
   String? _errorPin;
   String? _error;
-  final _foroPin = FocusNode();
+  final _focoPin = FocusNode();
   bool _enviando = false;
   bool _escribirAMano = false;
   DatosUnirse? _escaneado;
@@ -41,7 +41,7 @@ class _UnirseTiendaScreenState extends ConsumerState<UnirseTiendaScreen> {
     _codigoController.dispose();
     _numeroController.dispose();
     _pinController.dispose();
-    _foroPin.dispose();
+    _focoPin.dispose();
     super.dispose();
   }
 
@@ -58,7 +58,7 @@ class _UnirseTiendaScreenState extends ConsumerState<UnirseTiendaScreen> {
           : null;
       if (datos != null) _escribirAMano = false;
     });
-    if (datos != null) _foroPin.requestFocus();
+    if (datos != null) _focoPin.requestFocus();
   }
 
   Future<void> _pedirEntrada() async {
@@ -195,7 +195,7 @@ class _UnirseTiendaScreenState extends ConsumerState<UnirseTiendaScreen> {
               TextField(
                 key: const Key('campo_pin_vendedor'),
                 controller: _pinController,
-                focusNode: _foroPin,
+                focusNode: _focoPin,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 obscureText: true,

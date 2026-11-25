@@ -164,8 +164,10 @@ la monetización y la subida a Play Store quedan para después).
   aparecer "Quedan N …: toca pedir" en el celular del admin en un minuto.
 
 - E3 (entrada y salida del vendedor), con un segundo celular o un emulador como vendedor:
-  activar "Allow anonymous sign-ins" en Supabase; crear el vendedor y "Conectar su celular";
-  en el celular del vendedor, "Unirme a una tienda" y esperar; aprobarlo en el aviso; que el
+  activar "Allow anonymous sign-ins" en Supabase; en el celular del dueño, Ajustes →
+  "Agregar un celular", elegir al vendedor y mostrar el QR; en el celular del vendedor,
+  "Unirme a una tienda" → "Escanear el código del dueño", escribir su PIN y "Pedir entrada";
+  el dueño lo aprueba en esa misma pantalla; que el
   vendedor venda y la venta llegue al admin en un minuto; desactivarlo y ver que su celular
   vuelve a la bienvenida. También: el celular del admin con la app de E2 entra con su PIN
   después de actualizar (su PIN viejo se sube solo).

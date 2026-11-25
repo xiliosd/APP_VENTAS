@@ -19,6 +19,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../support/nube_tienda_falsa.dart';
 import '../support/respaldo_prueba.dart';
 
+/// Un ciclo lento puede traer la lista de solicitudes de antes de responder.
+class _NubeConSolicitudesViejas extends NubeTiendaFalsa {
+  List<CelularTienda>? viejas;
+
+  @override
+  Future<List<CelularTienda>> solicitudes(String tiendaId) async =>
+      viejas ?? await super.solicitudes(tiendaId);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -288,6 +297,52 @@ void main() {
 
     expect(container.read(sincronizacionProvider).solicitudes, isEmpty);
     expect((await celular.miMembresia())!.estado, EstadoMiembro.aprobado);
+  });
+
+  test('una solicitud ya respondida no vuelve con un ciclo atrasado', () async {
+    final viejo = _NubeConSolicitudesViejas();
+    nube = viejo;
+    await compartir();
+    final tienda = (await nube.miTienda())!;
+    await nube.subir(tienda, [
+      const CambioSubida(
+        tabla: 'usuarios',
+        idGlobal: 'u-beto',
+        datos: {
+          'id_global': 'u-beto',
+          'nombre': 'Beto',
+          'rol': 'vendedor',
+          'activo': 1,
+          'numero_vendedor': 1,
+        },
+        borrado: false,
+      ),
+    ]);
+    await nube.guardarPin(tienda, 'u-beto', '1234', 0);
+    final celular = nube.otroCelular();
+    await celular.iniciarSesionCelular();
+    await celular.solicitarIngreso('ABC234', 1, '1234', 'Redmi');
+    final container = await contenedor();
+    container.listen(sincronizacionProvider, (_, _) {});
+    await esperar(retardo);
+    final notificador = container.read(sincronizacionProvider.notifier);
+    final pendiente = container.read(sincronizacionProvider).solicitudes.single;
+
+    await notificador.responderSolicitud(pendiente, aprobar: true);
+    // Un ciclo que empezó antes de responder termina con la lista vieja.
+    viejo.viejas = [pendiente];
+    await notificador.sincronizarAhora();
+    expect(container.read(sincronizacionProvider).solicitudes, isEmpty);
+
+    // Cuando la nube ya no la lista, un nuevo pedido del mismo celular sí sale.
+    viejo.viejas = const [];
+    await notificador.sincronizarAhora();
+    viejo.viejas = [pendiente];
+    await notificador.sincronizarAhora();
+    expect(
+      container.read(sincronizacionProvider).solicitudes.single.usuarioAuth,
+      pendiente.usuarioAuth,
+    );
   });
 
   test(

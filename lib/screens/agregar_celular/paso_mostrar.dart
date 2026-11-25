@@ -85,12 +85,17 @@ class _PasoMostrarState extends ConsumerState<PasoMostrar> {
   });
 
   CelularTienda? _solicitudDelVendedor(List<CelularTienda> solicitudes) {
+    // Con varias del mismo vendedor, la última es la del celular que tiene en
+    // la mano.
+    CelularTienda? ultima;
     for (final solicitud in solicitudes) {
-      if (solicitud.usuarioIdGlobal == widget.vendedor.idGlobal) {
-        return solicitud;
+      if (solicitud.usuarioIdGlobal != widget.vendedor.idGlobal) continue;
+      if (ultima == null ||
+          solicitud.solicitadoEn.isAfter(ultima.solicitadoEn)) {
+        ultima = solicitud;
       }
     }
-    return null;
+    return ultima;
   }
 
   Future<void> _aprobar(CelularTienda solicitud) async {

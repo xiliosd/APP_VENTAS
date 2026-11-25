@@ -2,6 +2,7 @@ import 'package:app_ventas/data/database.dart';
 import 'package:app_ventas/screens/agregar_celular/agregar_celular_screen.dart';
 import 'package:app_ventas/screens/agregar_celular/paso_mostrar.dart';
 import 'package:app_ventas/screens/agregar_celular/paso_soy_yo.dart';
+import 'package:app_ventas/screens/respaldo/verificar_correo_screen.dart';
 import 'package:app_ventas/sincronizacion/nube_tienda.dart';
 import 'package:app_ventas/sincronizacion/sincronizacion_provider.dart';
 import 'package:app_ventas/ui/tema_app.dart';
@@ -28,7 +29,8 @@ class _SincronizacionSinInternet extends SincronizacionFalsa {
   }
 }
 
-/// La primera sincronización falla, como sin internet.
+/// La primera sincronización falla como en producción: sin lanzar, dejando
+/// la fase en sinConexion.
 class _SincronizacionQueFallaAlSubir extends SincronizacionFalsa {
   _SincronizacionQueFallaAlSubir() : super(inicial: _alDia);
 
@@ -36,8 +38,10 @@ class _SincronizacionQueFallaAlSubir extends SincronizacionFalsa {
   Future<void> sincronizarAhora() async {
     if (sincronizaciones == 0) {
       sincronizaciones++;
-      throw const ErrorSinConexion();
+      state = state.copiar(fase: FaseSincronizacion.sinConexion);
+      return;
     }
+    state = state.copiar(fase: FaseSincronizacion.alDia);
     await super.sincronizarAhora();
   }
 }
@@ -118,6 +122,84 @@ void main() {
     expect(find.text('Confirma tu correo'), findsOneWidget);
     expect(find.byKey(const Key('boton_confirmar_correo')), findsOneWidget);
     expect(find.text('¿Quién va a usar el celular?'), findsNothing);
+  });
+
+  group('correo y tienda compartida', () {
+    const noCompartida = EstadoTiendaCompartida(
+      fase: FaseSincronizacion.noCompartida,
+    );
+
+    testWidgets('con el respaldo activo comparte sin verificar otra vez', (
+      tester,
+    ) async {
+      final sincronizacion = SincronizacionFalsa(inicial: noCompartida);
+      await montar(tester, sincronizacion: sincronizacion);
+      expect(find.text('Comparte la tienda'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('boton_confirmar_correo')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VerificarCorreoScreen), findsNothing);
+      expect(sincronizacion.compartidas, 1);
+      expect(find.text('¿Quién va a usar el celular?'), findsOneWidget);
+    });
+
+    testWidgets('con el respaldo activo y un vendedor termina en el QR', (
+      tester,
+    ) async {
+      final id = await db
+          .into(db.usuarios)
+          .insert(
+            UsuariosCompanion.insert(
+              nombre: 'Beto',
+              rol: 'vendedor',
+              pinHash: 'x',
+            ),
+          );
+      final vendedor = await (db.select(
+        db.usuarios,
+      )..where((u) => u.id.equals(id))).getSingle();
+      final sincronizacion = SincronizacionFalsa(inicial: noCompartida);
+      await montar(tester, sincronizacion: sincronizacion, vendedor: vendedor);
+
+      await tester.tap(find.byKey(const Key('boton_confirmar_correo')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VerificarCorreoScreen), findsNothing);
+      expect(sincronizacion.compartidas, 1);
+      expect(find.byType(PasoMostrar), findsOneWidget);
+      await tester.pump(const Duration(seconds: 31));
+    });
+
+    testWidgets(
+      'con el respaldo inactivo verifica el correo y luego comparte',
+      (tester) async {
+        final sincronizacion = SincronizacionFalsa(inicial: noCompartida);
+        await montar(
+          tester,
+          respaldoActivo: false,
+          sincronizacion: sincronizacion,
+        );
+        await tester.tap(find.byKey(const Key('boton_confirmar_correo')));
+        await tester.pumpAndSettle();
+        expect(find.byType(VerificarCorreoScreen), findsOneWidget);
+        expect(sincronizacion.compartidas, 0);
+
+        await tester.enterText(
+          find.byKey(const Key('campo_correo')),
+          'tienda@correo.com',
+        );
+        await tester.tap(find.byKey(const Key('boton_enviar_codigo')));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byKey(const Key('campo_codigo')), '123456');
+        await tester.tap(find.byKey(const Key('boton_verificar')));
+        await tester.pumpAndSettle();
+
+        expect(sincronizacion.compartidas, 1);
+        expect(find.text('¿Quién va a usar el celular?'), findsOneWidget);
+        await tester.pump(const Duration(seconds: 31));
+      },
+    );
   });
 
   testWidgets('con la tienda compartida empieza en Quién', (tester) async {

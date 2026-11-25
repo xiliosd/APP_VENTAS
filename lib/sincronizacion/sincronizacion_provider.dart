@@ -131,6 +131,10 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
   bool _enCurso = false;
   bool _otraVez = false;
 
+  /// Solicitudes ya respondidas en este celular: un ciclo que empezó antes de
+  /// responder puede traer aún la lista vieja, y no deben volver a preguntarse.
+  final _respondidas = <String>{};
+
   Sincronizador? get _sincronizador => ref.read(sincronizadorProvider);
 
   @override
@@ -233,12 +237,24 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
               .trasVenta(sincronizador.avisosBajados);
         } catch (_) {}
       }
+      if (fase == FaseSincronizacion.alDia) {
+        // Una vez que la nube ya no la lista, la solicitud dejó de ser vieja:
+        // si el mismo celular pide de nuevo, debe volver a aparecer.
+        final enNube = {
+          for (final solicitud in sincronizador.solicitudes)
+            solicitud.usuarioAuth,
+        };
+        _respondidas.retainAll(enNube);
+      }
       state = EstadoTiendaCompartida(
         fase: fase,
         ultimaSincronizacion: await sincronizador.ultimaSincronizacion(),
         pendientes: await sincronizador.cuantosPendientes(),
         solicitudes: fase == FaseSincronizacion.alDia
-            ? sincronizador.solicitudes
+            ? [
+                for (final solicitud in sincronizador.solicitudes)
+                  if (!_respondidas.contains(solicitud.usuarioAuth)) solicitud,
+              ]
             : state.solicitudes,
       );
     } finally {
@@ -323,6 +339,7 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
       solicitud.usuarioAuth,
       aprobar: aprobar,
     );
+    _respondidas.add(solicitud.usuarioAuth);
     state = state.copiar(
       solicitudes: [
         for (final otra in state.solicitudes)

@@ -74,7 +74,10 @@ class _AgregarCelularScreenState extends ConsumerState<AgregarCelularScreen> {
       if (!mounted) return;
       setState(() {
         _vendedor = conNumero ?? vendedor;
-        _cambiaCelular = tieneCelularAprobado(celulares, vendedor.idGlobal);
+        _cambiaCelular = tieneCelularAprobado(
+          celulares,
+          (conNumero ?? vendedor).idGlobal,
+        );
         _paso = _Paso.mostrar;
       });
     } catch (error) {
@@ -86,13 +89,17 @@ class _AgregarCelularScreenState extends ConsumerState<AgregarCelularScreen> {
     }
   }
 
+  /// Con el respaldo ya activo el correo está confirmado: pasar otra vez por
+  /// la verificación podría apagarlo, así que se pasa directo a compartir.
   Future<void> _confirmarCorreo() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) =>
-            const VerificarCorreoScreen(modo: ModoVerificacion.activar),
-      ),
-    );
+    if (ref.read(respaldoProvider).fase != FaseRespaldo.activo) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) =>
+              const VerificarCorreoScreen(modo: ModoVerificacion.activar),
+        ),
+      );
+    }
     if (!mounted || ref.read(respaldoProvider).fase != FaseRespaldo.activo) {
       return;
     }
@@ -123,7 +130,11 @@ class _AgregarCelularScreenState extends ConsumerState<AgregarCelularScreen> {
           mensaje: _errorAbrir ?? '',
           alReintentar: () => _abrirConVendedor(widget.vendedor!),
         ),
-        _Paso.correo => _PasoCorreo(alConfirmar: _confirmarCorreo),
+        _Paso.correo => _PasoCorreo(
+          correoConfirmado:
+              ref.watch(respaldoProvider).fase == FaseRespaldo.activo,
+          alConfirmar: _confirmarCorreo,
+        ),
         _Paso.quien => PasoQuien(
           alElegirVendedor: _elegirVendedor,
           alSoyYo: () => setState(() => _paso = _Paso.soyYo),
@@ -139,8 +150,12 @@ class _AgregarCelularScreenState extends ConsumerState<AgregarCelularScreen> {
 }
 
 class _PasoCorreo extends StatelessWidget {
-  const _PasoCorreo({required this.alConfirmar});
+  const _PasoCorreo({
+    required this.correoConfirmado,
+    required this.alConfirmar,
+  });
 
+  final bool correoConfirmado;
   final VoidCallback alConfirmar;
 
   @override
@@ -148,20 +163,25 @@ class _PasoCorreo extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text(
-          'Confirma tu correo',
+        Text(
+          correoConfirmado ? 'Comparte la tienda' : 'Confirma tu correo',
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
-        const Text(
-          'Para que los celulares compartan las ventas, la tienda se guarda '
-          'en la nube con tu correo.',
+        Text(
+          correoConfirmado
+              ? 'Tu correo ya está confirmado. Falta guardar la tienda en la '
+                    'nube para que los celulares compartan las ventas.'
+              : 'Para que los celulares compartan las ventas, la tienda se '
+                    'guarda en la nube con tu correo.',
           style: TextStyle(fontSize: 18, height: 1.4),
         ),
         const SizedBox(height: 24),
         BotonPrincipal(
           key: const Key('boton_confirmar_correo'),
-          texto: 'Confirmar mi correo',
+          texto: correoConfirmado
+              ? 'Compartir la tienda'
+              : 'Confirmar mi correo',
           onPressed: alConfirmar,
         ),
       ],
