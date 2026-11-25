@@ -133,12 +133,20 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
 
   /// Solicitudes ya respondidas en este celular: un ciclo que empezó antes de
   /// responder puede traer aún la lista vieja, y no deben volver a preguntarse.
-  final _respondidas = <String>{};
+  /// Guarda cuándo se pidió lo que se respondió: si el mismo celular pide de
+  /// nuevo, la nube trae un `solicitadoEn` más nuevo y la solicitud reaparece.
+  final _respondidas = <String, DateTime>{};
+
+  /// Pendiente de quien llamó a [sincronizarAhora] con un ciclo en curso:
+  /// se completa cuando termina la repetición que ese ciclo dejó en cola.
+  Completer<void>? _repeticion;
 
   Sincronizador? get _sincronizador => ref.read(sincronizadorProvider);
 
   @override
   EstadoTiendaCompartida build() {
+    // Otra tienda o sesión: lo respondido en la anterior no cuenta.
+    _respondidas.clear();
     final sincronizador = ref.watch(sincronizadorProvider);
     const inicial = EstadoTiendaCompartida(
       fase: FaseSincronizacion.noCompartida,
@@ -180,13 +188,14 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
   }
 
   /// Un ciclo de sincronización si la tienda es compartida. Si ya hay uno en
-  /// curso, deja otro para cuando termine.
+  /// curso, deja otro para cuando termine y el futuro se completa solo
+  /// cuando ese otro ciclo terminó.
   Future<void> sincronizarAhora() async {
     final sincronizador = _sincronizador;
     if (sincronizador == null) return;
     if (_enCurso) {
       _otraVez = true;
-      return;
+      return (_repeticion ??= Completer<void>()).future;
     }
     _enCurso = true;
     try {
@@ -244,7 +253,7 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
           for (final solicitud in sincronizador.solicitudes)
             solicitud.usuarioAuth,
         };
-        _respondidas.retainAll(enNube);
+        _respondidas.removeWhere((auth, _) => !enNube.contains(auth));
       }
       state = EstadoTiendaCompartida(
         fase: fase,
@@ -253,7 +262,7 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
         solicitudes: fase == FaseSincronizacion.alDia
             ? [
                 for (final solicitud in sincronizador.solicitudes)
-                  if (!_respondidas.contains(solicitud.usuarioAuth)) solicitud,
+                  if (!_yaRespondida(solicitud)) solicitud,
               ]
             : state.solicitudes,
       );
@@ -261,7 +270,9 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
       _enCurso = false;
       if (_otraVez) {
         _otraVez = false;
-        unawaited(sincronizarAhora());
+        final esperando = _repeticion;
+        _repeticion = null;
+        unawaited(sincronizarAhora().whenComplete(() => esperando?.complete()));
       }
     }
   }
@@ -296,6 +307,7 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
   /// Tras perder el acceso: este celular olvida todo lo de la tienda (las
   /// huellas, el recorrido, los consejos y la sesión en la nube).
   Future<void> _olvidarTienda() async {
+    _respondidas.clear();
     await ref.read(usuariosConHuellaProvider.notifier).borrarTodas();
     final preferencias = ref.read(preferenciasProvider);
     await preferencias.remove(claveRecorrido);
@@ -330,6 +342,12 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
   Future<List<CelularTienda>> celulares() async =>
       _sincronizador!.nube.celulares(await _tiendaActual());
 
+  bool _yaRespondida(CelularTienda solicitud) {
+    final respondidaEn = _respondidas[solicitud.usuarioAuth];
+    return respondidaEn != null &&
+        !solicitud.solicitadoEn.isAfter(respondidaEn);
+  }
+
   Future<void> responderSolicitud(
     CelularTienda solicitud, {
     required bool aprobar,
@@ -339,7 +357,7 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
       solicitud.usuarioAuth,
       aprobar: aprobar,
     );
-    _respondidas.add(solicitud.usuarioAuth);
+    _respondidas[solicitud.usuarioAuth] = solicitud.solicitadoEn;
     state = state.copiar(
       solicitudes: [
         for (final otra in state.solicitudes)

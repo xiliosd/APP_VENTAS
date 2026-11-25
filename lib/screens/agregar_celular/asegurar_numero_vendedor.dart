@@ -24,7 +24,9 @@ Future<int> asegurarNumeroVendedorEnNube(
   if (!teniaNumero || sincronizar) {
     final notificador = ref.read(sincronizacionProvider.notifier);
     await notificador.sincronizarAhora();
-    // sincronizarAhora no lanza: deja el resultado en la fase del estado.
+    // sincronizarAhora no lanza: deja el resultado en la fase del estado. Si ya
+    // había un ciclo en curso, espera a la repetición que dejó en cola, así la
+    // fase es la de un ciclo que empezó después del número nuevo.
     switch (ref.read(sincronizacionProvider).fase) {
       case FaseSincronizacion.sinConexion:
         throw const ErrorSinConexion();

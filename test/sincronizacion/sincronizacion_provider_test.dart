@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:app_ventas/data/database.dart';
@@ -342,6 +343,106 @@ void main() {
     expect(
       container.read(sincronizacionProvider).solicitudes.single.usuarioAuth,
       pendiente.usuarioAuth,
+    );
+  });
+
+  Future<(_NubeConSolicitudesViejas, ProviderContainer, CelularTienda)>
+  escenarioConSolicitud() async {
+    final viejo = _NubeConSolicitudesViejas();
+    nube = viejo;
+    await compartir();
+    final tienda = (await nube.miTienda())!;
+    await nube.subir(tienda, [
+      const CambioSubida(
+        tabla: 'usuarios',
+        idGlobal: 'u-beto',
+        datos: {
+          'id_global': 'u-beto',
+          'nombre': 'Beto',
+          'rol': 'vendedor',
+          'activo': 1,
+          'numero_vendedor': 1,
+        },
+        borrado: false,
+      ),
+    ]);
+    await nube.guardarPin(tienda, 'u-beto', '1234', 0);
+    final celular = nube.otroCelular();
+    await celular.iniciarSesionCelular();
+    await celular.solicitarIngreso('ABC234', 1, '1234', 'Redmi');
+    final container = await contenedor();
+    container.listen(sincronizacionProvider, (_, _) {});
+    await esperar(retardo);
+    final pendiente = container.read(sincronizacionProvider).solicitudes.single;
+    return (viejo, container, pendiente);
+  }
+
+  CelularTienda pedirDeNuevo(CelularTienda anterior) => CelularTienda(
+    usuarioAuth: anterior.usuarioAuth,
+    rol: anterior.rol,
+    estado: EstadoMiembro.pendiente,
+    solicitadoEn: anterior.solicitadoEn.add(const Duration(minutes: 1)),
+    nombreVendedor: anterior.nombreVendedor,
+    nombreCelular: anterior.nombreCelular,
+    usuarioIdGlobal: anterior.usuarioIdGlobal,
+  );
+
+  test('un celular rechazado que pide de nuevo vuelve a aparecer sin esperar '
+      'un ciclo que no lo liste', () async {
+    final (viejo, container, pendiente) = await escenarioConSolicitud();
+    final notificador = container.read(sincronizacionProvider.notifier);
+
+    await notificador.responderSolicitud(pendiente, aprobar: false);
+    viejo.viejas = [pendiente];
+    await notificador.sincronizarAhora();
+    expect(container.read(sincronizacionProvider).solicitudes, isEmpty);
+
+    viejo.viejas = [pedirDeNuevo(pendiente)];
+    await notificador.sincronizarAhora();
+
+    expect(container.read(sincronizacionProvider).solicitudes, hasLength(1));
+  });
+
+  test(
+    'lo respondido se olvida cuando el notificador se reconstruye',
+    () async {
+      final (viejo, container, pendiente) = await escenarioConSolicitud();
+      final notificador = container.read(sincronizacionProvider.notifier);
+      await notificador.responderSolicitud(pendiente, aprobar: false);
+
+      container.invalidate(sincronizacionProvider);
+      container.read(sincronizacionProvider);
+      await esperar(retardo);
+      viejo.viejas = [pendiente];
+      await container.read(sincronizacionProvider.notifier).sincronizarAhora();
+
+      expect(container.read(sincronizacionProvider).solicitudes, hasLength(1));
+    },
+  );
+
+  test('sincronizarAhora durante un ciclo espera a la repetición', () async {
+    await compartir();
+    nube.ciclos = 0;
+    final puerta = Completer<void>();
+    nube.alBajar = () => puerta.future;
+    final container = await contenedor();
+    container.listen(sincronizacionProvider, (_, _) {});
+    final notificador = container.read(sincronizacionProvider.notifier);
+    await esperar(retardo);
+    expect(nube.ciclos, 1);
+
+    var terminada = false;
+    final espera = notificador.sincronizarAhora().then((_) => terminada = true);
+    await esperar(retardo);
+    expect(terminada, isFalse);
+
+    puerta.complete();
+    await espera;
+
+    expect(nube.ciclos, 2);
+    expect(
+      container.read(sincronizacionProvider).fase,
+      FaseSincronizacion.alDia,
     );
   });
 
