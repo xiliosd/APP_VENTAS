@@ -272,7 +272,14 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
         _otraVez = false;
         final esperando = _repeticion;
         _repeticion = null;
-        unawaited(sincronizarAhora().whenComplete(() => esperando?.complete()));
+        unawaited(
+          sincronizarAhora().then(
+            (_) => esperando?.complete(),
+            onError: (Object error, StackTrace pila) {
+              esperando?.completeError(error, pila);
+            },
+          ),
+        );
       }
     }
   }
@@ -445,6 +452,7 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
   /// Deja de esperar la aprobación y cierra la sesión de este celular.
   Future<void> cancelarSolicitud() async {
     _pinSolicitud = null;
+    _respondidas.clear();
     // Una descarga cortada deja el estado de la tienda sin datos: se borra
     // para que el celular quede como nuevo.
     final sincronizador = _sincronizador;
@@ -475,6 +483,7 @@ class SincronizacionNotifier extends Notifier<EstadoTiendaCompartida> {
     bool reemplazarDatos = false,
   }) async {
     final sincronizador = _sincronizador!;
+    _respondidas.clear();
     // Los ids locales cambian: ninguna huella debe apuntar a otra persona.
     await ref.read(usuariosConHuellaProvider.notifier).borrarTodas();
     if (reemplazarDatos) await sincronizador.vaciarBase();

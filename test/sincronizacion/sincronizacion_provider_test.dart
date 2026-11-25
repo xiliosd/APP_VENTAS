@@ -29,6 +29,19 @@ class _NubeConSolicitudesViejas extends NubeTiendaFalsa {
       viejas ?? await super.solicitudes(tiendaId);
 }
 
+/// Falla en el segundo ciclo, fuera del manejo de errores de la sincronización.
+class _SincronizadorQueFallaLaSegunda extends Sincronizador {
+  _SincronizadorQueFallaLaSegunda(super.db, super.nube);
+
+  var _llamadas = 0;
+
+  @override
+  Future<DateTime?> ultimaSincronizacion() async {
+    if (++_llamadas == 2) throw StateError('falla de la repetición');
+    return super.ultimaSincronizacion();
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -44,7 +57,10 @@ void main() {
   });
   tearDown(() => db.close());
 
-  Future<ProviderContainer> contenedor({NubeRespaldoFalsa? respaldo}) async {
+  Future<ProviderContainer> contenedor({
+    NubeRespaldoFalsa? respaldo,
+    Sincronizador? sincronizador,
+  }) async {
     SharedPreferences.setMockInitialValues({
       if (respaldo != null) claveRespaldoHabilitado: true,
     });
@@ -54,6 +70,8 @@ void main() {
         databaseProvider.overrideWithValue(db),
         preferenciasProvider.overrideWithValue(preferencias),
         nubeTiendaProvider.overrideWithValue(nube),
+        if (sincronizador != null)
+          sincronizadorProvider.overrideWithValue(sincronizador),
         nubeRespaldoProvider.overrideWithValue(respaldo),
         copiadorProvider.overrideWithValue(
           () async => File('copia_de_prueba.sqlite'),
@@ -410,11 +428,11 @@ void main() {
       final notificador = container.read(sincronizacionProvider.notifier);
       await notificador.responderSolicitud(pendiente, aprobar: false);
 
+      // La nube aún trae la lista vieja: solo vaciar al reconstruir la oculta.
+      viejo.viejas = [pendiente];
       container.invalidate(sincronizacionProvider);
       container.read(sincronizacionProvider);
       await esperar(retardo);
-      viejo.viejas = [pendiente];
-      await container.read(sincronizacionProvider.notifier).sincronizarAhora();
 
       expect(container.read(sincronizacionProvider).solicitudes, hasLength(1));
     },
@@ -444,6 +462,24 @@ void main() {
       container.read(sincronizacionProvider).fase,
       FaseSincronizacion.alDia,
     );
+  });
+
+  test('un error de la repetición llega a quien esperaba', () async {
+    await compartir();
+    nube.ciclos = 0;
+    final puerta = Completer<void>();
+    nube.alBajar = () => puerta.future;
+    final sincronizador = _SincronizadorQueFallaLaSegunda(db, nube);
+    final container = await contenedor(sincronizador: sincronizador);
+    container.listen(sincronizacionProvider, (_, _) {});
+    final notificador = container.read(sincronizacionProvider.notifier);
+    await esperar(retardo);
+
+    final espera = notificador.sincronizarAhora();
+    final resultado = expectLater(espera, throwsA(isA<StateError>()));
+    puerta.complete();
+
+    await resultado;
   });
 
   test(
